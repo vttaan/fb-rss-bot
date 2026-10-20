@@ -1,12 +1,21 @@
-name: Live WebSocket Server (Cloudflare Tunnel Demo)
+name: 24/7 Live WebSocket Server (Auto-Restart + Permanent Domain)
 
 on:
+  # Automatically starts a fresh 5-hour runner every 5 hours (24/7 operation)
+  schedule:
+    - cron: "0 */5 * * *"
+  # Also allows manual start anytime from the Actions tab
   workflow_dispatch:
     inputs:
       duration_minutes:
-        description: "How many minutes to keep the live WebSocket server running (max 350)"
-        required: true
-        default: "60"
+        description: "Minutes to run before rotating to next runner (default: 295 = ~5 hours)"
+        required: false
+        default: "295"
+
+# Ensure only one live server runs at a time during handoff
+concurrency:
+  group: live-websocket-server
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -14,9 +23,11 @@ permissions:
 jobs:
   host-websocket-server:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 350
     env:
       TZ: Asia/Ho_Chi_Minh
+      NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+      NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
 
     steps:
       - name: Checkout repository
@@ -28,42 +39,118 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install dependencies, Playwright & Cloudflared
+      - name: Install Python dependencies, Playwright & Tunnel CLI
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
           playwright install --with-deps chromium
+
+          # Install ngrok (for permanent static domain) & cloudflared (fallback)
+          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+            | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+            | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install -y ngrok
+
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Start FastAPI WebSocket Server & Public Tunnel
+      - name: Start Server & Public Tunnel (Permanent ngrok or Cloudflare Fallback)
         run: |
-          # Start the Python FastAPI + WebSocket server in the background
-          python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 &
+          # 1. Start the FastAPI + WebSocket + 1-hour Scraper Server in the background
+          nohup python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 < /dev/null &
           sleep 3
 
-          # Start Cloudflare Quick Tunnel and log the public HTTPS / WSS URL
-          cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 &
-          sleep 6
+          PUBLIC_URL=""
+
+          # 2. If NGROK_AUTHTOKEN and NGROK_DOMAIN secrets are set, use permanent static URL
+          if [ -n "$NGROK_AUTHTOKEN" ] && [ -n "$NGROK_DOMAIN" ]; then
+            ngrok config add-authtoken "$NGROK_AUTHTOKEN"
+            CLEAN_DOMAIN="${NGROK_DOMAIN#https://}"
+            CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
+            CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
+            nohup ngrok http --url="https://$CLEAN_DOMAIN" 8000 --log=stdout > tunnel.log 2>&1 < /dev/null &
+            sleep 5
+            PUBLIC_URL="https://$CLEAN_DOMAIN"
+            TUNNEL_MODE="Permanent Static Domain (ngrok)"
+          else
+            # Fallback to temporary Cloudflare Quick Tunnel if secrets are not set yet
+            nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 < /dev/null &
+            for i in {1..20}; do
+              PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || true)
+              if [ -n "$PUBLIC_URL" ]; then
+                break
+              fi
+              sleep 1
+            done
+            TUNNEL_MODE="Temporary Cloudflare Tunnel (Set NGROK_AUTHTOKEN & NGROK_DOMAIN in Secrets for a permanent URL)"
+          fi
+
+          WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws/user_1"
 
           echo "=================================================================="
-          echo "🚀 PUBLIC SERVER & WEBSOCKET URL (Copy the trycloudflare.com link):"
-          grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || cat tunnel.log
+          echo "🌐 TUNNEL MODE        : $TUNNEL_MODE"
+          echo "🚀 LIVE DASHBOARD URL : $PUBLIC_URL"
+          echo "🔌 WEBSOCKET ENDPOINT : $WS_URL"
+          echo "📰 USER RSS XML FEED  : $PUBLIC_URL/users/user_1/rss.xml"
           echo "=================================================================="
-          echo "Note: For WebSockets, replace https:// with wss:// and append /ws/<client_id>"
 
-          # Keep alive for the requested duration
-          DURATION_SEC=$(( ${{ github.event.inputs.duration_minutes }} * 60 ))
-          sleep $DURATION_SEC
+          {
+            echo "### 🚀 Live Facebook Fanpage Scrape Server is Online!"
+            echo "- **Tunnel Mode:** $TUNNEL_MODE"
+            echo "- **Live Dashboard:** [$PUBLIC_URL]($PUBLIC_URL)"
+            echo "- **WebSocket Endpoint:** \`$WS_URL\`"
+            echo "- **User RSS XML Feed:** [$PUBLIC_URL/users/user_1/rss.xml]($PUBLIC_URL/users/user_1/rss.xml)"
+            echo "- **Swagger API Docs:** [$PUBLIC_URL/docs]($PUBLIC_URL/docs)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Save updated SQLite DB & XML feeds back to repo before shutdown
+      - name: Keep Server Alive, Stream Logs & Auto-Sync DB Every 15 Mins
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DURATION_MIN="${{ github.event.inputs.duration_minutes }}"
+          if [ -z "$DURATION_MIN" ]; then
+            DURATION_MIN=295
+          fi
+
+          END_TIME=$(( $(date +%s) + DURATION_MIN * 60 ))
+          LAST_SYNC=$(date +%s)
+          LAST_LINE=0
+
+          while [ $(date +%s) -lt $END_TIME ]; do
+            # Stream any new server logs to the GitHub Actions console
+            if [ -f server.log ]; then
+              CURRENT_LINES=$(wc -l < server.log)
+              if [ "$CURRENT_LINES" -gt "$LAST_LINE" ]; then
+                tail -n +$((LAST_LINE + 1)) server.log
+                LAST_LINE=$CURRENT_LINES
+              fi
+            fi
+
+            # Every 15 minutes (900s), auto-commit rss_bot.db & feeds/ so nothing is ever lost
+            NOW=$(date +%s)
+            if [ $((NOW - LAST_SYNC)) -ge 900 ]; then
+              git add rss_bot.db feeds/
+              if ! git diff --staged --quiet; then
+                git commit -m "chore(rss): periodic 15m DB & XML backup [skip ci]"
+                git pull --rebase origin ${{ github.ref_name }} || true
+                git push origin ${{ github.ref_name }} || true
+              fi
+              LAST_SYNC=$NOW
+            fi
+
+            sleep 15
+          done
+
+      - name: Final Save of SQLite DB & XML Feeds Before Runner Rotation
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add rss_bot.db feeds/
           if ! git diff --staged --quiet; then
-            git commit -m "chore(rss): save DB state after live server session [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push origin ${{ github.ref_name }}
+            git commit -m "chore(rss): save DB state before runner handoff [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }} || true
+            git push origin ${{ github.ref_name }} || true
           fi

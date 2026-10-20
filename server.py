@@ -423,7 +423,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       };
 
       ws.onclose = () => {
-        document.getElementById('wsBadge').textContent = 'Disconnected';
+        document.getElementById('wsBadge').textContent = 'Reconnecting...';
+        setTimeout(connectWS, 4000);
       };
     }
 
