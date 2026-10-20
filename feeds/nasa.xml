@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
   <channel>
-    <title>Facebook - Facebook Fanpage RSS</title>
+    <title>NASA - National Aeronautics and Space Administration - Facebook Fanpage RSS</title>
     <link>https://www.facebook.com/nasa</link>
     <description>Latest public posts scraped from https://www.facebook.com/nasa</description>
-    <lastBuildDate>Wed, 21 Oct 2026 01:39:20 +0700</lastBuildDate>
+    <lastBuildDate>Wed, 21 Oct 2026 02:50:42 +0700</lastBuildDate>
     <generator>Facebook Fanpage RSS Scraper Bot (Python)</generator>
     <item>
       <title>There's a lot of ground to cover when you're building a Moon Base.</title>
