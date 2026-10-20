@@ -1,0 +1,69 @@
+name: Live WebSocket Server (Cloudflare Tunnel Demo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: "How many minutes to keep the live WebSocket server running (max 350)"
+        required: true
+        default: "60"
+
+permissions:
+  contents: write
+
+jobs:
+  host-websocket-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      TZ: Asia/Ho_Chi_Minh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies, Playwright & Cloudflared
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+
+      - name: Start FastAPI WebSocket Server & Public Tunnel
+        run: |
+          # Start the Python FastAPI + WebSocket server in the background
+          python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 &
+          sleep 3
+
+          # Start Cloudflare Quick Tunnel and log the public HTTPS / WSS URL
+          cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 &
+          sleep 6
+
+          echo "=================================================================="
+          echo "🚀 PUBLIC SERVER & WEBSOCKET URL (Copy the trycloudflare.com link):"
+          grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || cat tunnel.log
+          echo "=================================================================="
+          echo "Note: For WebSockets, replace https:// with wss:// and append /ws/<client_id>"
+
+          # Keep alive for the requested duration
+          DURATION_SEC=$(( ${{ github.event.inputs.duration_minutes }} * 60 ))
+          sleep $DURATION_SEC
+
+      - name: Save updated SQLite DB & XML feeds back to repo before shutdown
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rss_bot.db feeds/
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(rss): save DB state after live server session [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
+          fi
