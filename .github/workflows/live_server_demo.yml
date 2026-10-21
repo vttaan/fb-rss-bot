@@ -1,18 +1,17 @@
-name: 24/7 Live WebSocket Server (Auto-Restart + Permanent Domain)
+name: Hourly Scrape & 5-Minute Live RSS/WebSocket Server (X:00 - X:05)
 
 on:
-  # Automatically starts a fresh 5-hour runner every 5 hours (24/7 operation)
+  # Activates every hour at X:00 (minute 0)
   schedule:
-    - cron: "0 */5 * * *"
-  # Also allows manual start anytime from the Actions tab
+    - cron: "0 * * * *"
+  # Also allows manual trigger anytime for testing
   workflow_dispatch:
     inputs:
-      duration_minutes:
-        description: "Minutes to run before rotating to next runner (default: 295 = ~5 hours)"
+      stay_awake_minutes:
+        description: "Minutes to stay awake waiting for client RSS/WebSocket requests (default: 5)"
         required: false
-        default: "295"
+        default: "5"
 
-# Ensure only one live server runs at a time during handoff
 concurrency:
   group: live-websocket-server
   cancel-in-progress: false
@@ -21,9 +20,9 @@ permissions:
   contents: write
 
 jobs:
-  host-websocket-server:
+  hourly-scrape-and-serve:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 25
     env:
       TZ: Asia/Ho_Chi_Minh
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
@@ -45,7 +44,6 @@ jobs:
           pip install -r requirements.txt
           playwright install --with-deps chromium
 
-          # Install ngrok (for permanent static domain) & cloudflared (fallback)
           curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
             | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
           echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
@@ -55,26 +53,25 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Start Server & Public Tunnel (Permanent ngrok or Cloudflare Fallback)
+      - name: Start Live Server, Open Public Tunnel & Scrape Fanpages
         run: |
-          # 1. Start the FastAPI + WebSocket + 1-hour Scraper Server in the background
+          # 1. Start the FastAPI + WebSocket + RSS server immediately so clients can connect right away
           nohup python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 < /dev/null &
           sleep 3
 
           PUBLIC_URL=""
 
-          # 2. If NGROK_AUTHTOKEN and NGROK_DOMAIN secrets are set, use permanent static URL
+          # 2. Open permanent ngrok domain (or Cloudflare fallback)
           if [ -n "$NGROK_AUTHTOKEN" ] && [ -n "$NGROK_DOMAIN" ]; then
             ngrok config add-authtoken "$NGROK_AUTHTOKEN"
             CLEAN_DOMAIN="${NGROK_DOMAIN#https://}"
             CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
             CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
             nohup ngrok http --url="https://$CLEAN_DOMAIN" 8000 --log=stdout > tunnel.log 2>&1 < /dev/null &
-            sleep 5
+            sleep 4
             PUBLIC_URL="https://$CLEAN_DOMAIN"
             TUNNEL_MODE="Permanent Static Domain (ngrok)"
           else
-            # Fallback to temporary Cloudflare Quick Tunnel if secrets are not set yet
             nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 < /dev/null &
             for i in {1..20}; do
               PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || true)
@@ -83,43 +80,67 @@ jobs:
               fi
               sleep 1
             done
-            TUNNEL_MODE="Temporary Cloudflare Tunnel (Set NGROK_AUTHTOKEN & NGROK_DOMAIN in Secrets for a permanent URL)"
+            TUNNEL_MODE="Temporary Cloudflare Tunnel"
           fi
 
           WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws/user_1"
 
           echo "=================================================================="
+          echo "⏰ SERVER ACTIVATED AT : $(date '+%Y-%m-%d %H:%M:%S %z')"
           echo "🌐 TUNNEL MODE        : $TUNNEL_MODE"
           echo "🚀 LIVE DASHBOARD URL : $PUBLIC_URL"
           echo "🔌 WEBSOCKET ENDPOINT : $WS_URL"
+          echo "📰 ALL RSS XML FEED   : $PUBLIC_URL/feeds/all.xml"
           echo "📰 USER RSS XML FEED  : $PUBLIC_URL/users/user_1/rss.xml"
           echo "=================================================================="
 
           {
-            echo "### 🚀 Live Facebook Fanpage Scrape Server is Online!"
-            echo "- **Tunnel Mode:** $TUNNEL_MODE"
+            echo "### 🚀 Hourly Facebook RSS Server Activated!"
+            echo "- **Activated At:** \`$(date '+%Y-%m-%d %H:%M:%S %z')\`"
             echo "- **Live Dashboard:** [$PUBLIC_URL]($PUBLIC_URL)"
             echo "- **WebSocket Endpoint:** \`$WS_URL\`"
+            echo "- **Combined RSS XML Feed:** [$PUBLIC_URL/feeds/all.xml]($PUBLIC_URL/feeds/all.xml)"
             echo "- **User RSS XML Feed:** [$PUBLIC_URL/users/user_1/rss.xml]($PUBLIC_URL/users/user_1/rss.xml)"
-            echo "- **Swagger API Docs:** [$PUBLIC_URL/docs]($PUBLIC_URL/docs)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Keep Server Alive, Stream Logs & Auto-Sync DB Every 15 Mins
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 3. Trigger immediate scrape inside the running server (updates SQLite + .xml feeds + pushes to WebSockets)
+          echo "🔍 Scraping newly uploaded posts across tracked fanpages..."
+          curl -sS -X POST http://127.0.0.1:8000/api/scrape
+          echo ""
+          python main.py list
 
-          DURATION_MIN="${{ github.event.inputs.duration_minutes }}"
-          if [ -z "$DURATION_MIN" ]; then
-            DURATION_MIN=295
+      - name: Stay Awake Until X:05 (5-Minute Window for Client Requests)
+        run: |
+          WAIT_MIN="${{ github.event.inputs.stay_awake_minutes }}"
+          if [ -z "$WAIT_MIN" ]; then
+            WAIT_MIN=5
           fi
 
-          END_TIME=$(( $(date +%s) + DURATION_MIN * 60 ))
-          LAST_SYNC=$(date +%s)
-          LAST_LINE=0
+          NOW_TS=$(date +%s)
+          CURRENT_MINUTE=$(date +%M | sed 's/^0*//')
+          CURRENT_SECOND=$(date +%S | sed 's/^0*//')
+          CURRENT_MINUTE=${CURRENT_MINUTE:-0}
+          CURRENT_SECOND=${CURRENT_SECOND:-0}
 
+          # Calculate seconds remaining until X:05:59, and ensure at least WAIT_MIN (5 mins) awake window
+          MIN_WAIT_SEC=$(( WAIT_MIN * 60 ))
+          if [ "$CURRENT_MINUTE" -lt 5 ]; then
+            UNTIL_X05=$(( (5 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
+          else
+            UNTIL_X05=$MIN_WAIT_SEC
+          fi
+
+          if [ "$UNTIL_X05" -gt "$MIN_WAIT_SEC" ]; then
+            SLEEP_SEC=$UNTIL_X05
+          else
+            SLEEP_SEC=$MIN_WAIT_SEC
+          fi
+
+          END_TIME=$(( NOW_TS + SLEEP_SEC ))
+          echo "🟢 Server is now waiting for client RSS/WebSocket requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
+
+          LAST_LINE=0
           while [ $(date +%s) -lt $END_TIME ]; do
-            # Stream any new server logs to the GitHub Actions console
             if [ -f server.log ]; then
               CURRENT_LINES=$(wc -l < server.log)
               if [ "$CURRENT_LINES" -gt "$LAST_LINE" ]; then
@@ -127,30 +148,21 @@ jobs:
                 LAST_LINE=$CURRENT_LINES
               fi
             fi
-
-            # Every 15 minutes (900s), auto-commit rss_bot.db & feeds/ so nothing is ever lost
-            NOW=$(date +%s)
-            if [ $((NOW - LAST_SYNC)) -ge 900 ]; then
-              git add rss_bot.db feeds/
-              if ! git diff --staged --quiet; then
-                git commit -m "chore(rss): periodic 15m DB & XML backup [skip ci]"
-                git pull --rebase origin ${{ github.ref_name }} || true
-                git push origin ${{ github.ref_name }} || true
-              fi
-              LAST_SYNC=$NOW
-            fi
-
-            sleep 15
+            sleep 10
           done
 
-      - name: Final Save of SQLite DB & XML Feeds Before Runner Rotation
+          echo "💤 Client request window ended at $(date '+%Y-%m-%d %H:%M:%S %z'). Preparing to sleep..."
+
+      - name: Save SQLite DB & XML RSS Feeds Before Sleeping
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add rss_bot.db feeds/
-          if ! git diff --staged --quiet; then
-            git commit -m "chore(rss): save DB state before runner handoff [skip ci]"
+          if git diff --staged --quiet; then
+            echo "No database or XML feed changes to commit."
+          else
+            git commit -m "chore(rss): hourly scrape & client sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin ${{ github.ref_name }} || true
           fi

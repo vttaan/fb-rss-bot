@@ -155,6 +155,18 @@ def api_list_fanpages():
     ]
 
 
+@app.post("/api/scrape")
+async def api_run_scrape_now():
+    """Run a full scrape cycle inside the server and broadcast new posts to WebSocket subscribers."""
+    async with manager.scrape_lock:
+        await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
+        new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        await manager.broadcast_to_all(
+            {"event": "status", "message": f"Scrape finished! Found {new_count} new post(s)."}
+        )
+    return {"status": "ok", "new_posts_count": new_count}
+
+
 @app.get("/api/users/{client_id}/subscriptions")
 def api_get_user_subscriptions(client_id: str):
     get_or_create_user(client_id)

@@ -1,10 +1,7 @@
-name: Hourly Facebook Fanpage RSS Scraper
+name: Manual CLI Scrape Only (No Server)
 
 on:
-  # Runs automatically every 1 hour at minute 0
-  schedule:
-    - cron: "0 * * * *"
-  # Allows manual trigger from the GitHub Actions tab (with optional fanpage URL input)
+  # Manual-only workflow (hourly cron is handled by live_server_demo.yml)
   workflow_dispatch:
     inputs:
       add_fanpage_url:
