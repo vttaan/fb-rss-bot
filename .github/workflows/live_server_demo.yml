@@ -18,6 +18,8 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   hourly-scrape-and-serve:
@@ -166,3 +168,61 @@ jobs:
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin ${{ github.ref_name }} || true
           fi
+
+      - name: Prepare GitHub Pages Payload
+        if: always()
+        run: |
+          # Generate an index.html inside feeds/ for friendly browsing on GitHub Pages
+          cat << 'EOF' > feeds/index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Facebook Fanpage RSS Feeds (24/7)</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 30px; }
+              .card { background: #1e293b; padding: 20px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+              a { color: #60a5fa; text-decoration: none; font-size: 16px; }
+              li { margin: 12px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h2>📡 Facebook Fanpage RSS Feeds (Available 24/7)</h2>
+              <p>Feeds updated automatically every hour via GitHub Actions.</p>
+              <ul>
+          EOF
+
+          for f in feeds/*.xml; do
+            [ -e "$f" ] || continue
+            NAME=$(basename "$f")
+            echo "      <li><a href=\"$NAME\" target=\"_blank\">$NAME</a></li>" >> feeds/index.html
+          done
+
+          cat << 'EOF' >> feeds/index.html
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload GitHub Pages Artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "feeds"
+
+  deploy-github-pages:
+    needs: hourly-scrape-and-serve
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
