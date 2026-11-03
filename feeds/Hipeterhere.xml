@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
   <channel>
-    <title>Hi Peter here - Facebook Fanpage RSS</title>
+    <title>Facebook - Facebook Fanpage RSS</title>
     <link>https://www.facebook.com/Hipeterhere</link>
     <description>Latest public posts scraped from https://www.facebook.com/Hipeterhere</description>
-    <lastBuildDate>Tue, 03 Nov 2026 22:58:42 +0700</lastBuildDate>
+    <lastBuildDate>Wed, 04 Nov 2026 04:42:04 +0700</lastBuildDate>
     <generator>Facebook Fanpage RSS Scraper Bot (Python)</generator>
     <item>
       <title>&gt; “T qua đây để chứng minh rằng t mạnh hơn m”</title>
