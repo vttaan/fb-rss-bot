@@ -348,26 +348,38 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <title>Facebook Fanpage RSS & WebSocket Live Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --bg: #0f172a; --card: #1e293b; --accent: #3b82f6; --text: #f8fafc; --muted: #94a3b8; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
-    .container { max-width: 960px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; }
-    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #22c55e33; color: #4ade80; }
-    .panel { background: var(--card); padding: 18px 20px; border-radius: 12px; margin-bottom: 20px; }
-    input { background: #0f172a; border: 1px solid #334155; color: var(--text); padding: 10px 14px; border-radius: 8px; width: 320px; }
-    button { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-    button.secondary { background: #334155; }
-    button.danger { background: #ef4444; padding: 4px 10px; font-size: 12px; margin-left: 8px; }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .chip { background: #0f172a; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; font-size: 14px; }
-    .post { background: var(--card); padding: 18px 20px; border-radius: 12px; margin-bottom: 14px; border-left: 4px solid var(--accent); }
-    .post-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
-    .post-content { white-space: pre-wrap; line-height: 1.5; margin-bottom: 12px; }
+    :root { --bg: #f6f3ff; --card: #ffffff; --accent: #9b8cf0; --accent-soft: #ece8ff; --mint: #d6f5e8; --mint-text: #2f8f6b; --peach: #ffe8dc; --rose: #ffdce6; --sky: #dcecff; --text: #3b3552; --muted: #8c86a3; --border: #e6e0f7; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #f6f3ff 0%, #eaf4ff 55%, #fff1f6 100%); background-attachment: fixed; color: var(--text); margin: 0; padding: 32px 40px; font-size: 16px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; background: var(--card); padding: 22px 28px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 6px 24px #b8a9e822; }
+    .header h2 { font-size: 24px; }
+    .badge { padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--mint); color: var(--mint-text); }
+    .panel { background: var(--card); padding: 24px 28px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 6px 24px #b8a9e822; }
+    input { background: #faf9ff; border: 2px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 12px; width: 320px; font-size: 15px; outline: none; }
+    input:focus { border-color: var(--accent); }
+    button { background: var(--accent); color: #fff; border: none; padding: 12px 20px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15px; transition: transform .1s, filter .15s; }
+    button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+    button.secondary { background: var(--sky); color: #3d6fb5; }
+    button.danger { background: var(--rose); color: #c2476b; padding: 4px 10px; font-size: 13px; margin-left: 10px; border-radius: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .chip { background: var(--accent-soft); padding: 8px 14px; border-radius: 999px; display: flex; align-items: center; font-size: 14px; }
+    #postsContainer { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 22px; }
+    .post { background: var(--card); padding: 22px 24px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 6px 24px #b8a9e822; }
+    .post:nth-child(4n+2) { border-top-color: #8fd3b6; }
+    .post:nth-child(4n+3) { border-top-color: #ffb89a; }
+    .post:nth-child(4n+4) { border-top-color: #8fbdf2; }
+    .post-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    .post-content { white-space: pre-wrap; line-height: 1.7; margin-bottom: 14px; word-break: break-word; }
     .post-imgs { display: flex; gap: 10px; overflow-x: auto; }
-    .post-imgs img { max-height: 220px; border-radius: 8px; }
-    a { color: #60a5fa; text-decoration: none; }
-    #status { color: #fbbf24; font-size: 13px; margin-top: 8px; }
+    .post-imgs img { max-height: 260px; border-radius: 12px; }
+    h3 { font-size: 20px; }
+    a { color: #5b7fd6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    #status { color: var(--muted); font-size: 14px; margin-top: 8px; }
+    @media (max-width: 700px) { body { padding: 16px; } #postsContainer { grid-template-columns: 1fr; } input { width: 100%; } }
   </style>
 </head>
 <body>
@@ -460,7 +472,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function renderSubs(subs) {
       const el = document.getElementById('subsContainer');
       if (!subs.length) {
-        el.innerHTML = '<span style="color:#94a3b8;font-size:14px;">No fanpages selected yet. Add one above!</span>';
+        el.innerHTML = '<span style="color:#8c86a3;font-size:14px;">No fanpages selected yet. Add one above!</span>';
         return;
       }
       el.innerHTML = subs.map(s => `
