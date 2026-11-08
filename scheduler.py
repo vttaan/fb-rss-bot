@@ -22,6 +22,7 @@ from database import (
     update_fanpage_metadata,
 )
 from rss import generate_all_rss, generate_fanpage_rss
+from events import analyze_fanpage_posts
 from scraper import scrape_fanpage
 
 console = Console()
@@ -83,6 +84,15 @@ async def run_scrape_cycle(
             total_new_posts += len(new_posts)
 
             xml_path = generate_fanpage_rss(fp)
+
+            try:
+                ev = await asyncio.to_thread(analyze_fanpage_posts, fp.id)
+                console.print(
+                    f"[magenta]   Events: {ev['events']} found, {ev['llm_calls']} LLM call(s), "
+                    f"{ev['analyzed']} post(s) analyzed[/magenta]"
+                )
+            except Exception as ev_exc:
+                console.print(f"[yellow]   Event analysis skipped: {ev_exc}[/yellow]")
             if new_posts and on_new_posts is not None:
                 try:
                     await on_new_posts(fp, new_posts)

@@ -136,3 +136,18 @@ class Post(Base):
             "published_at": pub_dt.isoformat() if pub_dt else None,
             "scraped_at": scr_dt.isoformat() if scr_dt else None,
         }
+
+
+class PostAnalysis(Base):
+    """LLM event-analysis result cache so each post is analyzed only once."""
+
+    __tablename__ = "post_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    fanpage_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("fanpages.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    is_event: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    event_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now)

@@ -143,6 +143,11 @@ app.add_middleware(
 )
 
 
+from admin import router as admin_router  # noqa: E402
+
+app.include_router(admin_router)
+
+
 # --- REST API Endpoints ---
 
 
@@ -400,7 +405,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="panel">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3 style="margin:0;">Your Selected Fanpages</h3>
-        <a id="rssLink" href="/users/user_1/rss.xml" target="_blank">Personal RSS Feed (.xml) ↗</a>
+        <span><a href="/admin" style="margin-right:16px;">Admin ⚙</a><a id="rssLink" href="/users/user_1/rss.xml" target="_blank">Personal RSS Feed (.xml) ↗</a></span>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px;">
         <input id="fanpageInput" placeholder="https://www.facebook.com/nasa or TechCrunch" style="flex:1;" />

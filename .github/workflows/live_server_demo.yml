@@ -29,6 +29,9 @@ jobs:
       TZ: Asia/Ho_Chi_Minh
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -182,6 +185,14 @@ jobs:
               *)          cp "$f" site/fanpages/ ;;
             esac
           done
+          for d in feeds/*/; do
+            [ -d "$d" ] || continue
+            SLUG=$(basename "$d")
+            if [ -f "$d/events.json" ]; then
+              mkdir -p "site/fanpages/$SLUG"
+              cp "$d/events.json" "site/fanpages/$SLUG/events.json"
+            fi
+          done
           UPDATED=$(date '+%Y-%m-%d %H:%M %Z')
           {
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -193,9 +204,9 @@ jobs:
             echo "<p class=\"muted\">Updated at $UPDATED. Refreshed 3 times a day (08:00, 14:00, 20:00 ICT).</p></div>"
             for d in all fanpages users; do
               echo "<div class=\"card\"><h2>/$d/</h2><ul>"
-              for f in site/$d/*.xml; do
+              for f in site/$d/*.xml site/$d/*/events.json; do
                 [ -e "$f" ] || continue
-                N=$(basename "$f")
+                N=${f#site/$d/}
                 echo "<li><a href=\"$d/$N\">$N</a></li>"
               done
               echo '</ul></div>'
