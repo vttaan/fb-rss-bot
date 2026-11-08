@@ -26,6 +26,7 @@ from database import Fanpage, Post, get_session
 from database.models import PostAnalysis
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 5)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
 
 # Compared against lowercase, diacritics-stripped text.
@@ -35,7 +36,7 @@ EVENT_KEYWORDS = [
     "registration", "ticket", "rsvp", "join us", "save the date", "exhibition", "talk",
     "su kien", "hoi thao", "hoi nghi", "toa dam", "giao luu", "khai mac", "le hoi", "cuoc thi",
     "dang ky", "tham gia", "sinh hoat", "buoi", "chuong trinh", "trien lam", "ngay hoi",
-    "tuyen sinh", "workshop", "lich", "vao luc", "dia diem", "thoi gian",
+    "tuyen sinh", "lich", "vao luc", "dia diem", "thoi gian",
 ]
 
 PROMPT = """You analyze Facebook fanpage posts. Decide whether the post announces or promotes a
@@ -58,8 +59,12 @@ Return ONLY a JSON object with exactly these keys (use null when unknown, never 
   "end_datetime": string|null,
   "location": string|null,
   "organizer": string|null,
-  "registration_url": string|null,
-  "is_online": boolean|null
+  "registration_url": string|null,   // only a URL that literally appears in the post text; null otherwise (never invent one)
+  "fee": string|null,                  // e.g., "miễn phí", "100.000 VND"
+  "is_online": boolean|null,
+  "target_audience": string[]|null,  // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies student in any major or year, list them specifically (e.g., "sinh viên CNTT", "sinh viên năm 2"); if the post specifies a specific school, list it (e.g., "sinh viên Đại học Bách Khoa")
+  "category": string[],               // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện", "quyên góp","khác"; [] if unknown
+  "format": string[]                  // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
 }}"""
 
 
@@ -68,9 +73,17 @@ def _strip_accents(text: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
 
 
-def looks_event_related(content: str) -> bool:
+def count_event_keywords(content: str) -> int:
+    """Number of DISTINCT event keywords found in the post (accent- and case-insensitive)."""
     haystack = _strip_accents(content or "").lower()
-    return any(re.search(r"\b" + re.escape(k) + r"\b", haystack) for k in EVENT_KEYWORDS)
+    return sum(
+        1 for k in set(EVENT_KEYWORDS)
+        if re.search(r"\b" + re.escape(k) + r"\b", haystack)
+    )
+
+
+def looks_event_related(content: str) -> bool:
+    return count_event_keywords(content) >= MIN_KEYWORD_MATCHES
 
 
 def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
@@ -96,6 +109,53 @@ def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[st
         data = data[0] if data else {}
     return data if isinstance(data, dict) else None
 
+
+def scan_qr_link(image_url: str) -> Optional[str]:
+    """Download an image and decode a QR code locally (OpenCV). Returns an http(s) URL or None.
+
+    Raises on download/decoder-unavailable errors so the caller can tell "no QR" from "could not check".
+    """
+    import cv2  # opencv-python-headless
+    import numpy as np
+
+    req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        raw = resp.read(10 * 1024 * 1024)
+    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        return None
+    detector = cv2.QRCodeDetector()
+    candidates = [img]
+    h, w = img.shape[:2]
+    if max(h, w) < 1600:
+        candidates.append(cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC))
+    candidates.append(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+    for candidate in candidates:
+        value, _, _ = detector.detectAndDecode(candidate)
+        if value and value.strip().lower().startswith(("http://", "https://")):
+            return value.strip()
+    return None
+
+
+def fill_registration(post: Post, data: Dict[str, Any]) -> None:
+    """Fallback chain: link in text -> QR in first image -> "free" (registration_status tells which)."""
+    if data.get("registration_url"):
+        data["registration_status"] = "link"
+        return
+    media = post.media_urls
+    if media:
+        try:
+            link = scan_qr_link(media[0])
+        except Exception as exc:  # download/decoder problem: don't claim "free"
+            print(f"[events] QR scan failed for post {post.post_id}: {exc}")
+            data["registration_status"] = "unknown"
+            return
+        if link:
+            data["registration_url"] = link
+            data["registration_status"] = "qr"
+            return
+    data["registration_url"] = "free"
+    data["registration_status"] = "free"
 
 def _events_path(slug: str):
     return FEEDS_DIR / slug / "events.json"
@@ -162,7 +222,7 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
             try:
                 stats["llm_calls"] += 1
                 data = call_gemini(post, name, api_key)
-            except (urllib.error.URLError, KeyError, IndexError, ValueError) as exc:
+            except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
                 stats["errors"] += 1
                 print(f"[events] LLM error for post {post.post_id}: {exc}")
                 continue
@@ -170,6 +230,8 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
                 stats["errors"] += 1
                 continue
             is_event = bool(data.pop("is_event", False))
+            if is_event:
+                fill_registration(post, data)
             session.add(PostAnalysis(
                 post_id=post.post_id,
                 fanpage_id=fanpage_id,
