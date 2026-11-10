@@ -1,7 +1,54 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-10T14:17:39.798402+07:00",
-  "count": 0,
-  "events": []
+  "updated_at": "2026-11-10T15:01:05.728664+07:00",
+  "count": 1,
+  "events": [
+    {
+      "event_id": 1,
+      "title": "THÔNG BÁO ĐĂNG KÝ THAM GIA CHUYÊN ĐỀ “BẪY LỪA KHÔNG XA – TỈNH TÁO ĐỂ KHÔNG SA”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-08",
+      "time": null,
+      "start_datetime": "2026-11-08T00:00:00+07:00",
+      "end_datetime": null,
+      "location": null,
+      "source_type": "email",
+      "source_id": "email_89af83834c100c1ac451",
+      "fanpage_id": null,
+      "client_id": "client_team_1",
+      "version": 1,
+      "created_at": "2026-11-10T14:47:32.407195+07:00",
+      "updated_at": "2026-11-10T14:47:32.407195+07:00",
+      "description": "Nhằm trang bị cho sinh viên kiến thức và kỹ năng nhận diện, phòng tránh các thủ đoạn lừa đảo trong học tập và đời sống, Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM thông báo đăng ký tham gia chuyên đề “Bẫy lừa không...",
+      "organizer": "moodlefit2@mso.hcmus.edu.v",
+      "registration_url": "https://link.hcmus.edu.vn/talkshowBLKXTTDKS-0811",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": null,
+      "posted_at": "2026-11-10T14:47:31.982463+07:00",
+      "sources": [
+        {
+          "source_type": "email",
+          "source_id": "email_89af83834c100c1ac451",
+          "fanpage_id": null,
+          "client_id": "client_team_1",
+          "post_url": null,
+          "posted_at": "2026-11-10T14:47:31.982463+07:00",
+          "seen_at": "2026-11-10T14:47:32.407195+07:00"
+        }
+      ],
+      "update_history": []
+    }
+  ]
 }
