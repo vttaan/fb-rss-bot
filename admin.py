@@ -154,27 +154,75 @@ def admin_list_fanpages():
     ]
 
 
+def _trigger_github_actions_crawl() -> bool:
+    """Optionally trigger GitHub Actions live_server_demo.yml via workflow_dispatch when GITHUB_TOKEN is set."""
+    import json
+    import urllib.request
+
+    gh_token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if not gh_token:
+        return False
+    repo = os.environ.get("GITHUB_REPO", "vttaan/fb-rss-bot").strip()
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/live_server_demo.yml/dispatches"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps({"ref": "main"}).encode("utf-8"),
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {gh_token}",
+            "Content-Type": "application/json",
+            "User-Agent": "fb-rss-bot-admin",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 201, 204)
+    except Exception as exc:
+        print(f"[admin] GitHub workflow_dispatch trigger failed: {exc}")
+        return False
+
+
 @router.post("/api/admin/fanpages", dependencies=[Depends(require_admin)])
 async def admin_add_fanpage(body: AddFanpageRequest):
-    from server import trigger_background_scrape
+    import server
 
     try:
         fp, created = add_fanpage(body.url, body.name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    scrape_mode = "already_tracked"
+    message = "Fanpage already tracked."
     if created:
-        asyncio.create_task(trigger_background_scrape(fp.slug))
-    return {"created": created, "fanpage": fp.to_dict()}
+        if server.SERVER_AUTO_SCRAPE:
+            asyncio.create_task(server.trigger_background_scrape(fp.slug))
+            scrape_mode = "local_background"
+            message = "Added. Fetching 5 most recent posts in background."
+        else:
+            dispatched = await asyncio.to_thread(_trigger_github_actions_crawl)
+            if dispatched:
+                scrape_mode = "github_actions_dispatched"
+                message = "Added. Triggered GitHub Actions crawler to fetch 5 most recent posts."
+            else:
+                scrape_mode = "queued_for_actions"
+                message = "Added. GitHub Actions will fetch 5 most recent posts on the next scheduled/manual crawl."
+        await server.manager.broadcast_to_all({"event": "status", "message": f"Added fanpage: {fp.name or fp.slug}", "refresh_tree": True})
+
+    return {"created": created, "scrape_mode": scrape_mode, "message": message, "fanpage": fp.to_dict()}
 
 
 @router.delete("/api/admin/fanpages", dependencies=[Depends(require_admin)])
-def admin_remove_fanpage(identifier: str = Query(..., description="Fanpage id, slug or URL")):
+async def admin_remove_fanpage(identifier: str = Query(..., description="Fanpage id, slug or URL")):
+    from server import manager
+
     removed = remove_fanpage(identifier)
     if not removed:
         raise HTTPException(status_code=404, detail="Fanpage not found.")
     (FEEDS_DIR / f"{removed.slug}.xml").unlink(missing_ok=True)
     purge_fanpage_events(removed.id, removed.slug)
     generate_all_rss()
+    await manager.broadcast_to_all({"event": "status", "message": f"Removed fanpage: {removed.name or removed.slug}", "refresh_tree": True})
     return {"removed": removed.to_dict()}
 
 
@@ -310,7 +358,7 @@ ADMIN_HTML = """<!DOCTYPE html>
       if (!url) return;
       try {
         const r = await api('POST', '/api/admin/fanpages', { url, name });
-        msg(r.created ? 'Added. Scraping started in background.' : 'Fanpage already tracked.', false, 'actionMsg');
+        msg(r.message || (r.created ? 'Added.' : 'Fanpage already tracked.'), false, 'actionMsg');
         document.getElementById('url').value = ''; document.getElementById('name').value = '';
         load();
       } catch (e) { msg(e.message, true, 'actionMsg'); }

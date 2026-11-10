@@ -72,20 +72,67 @@ jobs:
             WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws"
             TUNNEL_MODE="Always-On External Ngrok Server (Synced via API)"
 
-            # 1. Sync fanpage list from the live Ngrok server (so pages added in /admin are also crawled)
+            # 1. Mirror fanpage list from the live Ngrok server (add new pages AND delete removed pages)
             TARGET_URL_VAL="$TARGET_URL" python - << 'PY'
-          import json, os, urllib.request
-          from database import add_fanpage, init_db
+          import json, os, shutil, urllib.request
+          from config import FEEDS_DIR
+          from database import add_fanpage, init_db, list_fanpages, remove_fanpage
+          from database.db import normalize_fb_url
+          from events import purge_fanpage_events, sync_all_event_folders
+          from rss import generate_all_rss
+
           init_db()
           url = os.environ.get("TARGET_URL_VAL") or f"https://{os.environ.get('CLEAN_DOMAIN_VAL')}"
           req = urllib.request.Request(f"{url}/api/fanpages", headers={"ngrok-skip-browser-warning": "true"})
           try:
               with urllib.request.urlopen(req, timeout=15) as r:
                   fps = json.loads(r.read().decode("utf-8"))
+              if not isinstance(fps, list):
+                  raise ValueError("Unexpected /api/fanpages response format")
+
+              live_urls = set()
+              live_slugs = set()
               for fp in fps:
-                  if fp.get("url"):
-                      add_fanpage(fp["url"], fp.get("name"))
-              print(f"Synced {len(fps)} fanpage(s) from live server.")
+                  raw_url = fp.get("url")
+                  if not raw_url:
+                      continue
+                  canon_url, slug = normalize_fb_url(raw_url)
+                  live_urls.add(canon_url)
+                  live_slugs.add(slug)
+                  if fp.get("slug"):
+                      live_slugs.add(fp["slug"])
+                  add_fanpage(raw_url, fp.get("name"))
+
+              removed_count = 0
+              for local_fp, _ in list_fanpages(active_only=False):
+                  if local_fp.url not in live_urls:
+                      remove_fanpage(str(local_fp.id))
+                      (FEEDS_DIR / f"{local_fp.slug}.xml").unlink(missing_ok=True)
+                      purge_fanpage_events(local_fp.id, local_fp.slug)
+                      removed_count += 1
+                      print(f"Removed deleted fanpage from Actions DB: {local_fp.url}")
+
+              # Remove any stale orphan XML or fanpage folders not in live_slugs
+              reserved_dirs = {"all", "emails", "fanpages", "inbox", "users"}
+              for xml_file in FEEDS_DIR.glob("*.xml"):
+                  stem = xml_file.stem
+                  if stem == "all" or stem.startswith("user_"):
+                      continue
+                  if stem not in live_slugs:
+                      xml_file.unlink(missing_ok=True)
+              for d in FEEDS_DIR.iterdir():
+                  if d.is_dir() and d.name not in reserved_dirs and d.name not in live_slugs:
+                      shutil.rmtree(d, ignore_errors=True)
+              fanpages_dir = FEEDS_DIR / "fanpages"
+              if fanpages_dir.exists():
+                  for d in fanpages_dir.iterdir():
+                      if d.is_dir() and d.name not in live_slugs:
+                          shutil.rmtree(d, ignore_errors=True)
+
+              if removed_count:
+                  generate_all_rss()
+                  sync_all_event_folders()
+              print(f"Synced {len(fps)} active fanpage(s) from live server (removed {removed_count}).")
           except Exception as exc:
               print(f"Warning syncing fanpages from live server: {exc}")
           PY

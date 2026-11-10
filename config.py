@@ -33,6 +33,7 @@ SCROLL_COUNT = 4                 # Number of scrolls per fanpage to load recent 
 SCROLL_DELAY_MS = 2500           # Wait time between scrolls in milliseconds
 PAGE_TIMEOUT_MS = 45000          # Page navigation timeout
 MAX_POSTS_IN_RSS = 50            # Max items to include in generated XML feed
+INITIAL_NEW_PAGE_POST_LIMIT = 5  # Fetch only the 5 most recent posts when scraping a newly added page
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

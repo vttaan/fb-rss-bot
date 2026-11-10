@@ -19,6 +19,7 @@ from config import (
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
     FEEDS_DIR,
+    INITIAL_NEW_PAGE_POST_LIMIT,
     SCRAPE_MISFIRE_GRACE_SECONDS,
     SCRAPE_TIMEZONE,
 )
@@ -80,10 +81,16 @@ async def run_scrape_cycle(
     summary_table.add_column("RSS XML File", style="cyan")
     summary_table.add_column("Status")
 
-    for idx, (fp, _) in enumerate(rows):
+    for idx, (fp, existing_count) in enumerate(rows):
+        is_new_page = (fp.last_checked_at is None) or (existing_count == 0)
         console.print(f"[bold blue]-> [{idx + 1}/{len(rows)}] Scraping:[/bold blue] {fp.url} ...")
         try:
             page_title, scraped_items = await scrape_fanpage(fp.url)
+            if is_new_page and len(scraped_items) > INITIAL_NEW_PAGE_POST_LIMIT:
+                scraped_items = scraped_items[:INITIAL_NEW_PAGE_POST_LIMIT]
+                console.print(
+                    f"[cyan]   New fanpage: keeping {len(scraped_items)} most recent post(s).[/cyan]"
+                )
             update_fanpage_metadata(fp.id, name=page_title)
             if page_title:
                 fp.name = page_title
