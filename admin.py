@@ -6,15 +6,17 @@ Clients send the token in the `X-Admin-Token` header.
 import asyncio
 import hmac
 import os
+from datetime import datetime
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from config import FEEDS_DIR
-from database import add_fanpage, list_fanpages, remove_fanpage
-from events import purge_fanpage_events
-from rss import generate_all_rss
+from database import add_fanpage, ensure_local_tz, list_fanpages, remove_fanpage, save_posts, update_fanpage_metadata
+from events import analyze_fanpage_posts, purge_fanpage_events, sync_all_event_folders
+from rss import generate_all_rss, generate_fanpage_rss
 
 router = APIRouter()
 
@@ -22,6 +24,24 @@ router = APIRouter()
 class AddFanpageRequest(BaseModel):
     url: str
     name: str | None = None
+
+
+class CrawledPostItem(BaseModel):
+    post_id: str
+    post_url: str = ""
+    content: str = ""
+    media_urls: List[str] = Field(default_factory=list)
+    published_at: Optional[str] = None
+
+
+class CrawledFanpagePayload(BaseModel):
+    url: str
+    name: Optional[str] = None
+    posts: List[CrawledPostItem] = Field(default_factory=list)
+
+
+class ImportCrawlRequest(BaseModel):
+    fanpages: List[CrawledFanpagePayload] = Field(default_factory=list)
 
 
 def require_admin(x_admin_token: str = Header(default="")) -> None:
@@ -40,6 +60,90 @@ def _event_count(slug: str) -> int:
         return int(json.loads(path.read_text(encoding="utf-8")).get("count", 0))
     except Exception:
         return 0
+
+
+@router.get("/api/admin/verify", dependencies=[Depends(require_admin)])
+def admin_verify_token():
+    """Verify X-Admin-Token from main-page login before redirecting to /admin."""
+    return {"ok": True}
+
+
+@router.post("/api/admin/scrape", dependencies=[Depends(require_admin)])
+async def admin_trigger_scrape():
+    """Trigger a full scrape + extractor cycle across all tracked Facebook fanpages."""
+    from server import trigger_background_scrape
+
+    asyncio.create_task(trigger_background_scrape())
+    return {"status": "started"}
+
+
+@router.post("/api/admin/import-crawl", dependencies=[Depends(require_admin)])
+async def admin_import_crawl(body: ImportCrawlRequest):
+    """
+    Receive scraped fanpage posts pushed from the 3x/day GitHub Actions crawler,
+    save new posts, run the unified event extractor, update XML/JSON folders, and
+    notify connected dashboard WebSockets.
+    """
+    from server import manager
+
+    total_new_posts = 0
+    total_events = 0
+    fanpages_synced = 0
+
+    for fp_payload in body.fanpages:
+        try:
+            fp, _ = add_fanpage(fp_payload.url, fp_payload.name)
+        except ValueError:
+            continue
+
+        update_fanpage_metadata(fp.id, name=fp_payload.name)
+        if fp_payload.name:
+            fp.name = fp_payload.name
+
+        scraped_items = []
+        for p in fp_payload.posts:
+            pub_dt = None
+            if p.published_at:
+                try:
+                    pub_dt = ensure_local_tz(datetime.fromisoformat(p.published_at.replace("Z", "+00:00")))
+                except Exception:
+                    pub_dt = None
+            scraped_items.append(
+                {
+                    "post_id": p.post_id,
+                    "post_url": p.post_url,
+                    "content": p.content,
+                    "media_urls": p.media_urls,
+                    "published_at": pub_dt,
+                }
+            )
+
+        new_posts = save_posts(fp.id, scraped_items)
+        total_new_posts += len(new_posts)
+        generate_fanpage_rss(fp)
+
+        ev_stats = await asyncio.to_thread(analyze_fanpage_posts, fp.id)
+        total_events += int(ev_stats.get("events", 0))
+        fanpages_synced += 1
+
+        if new_posts:
+            await manager.on_new_posts_scraped(fp, new_posts)
+
+    generate_all_rss()
+    await asyncio.to_thread(sync_all_event_folders)
+    await manager.broadcast_to_all(
+        {
+            "event": "status",
+            "message": f"Synced scheduled crawl: {fanpages_synced} fanpage(s), {total_new_posts} new post(s).",
+            "refresh_tree": True,
+        }
+    )
+    return {
+        "status": "ok",
+        "fanpages_synced": fanpages_synced,
+        "new_posts": total_new_posts,
+        "events_found": total_events,
+    }
 
 
 @router.get("/api/admin/fanpages", dependencies=[Depends(require_admin)])
@@ -103,38 +207,48 @@ ADMIN_HTML = """<!DOCTYPE html>
 <body>
   <div class="container">
     <div class="panel row" style="justify-content:space-between;">
-      <h2 style="margin:0;">Admin: Manage Fanpages</h2>
-      <a href="/">&larr; Back to dashboard</a>
+      <div>
+        <h2 style="margin:0;">Admin: Manage All Facebook Fanpages</h2>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:4px;">Add, remove, or scrape tracked Facebook fanpages (feeds automatically sync to Directory Tree)</div>
+      </div>
+      <div class="row">
+        <button class="secondary" id="scrapeAllBtn" onclick="scrapeAll()" style="display:none;">↻ Scrape All Now</button>
+        <button class="danger" id="logoutBtn" onclick="logoutAdmin()" style="display:none;">🔒 Lock &amp; Logout</button>
+        <a href="/">&larr; Back to main page</a>
+      </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="unlockPanel">
       <div class="row">
-        <input id="token" type="password" placeholder="Admin token" />
-        <button class="secondary" onclick="saveToken()">Unlock</button>
+        <input id="token" type="password" placeholder="Enter Admin Token (ADMIN_TOKEN)" onkeydown="if(event.key==='Enter')saveToken()" />
+        <button class="secondary" onclick="saveToken()">Unlock Admin</button>
       </div>
       <div id="msg"></div>
     </div>
 
-    <div class="panel">
-      <h3 style="margin-top:0;">Add fanpage</h3>
-      <div class="row">
-        <input id="url" placeholder="https://www.facebook.com/nasa or page name" />
-        <input id="name" placeholder="Display name (optional)" style="max-width:260px;" />
-        <button onclick="addFanpage()">+ Add &amp; scrape</button>
+    <div id="adminContent" style="display:none;">
+      <div class="panel">
+        <h3 style="margin-top:0;">Add Facebook Fanpage</h3>
+        <div class="row">
+          <input id="url" placeholder="https://www.facebook.com/nasa or page name" />
+          <input id="name" placeholder="Display name (optional)" style="max-width:260px;" />
+          <button onclick="addFanpage()">+ Add &amp; Scrape</button>
+        </div>
+        <div id="actionMsg" style="margin-top:10px; font-size:14px; color:var(--muted);"></div>
       </div>
-    </div>
 
-    <div class="panel">
-      <h3 style="margin-top:0;">Tracked fanpages (<span id="count">0</span>)</h3>
-      <table>
-        <thead><tr><th>Name</th><th>URL</th><th>Posts</th><th>Events</th><th>Last checked</th><th></th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
+      <div class="panel">
+        <h3 style="margin-top:0;">Tracked Facebook Fanpages (<span id="count">0</span>)</h3>
+        <table>
+          <thead><tr><th>Name</th><th>URL</th><th>Posts</th><th>Events</th><th>Last checked</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <script>
-    const msg = (t, bad) => { const m = document.getElementById('msg'); m.textContent = t; m.style.color = bad ? '#c2476b' : '#8c86a3'; };
+    const msg = (t, bad, id = 'msg') => { const m = document.getElementById(id); if (!m) return; m.textContent = t; m.style.color = bad ? '#c2476b' : '#2f8f6b'; };
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const headers = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' });
 
@@ -146,25 +260,48 @@ ADMIN_HTML = """<!DOCTYPE html>
     }
 
     function saveToken() {
-      sessionStorage.setItem('adminToken', document.getElementById('token').value);
+      const tok = document.getElementById('token').value.trim();
+      if (!tok) return;
+      sessionStorage.setItem('adminToken', tok);
       load();
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('adminToken');
+      window.location.href = '/';
     }
 
     async function load() {
       try {
         const list = await api('GET', '/api/admin/fanpages');
+        document.getElementById('unlockPanel').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        document.getElementById('scrapeAllBtn').style.display = 'inline-block';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
         document.getElementById('count').textContent = list.length;
         document.getElementById('rows').innerHTML = list.map(f => `
           <tr>
-            <td><strong>${esc(f.name)}</strong></td>
+            <td><strong>${esc(f.name)}</strong><br><a href="/feeds/fanpages/${encodeURIComponent(f.slug)}/events.json" target="_blank" style="font-size:12px;">events.json ↗</a></td>
             <td><a href="${esc(f.url)}" target="_blank">${esc(f.url)}</a></td>
             <td>${f.post_count}</td>
             <td><span class="pill">${f.event_count}</span></td>
             <td>${esc(f.last_checked_at ? new Date(f.last_checked_at).toLocaleString() : '-')}</td>
             <td><button class="danger" data-id="${f.id}" data-name="${esc(f.name)}" onclick="removeFanpage(this)">Remove</button></td>
           </tr>`).join('');
-        msg('Unlocked.');
-      } catch (e) { msg(e.message, true); }
+      } catch (e) {
+        document.getElementById('unlockPanel').style.display = 'block';
+        document.getElementById('adminContent').style.display = 'none';
+        document.getElementById('scrapeAllBtn').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'none';
+        msg(e.message, true);
+      }
+    }
+
+    async function scrapeAll() {
+      try {
+        await api('POST', '/api/admin/scrape');
+        msg('Background scrape & extraction started across all tracked fanpages.', false, 'actionMsg');
+      } catch (e) { msg(e.message, true, 'actionMsg'); }
     }
 
     async function addFanpage() {
@@ -173,18 +310,18 @@ ADMIN_HTML = """<!DOCTYPE html>
       if (!url) return;
       try {
         const r = await api('POST', '/api/admin/fanpages', { url, name });
-        msg(r.created ? 'Added. Scraping started in background.' : 'Fanpage already tracked.');
+        msg(r.created ? 'Added. Scraping started in background.' : 'Fanpage already tracked.', false, 'actionMsg');
         document.getElementById('url').value = ''; document.getElementById('name').value = '';
         load();
-      } catch (e) { msg(e.message, true); }
+      } catch (e) { msg(e.message, true, 'actionMsg'); }
     }
 
     async function removeFanpage(btn) {
       if (!confirm('Remove "' + btn.dataset.name + '" and its posts, feed and events?')) return;
       try {
         await api('DELETE', '/api/admin/fanpages?identifier=' + encodeURIComponent(btn.dataset.id));
-        msg('Removed.'); load();
-      } catch (e) { msg(e.message, true); }
+        msg('Removed.', false, 'actionMsg'); load();
+      } catch (e) { msg(e.message, true, 'actionMsg'); }
     }
 
     if (sessionStorage.getItem('adminToken')) load();

@@ -25,6 +25,7 @@ from database import (
     Fanpage,
     Post,
     get_all_events,
+    get_all_recent_posts,
     get_inbox_messages,
     get_or_create_user,
     get_posts_for_user,
@@ -93,17 +94,16 @@ class ConnectionManager:
     async def on_new_posts_scraped(self, fanpage: Fanpage, new_posts: List[Post]) -> None:
         """
         Callback invoked by the scraper whenever new posts are saved for a fanpage.
-        Pushes new posts ONLY to connected users subscribed to `fanpage.id`.
+        Pushes new posts to public dashboard listeners and to subscribed users.
         """
-        subscriber_ids = get_subscribers_for_fanpage(fanpage.id)
-        if not subscriber_ids:
-            return
-
         payload = {
             "event": "new_posts",
             "fanpage": fanpage.to_dict(),
             "posts": [p.to_dict() for p in new_posts],
         }
+        await self.send_to_user("__public__", payload)
+
+        subscriber_ids = get_subscribers_for_fanpage(fanpage.id)
         for client_id in subscriber_ids:
             if client_id in self.active_connections:
                 generate_user_rss_xml(client_id)
@@ -115,6 +115,7 @@ scheduler = AsyncIOScheduler(timezone=SCRAPE_TIMEZONE)
 SERVER_INTERVAL_SECONDS: Optional[int] = None
 SERVER_SCRAPE_HOURS: str = DEFAULT_SCRAPE_HOURS
 SERVER_SCRAPE_MINUTE: int = DEFAULT_SCRAPE_MINUTE
+SERVER_AUTO_SCRAPE: bool = True
 
 
 async def scheduled_scrape_task() -> None:
@@ -154,28 +155,30 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
 async def lifespan(app: FastAPI):
     init_db()
     await asyncio.to_thread(sync_all_event_folders)
-    if SERVER_INTERVAL_SECONDS is not None:
-        scheduler.add_job(
-            scheduled_scrape_task,
-            trigger="interval",
-            seconds=SERVER_INTERVAL_SECONDS,
-            id="server_scheduled_scrape",
-            max_instances=1,
-            coalesce=True,
-            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
-        )
-    else:
-        scheduler.add_job(
-            scheduled_scrape_task,
-            trigger=build_daily_cron_trigger(hours_str=SERVER_SCRAPE_HOURS, minute=SERVER_SCRAPE_MINUTE),
-            id="server_scheduled_scrape",
-            max_instances=1,
-            coalesce=True,
-            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
-        )
-    scheduler.start()
+    if SERVER_AUTO_SCRAPE:
+        if SERVER_INTERVAL_SECONDS is not None:
+            scheduler.add_job(
+                scheduled_scrape_task,
+                trigger="interval",
+                seconds=SERVER_INTERVAL_SECONDS,
+                id="server_scheduled_scrape",
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+            )
+        else:
+            scheduler.add_job(
+                scheduled_scrape_task,
+                trigger=build_daily_cron_trigger(hours_str=SERVER_SCRAPE_HOURS, minute=SERVER_SCRAPE_MINUTE),
+                id="server_scheduled_scrape",
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+            )
+        scheduler.start()
     yield
-    scheduler.shutdown(wait=False)
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
@@ -315,11 +318,17 @@ def api_get_directory_tree():
 @app.get("/api/schedule")
 def api_get_schedule():
     """Return the active scrape schedule configuration and next run timestamp."""
-    job = scheduler.get_job("server_scheduled_scrape")
+    job = scheduler.get_job("server_scheduled_scrape") if scheduler.running else None
     next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
     parsed_hours = parse_scrape_hours(SERVER_SCRAPE_HOURS)
+    mode = (
+        "external_push"
+        if not SERVER_AUTO_SCRAPE
+        else ("interval" if SERVER_INTERVAL_SECONDS is not None else "daily_cron")
+    )
     return {
-        "mode": "interval" if SERVER_INTERVAL_SECONDS is not None else "daily_cron",
+        "mode": mode,
+        "auto_scrape": SERVER_AUTO_SCRAPE,
         "timezone": str(SCRAPE_TIMEZONE),
         "interval_seconds": SERVER_INTERVAL_SECONDS,
         "scheduled_times_ict": [f"{h:02d}:{SERVER_SCRAPE_MINUTE:02d}" for h in parsed_hours],
@@ -428,6 +437,16 @@ def api_list_fanpages():
         {**fp.to_dict(), "post_count": count}
         for fp, count in rows
     ]
+
+
+@app.get("/api/posts")
+def api_list_all_posts(limit: int = Query(50, ge=1, le=200)):
+    """Return latest scraped posts across all tracked Facebook fanpages."""
+    posts = get_all_recent_posts(limit=limit)
+    return {
+        "count": len(posts),
+        "posts": [p.to_dict() for p in posts],
+    }
 
 
 @app.post("/api/scrape")
@@ -566,7 +585,40 @@ def serve_feed_file(file_path: str):
     return FileResponse(target, media_type="application/rss+xml; charset=utf-8")
 
 
-# --- WebSocket Endpoint ---
+# --- WebSocket Endpoints ---
+
+
+@app.websocket("/ws")
+async def public_websocket_endpoint(websocket: WebSocket):
+    """
+    Shared real-time WebSocket endpoint for the main server page (no per-client separation).
+    Sends all tracked fanpages and recent posts on connect, and supports {"action": "refresh"}.
+    """
+    await manager.connect("__public__", websocket)
+    fanpages = [{**fp.to_dict(), "post_count": count} for fp, count in list_fanpages(active_only=False)]
+    posts = get_all_recent_posts(limit=50)
+    await websocket.send_json(
+        {
+            "event": "init",
+            "fanpages": fanpages,
+            "posts": [p.to_dict() for p in posts],
+        }
+    )
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data.get("action") == "refresh":
+                if not manager.scrape_lock.locked():
+                    asyncio.create_task(trigger_background_scrape())
+                else:
+                    await websocket.send_json(
+                        {"event": "status", "message": "A scrape cycle is already in progress..."}
+                    )
+    except WebSocketDisconnect:
+        manager.disconnect("__public__", websocket)
+    except Exception:
+        manager.disconnect("__public__", websocket)
 
 
 @app.websocket("/ws/{client_id}")
@@ -874,16 +926,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <span>🌐 Public Endpoint: <a href="https://stimulus-rectangle-ship.ngrok-free.dev/" target="_blank">https://stimulus-rectangle-ship.ngrok-free.dev/</a></span>
           <span>· <a href="/feeds/all/events.json" target="_blank">All Events JSON ↗</a></span>
           <span>· <a href="/feeds/emails/events.json" target="_blank">Email Events JSON ↗</a></span>
+          <span>· <a href="/feeds/all.xml" target="_blank">Combined RSS XML ↗</a></span>
           <span>· <a href="/api/tree" target="_blank">API Tree Index ↗</a></span>
           <span>· <a href="/docs" target="_blank">OpenAPI Docs ↗</a></span>
-          <span>· <a href="/admin">Admin ⚙</a></span>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <label style="font-weight:600; font-size:13.5px;">Client ID:</label>
-        <input id="userInput" value="user_1" style="width:120px;" />
-        <button onclick="connectWS()">Switch Client</button>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span id="scheduleBadge" class="badge sky">Schedule: 08:00, 14:00, 20:00 ICT</span>
         <span id="wsBadge" class="badge">Disconnected</span>
+        <button onclick="openAdminLogin()">🔐 Admin Login</button>
       </div>
     </div>
 
@@ -963,24 +1014,43 @@ Content-Type: application/json
       </div>
     </div>
 
-    <!-- Fanpage Subscriptions & Crawler Controls -->
+    <!-- Tracked Facebook Fanpages (Managed via /admin) -->
     <div class="panel">
       <div class="panel-title">
-        <h3 style="margin:0;">📡 Tracked Facebook Fanpages &amp; Daily Crawler</h3>
-        <span>
-          <a id="rssLink" href="/users/user_1/rss.xml" target="_blank">Personal RSS Feed (.xml) ↗</a>
-        </span>
+        <div>
+          <h3 style="margin:0;">📡 Tracked Facebook Fanpages (<span id="fanpageCount">0</span>)</h3>
+          <div style="font-size:13px; color:var(--muted); margin-top:3px;">
+            Unified crawler targets across the server. Add or remove fanpages in the Admin subpage.
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="secondary" onclick="triggerRefresh()">↻ Run Crawler &amp; Extractor Now</button>
+          <button onclick="openAdminLogin()">⚙ Manage Fanpages (Admin)</button>
+        </div>
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input id="fanpageInput" placeholder="https://www.facebook.com/nasa or sab.ctda" style="flex:1; min-width:260px;" />
-        <button onclick="subscribeFanpage()">+ Subscribe Fanpage</button>
-        <button class="secondary" onclick="triggerRefresh()">Run Crawler &amp; Extractor Now</button>
-      </div>
-      <div id="subsContainer" class="chips"></div>
+      <div id="fanpagesContainer" class="chips"></div>
     </div>
 
-    <h3>Live Scraped Posts (<span id="postCount">0</span> posts)</h3>
+    <h3>Latest Scraped Posts (<span id="postCount">0</span> posts)</h3>
     <div id="postsContainer"></div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="adminLoginModal" onclick="if(event.target.id==='adminLoginModal') closeAdminLogin()" style="display:none; position:fixed; inset:0; background:rgba(25,20,45,0.55); z-index:1000; align-items:center; justify-content:center; padding:24px;">
+    <div class="modal-card" style="width:min(460px, 94vw);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <strong style="font-size:17px;">🔐 Admin Login — Manage Facebook Fanpages</strong>
+        <button class="ghost" onclick="closeAdminLogin()">✕ Close</button>
+      </div>
+      <div style="font-size:13.5px; color:var(--muted); margin-bottom:12px;">
+        Enter your server <code>ADMIN_TOKEN</code> to unlock the <code>/admin</code> fanpage management subpage.
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input id="adminTokenInput" type="password" placeholder="Enter ADMIN_TOKEN" onkeydown="if(event.key==='Enter') submitAdminLogin()" />
+        <button id="adminLoginBtn" onclick="submitAdminLogin()">Login &rarr;</button>
+      </div>
+      <div id="adminLoginMsg" style="margin-top:10px; font-size:13.5px; min-height:20px;"></div>
+    </div>
   </div>
 
   <!-- JSON Preview Modal -->
@@ -1182,36 +1252,97 @@ Content-Type: application/json
       }
     }
 
-    function connectWS() {
-      const userId = document.getElementById('userInput').value.trim() || 'user_1';
-      document.getElementById('rssLink').href = `/users/${encodeURIComponent(userId)}/rss.xml`;
-      if (ws) ws.close();
+    async function openAdminLogin() {
+      const saved = sessionStorage.getItem('adminToken');
+      if (saved) {
+        try {
+          const res = await fetch('/api/admin/verify', { headers: { 'X-Admin-Token': saved } });
+          if (res.ok) {
+            window.location.href = '/admin';
+            return;
+          }
+        } catch (e) {}
+      }
+      document.getElementById('adminLoginMsg').textContent = '';
+      document.getElementById('adminTokenInput').value = '';
+      document.getElementById('adminLoginModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('adminTokenInput').focus(), 50);
+    }
 
+    function closeAdminLogin() {
+      document.getElementById('adminLoginModal').style.display = 'none';
+    }
+
+    async function submitAdminLogin() {
+      const token = document.getElementById('adminTokenInput').value.trim();
+      const msgEl = document.getElementById('adminLoginMsg');
+      const btn = document.getElementById('adminLoginBtn');
+      if (!token) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = 'Please enter your ADMIN_TOKEN.';
+        return;
+      }
+      btn.disabled = true;
+      msgEl.style.color = '#7e7896';
+      msgEl.textContent = 'Verifying admin token...';
+      try {
+        const res = await fetch('/api/admin/verify', { headers: { 'X-Admin-Token': token } });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        sessionStorage.setItem('adminToken', token);
+        window.location.href = '/admin';
+      } catch (err) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadScheduleBadge() {
+      try {
+        const res = await fetch('/api/schedule');
+        const data = await res.json();
+        const badge = document.getElementById('scheduleBadge');
+        if (data.mode === 'daily_cron') {
+          badge.textContent = 'Daily: ' + (data.scheduled_times_ict || []).join(', ') + ' ICT';
+        } else {
+          badge.textContent = 'Interval: ' + data.interval_seconds + 's';
+        }
+      } catch (e) {}
+    }
+
+    function connectWS() {
+      if (ws) ws.close();
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${proto}//${location.host}/ws/${encodeURIComponent(userId)}`);
+      ws = new WebSocket(`${proto}//${location.host}/ws`);
 
       ws.onopen = () => {
-        document.getElementById('wsBadge').textContent = 'Connected (' + userId + ')';
+        document.getElementById('wsBadge').textContent = 'Live Connected';
         document.getElementById('status').textContent = 'Listening for real-time crawler & client inbox events...';
       };
 
       ws.onmessage = (evt) => {
         const msg = JSON.parse(evt.data);
-        if (msg.event === 'init' || msg.event === 'subscriptions_updated') {
-          renderSubs(msg.subscriptions || []);
+        if (msg.event === 'init') {
+          renderFanpages(msg.fanpages || []);
           currentPosts = msg.posts || [];
           renderPosts();
         } else if (msg.event === 'new_posts') {
           document.getElementById('status').textContent = `New post(s) arrived from ${msg.fanpage.name}!`;
           currentPosts = [...msg.posts, ...currentPosts];
           renderPosts();
+          loadFanpages();
           loadDirectoryTree();
         } else if (msg.event === 'inbox_updated') {
           loadInboxMessages();
           loadDirectoryTree();
         } else if (msg.event === 'status' || msg.event === 'error') {
           document.getElementById('status').textContent = msg.message;
-          if (msg.refresh_tree) loadDirectoryTree();
+          if (msg.refresh_tree) {
+            loadDirectoryTree();
+            loadFanpages();
+          }
         }
       };
 
@@ -1221,16 +1352,12 @@ Content-Type: application/json
       };
     }
 
-    function subscribeFanpage() {
-      const val = document.getElementById('fanpageInput').value.trim();
-      if (!val || !ws) return;
-      ws.send(JSON.stringify({ action: 'subscribe', urls: [val] }));
-      document.getElementById('fanpageInput').value = '';
-    }
-
-    function unsubscribeFanpage(url) {
-      if (!ws) return;
-      ws.send(JSON.stringify({ action: 'unsubscribe', url }));
+    async function loadFanpages() {
+      try {
+        const res = await fetch('/api/fanpages');
+        const list = await res.json();
+        renderFanpages(list || []);
+      } catch (e) {}
     }
 
     function triggerRefresh() {
@@ -1238,16 +1365,21 @@ Content-Type: application/json
       ws.send(JSON.stringify({ action: 'refresh' }));
     }
 
-    function renderSubs(subs) {
-      const el = document.getElementById('subsContainer');
-      if (!subs.length) {
-        el.innerHTML = '<span style="color:#8c86a3;font-size:14px;">No fanpages selected for this user yet. Add one above!</span>';
+    function renderFanpages(list) {
+      document.getElementById('fanpageCount').textContent = list.length;
+      const el = document.getElementById('fanpagesContainer');
+      if (!list.length) {
+        el.innerHTML = '<span style="color:#8c86a3;font-size:14px;">No Facebook fanpages tracked yet. Log into Admin to add fanpages!</span>';
         return;
       }
-      el.innerHTML = subs.map(s => `
+      el.innerHTML = list.map(f => `
         <div class="chip">
-          <span><strong>${esc(s.name)}</strong> (<a href="/feeds/fanpages/${encodeURIComponent(s.slug)}/events.json" target="_blank">events.json</a>)</span>
-          <button class="danger" onclick="unsubscribeFanpage('${esc(s.url)}')">✕</button>
+          <span>
+            <strong>${esc(f.name)}</strong>
+            (${f.post_count ?? 0} posts ·
+            <a href="/feeds/fanpages/${encodeURIComponent(f.slug)}/events.json" target="_blank">events.json</a> ·
+            <a href="/feeds/${encodeURIComponent(f.slug)}.xml" target="_blank">rss.xml</a>)
+          </span>
         </div>
       `).join('');
     }
@@ -1269,6 +1401,7 @@ Content-Type: application/json
       `).join('');
     }
 
+    loadScheduleBadge();
     loadDirectoryTree();
     loadInboxMessages();
     connectWS();

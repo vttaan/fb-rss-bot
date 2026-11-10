@@ -215,6 +215,11 @@ def cmd_serve(
         "-i",
         help="Optional fixed refresh interval in seconds (overrides --hours daily cron mode).",
     ),
+    no_scrape: bool = typer.Option(
+        False,
+        "--no-scrape",
+        help="Disable internal scheduler scraping (use when GitHub Actions pushes crawled data).",
+    ),
 ) -> None:
     """Host the FastAPI + WebSocket + Inbox + Directory Tree Server."""
     import uvicorn
@@ -222,17 +227,19 @@ def cmd_serve(
 
     server.SERVER_INTERVAL_SECONDS = interval
     server.SERVER_SCRAPE_HOURS = hours
-    schedule_desc = (
-        f"Every {interval}s ({interval / 3600:.2f} hr)"
-        if interval is not None
-        else f"Daily Cron at [{hours}] (Asia/Ho_Chi_Minh, UTC+7)"
-    )
+    server.SERVER_AUTO_SCRAPE = not no_scrape
+    if no_scrape:
+        schedule_desc = "External Push Only (GitHub Actions crawler -> POST /api/admin/import-crawl)"
+    elif interval is not None:
+        schedule_desc = f"Every {interval}s ({interval / 3600:.2f} hr)"
+    else:
+        schedule_desc = f"Daily Cron at [{hours}] (Asia/Ho_Chi_Minh, UTC+7)"
     console.print(
         f"[bold green]Starting Event Extractor Hub & RSS Server[/bold green]\n"
         f"  Dashboard & Tree UI : [underline cyan]http://{host}:{port}/[/underline cyan]\n"
+        f"  Admin Subpage       : [cyan]http://{host}:{port}/admin[/cyan]\n"
         f"  Client Email Inbox  : [cyan]http://{host}:{port}/api/inbox[/cyan]\n"
-        f"  WebSocket Endpoint  : [cyan]ws://{host}:{port}/ws/<client_id>[/cyan]\n"
-        f"  User RSS XML Feed   : [cyan]http://{host}:{port}/users/<client_id>/rss.xml[/cyan]\n"
+        f"  WebSocket Endpoint  : [cyan]ws://{host}:{port}/ws[/cyan]\n"
         f"  OpenAPI Docs        : [cyan]http://{host}:{port}/docs[/cyan]\n"
         f"  Scrape Schedule     : {schedule_desc}\n"
     )

@@ -1,19 +1,18 @@
-name: Scheduled Scrape (08:00, 14:00, 20:00 ICT) & Publish XML/JSON to Ngrok & GitHub Pages
+name: Scheduled Crawler (08:00, 14:00, 20:00 ICT) -> Sync to 24/7 Ngrok & GitHub Pages
 
 on:
   # Trigger ~13 minutes early at off-peak minute (:47) so GitHub Actions queue delay +
-  # setup (~2-3 mins) finish before 08:00, 14:00, and 20:00 Asia/Ho_Chi_Minh (UTC+7).
-  # Avoiding ":00" prevents GitHub cron throttling/drops (which caused 2x/day or off-hour runs).
+  # setup (~2-3 mins) finish in time for 08:00, 14:00, and 20:00 Asia/Ho_Chi_Minh (UTC+7).
   schedule:
-    - cron: "47 0 * * *"   # ~07:47 ICT -> live & scraped for 08:00 ICT
-    - cron: "47 6 * * *"   # ~13:47 ICT -> live & scraped for 14:00 ICT
-    - cron: "47 12 * * *"  # ~19:47 ICT -> live & scraped for 20:00 ICT
+    - cron: "47 0 * * *"   # ~07:47 ICT -> crawls & deploys for 08:00 ICT
+    - cron: "47 6 * * *"   # ~13:47 ICT -> crawls & deploys for 14:00 ICT
+    - cron: "47 12 * * *"  # ~19:47 ICT -> crawls & deploys for 20:00 ICT
   workflow_dispatch:
     inputs:
       stay_awake_minutes:
-        description: "Minutes to keep Ngrok live after scraping (default: 5)"
+        description: "Fallback awake minutes if 24/7 Ngrok server is offline (default: 10)"
         required: false
-        default: "5"
+        default: "10"
 
 concurrency:
   group: live-websocket-server
@@ -46,58 +45,139 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install Python dependencies, Playwright & Tunnel CLI
+      - name: Install Python dependencies & Playwright
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
           playwright install --with-deps chromium
 
-          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-            | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
-            | sudo tee /etc/apt/sources.list.d/ngrok.list
-          sudo apt update && sudo apt install -y ngrok
-
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-
-      - name: Start Live Server, Open Ngrok Tunnel & Run Scrape + Extractor
+      - name: Detect 24/7 Ngrok Server, Crawl & Deploy Data
         run: |
-          # 1. Start the FastAPI + Directory Tree + Email Inbox server
-          nohup python main.py serve --host 127.0.0.1 --port 8000 --hours "8,14,20" > server.log 2>&1 < /dev/null &
-          for i in {1..15}; do
-            if curl -fsS http://127.0.0.1:8000/api/schedule >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
+          RAW_DOMAIN="${NGROK_DOMAIN:-stimulus-rectangle-ship.ngrok-free.dev}"
+          CLEAN_DOMAIN="${RAW_DOMAIN#https://}"
+          CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
+          CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
+          TARGET_URL="https://$CLEAN_DOMAIN"
 
-          PUBLIC_URL=""
+          LIVE_SERVER_UP="false"
+          if curl -fsS --max-time 8 -H "ngrok-skip-browser-warning: true" "$TARGET_URL/api/schedule" >/dev/null 2>&1; then
+            LIVE_SERVER_UP="true"
+          fi
 
-          # 2. Open permanent ngrok domain (defaulting to stimulus-rectangle-ship.ngrok-free.dev)
-          if [ -n "$NGROK_AUTHTOKEN" ]; then
-            ngrok config add-authtoken "$NGROK_AUTHTOKEN"
-            RAW_DOMAIN="${NGROK_DOMAIN:-stimulus-rectangle-ship.ngrok-free.dev}"
-            CLEAN_DOMAIN="${RAW_DOMAIN#https://}"
-            CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
-            CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
-            nohup ngrok http --url="https://$CLEAN_DOMAIN" 8000 --log=stdout > tunnel.log 2>&1 < /dev/null &
-            sleep 4
-            PUBLIC_URL="https://$CLEAN_DOMAIN"
-            TUNNEL_MODE="Permanent Static Domain (ngrok)"
+          echo "LIVE_SERVER_UP=$LIVE_SERVER_UP" >> "$GITHUB_ENV"
+
+          if [ "$LIVE_SERVER_UP" = "true" ]; then
+            echo "🟢 24/7 Ngrok server is ONLINE at $TARGET_URL — running 3x/day crawler & pushing data..."
+            PUBLIC_URL="$TARGET_URL"
+            WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws"
+            TUNNEL_MODE="Always-On External Ngrok Server (Synced via API)"
+
+            # 1. Sync fanpage list from the live Ngrok server (so pages added in /admin are also crawled)
+            TARGET_URL_VAL="$TARGET_URL" python - << 'PY'
+          import json, os, urllib.request
+          from database import add_fanpage, init_db
+          init_db()
+          url = os.environ.get("TARGET_URL_VAL") or f"https://{os.environ.get('CLEAN_DOMAIN_VAL')}"
+          req = urllib.request.Request(f"{url}/api/fanpages", headers={"ngrok-skip-browser-warning": "true"})
+          try:
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  fps = json.loads(r.read().decode("utf-8"))
+              for fp in fps:
+                  if fp.get("url"):
+                      add_fanpage(fp["url"], fp.get("name"))
+              print(f"Synced {len(fps)} fanpage(s) from live server.")
+          except Exception as exc:
+              print(f"Warning syncing fanpages from live server: {exc}")
+          PY
+
+            # 2. Run Playwright crawler + extractor locally inside GitHub Actions (~2-5 mins)
+            python main.py fetch
+            python main.py list
+
+            # 3. Push freshly scraped posts & metadata to the 24/7 Ngrok server
+            SYNC_RESULT=$(TARGET_URL_VAL="$TARGET_URL" python - << 'PY'
+          import json, os, urllib.request
+          from database import list_fanpages, get_posts_for_fanpage
+          payload = {"fanpages": []}
+          for fp, _ in list_fanpages(active_only=True):
+              posts = get_posts_for_fanpage(fp.id, limit=50)
+              payload["fanpages"].append({
+                  "url": fp.url,
+                  "name": fp.name,
+                  "posts": [
+                      {
+                          "post_id": p.post_id,
+                          "post_url": p.post_url,
+                          "content": p.content,
+                          "media_urls": p.media_urls,
+                          "published_at": p.published_at.isoformat() if p.published_at else None,
+                      }
+                      for p in posts
+                  ],
+              })
+          target = os.environ["TARGET_URL_VAL"]
+          headers = {
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true",
+              "X-Admin-Token": os.environ.get("ADMIN_TOKEN", ""),
+          }
+          req = urllib.request.Request(
+              f"{target}/api/admin/import-crawl",
+              data=json.dumps(payload).encode("utf-8"),
+              headers=headers,
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  print(r.read().decode("utf-8"))
+          except Exception as exc:
+              print(json.dumps({"status": "push_failed", "detail": str(exc)}))
+          PY
+            )
+            echo "Push to 24/7 Ngrok server result: $SYNC_RESULT"
+            SCRAPE_RESULT="$SYNC_RESULT"
           else
-            nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 < /dev/null &
-            for i in {1..20}; do
-              PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || true)
-              if [ -n "$PUBLIC_URL" ]; then
+            echo "🟡 24/7 Ngrok server is OFFLINE — falling back to temporary runner Ngrok window..."
+            curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+              | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+            echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+              | sudo tee /etc/apt/sources.list.d/ngrok.list
+            sudo apt update && sudo apt install -y ngrok
+
+            nohup python main.py serve --host 127.0.0.1 --port 8000 --hours "8,14,20" > server.log 2>&1 < /dev/null &
+            for i in {1..15}; do
+              if curl -fsS http://127.0.0.1:8000/api/schedule >/dev/null 2>&1; then
                 break
               fi
               sleep 1
             done
-            TUNNEL_MODE="Temporary Cloudflare Tunnel"
-          fi
 
-          WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws/user_1"
+            if [ -n "$NGROK_AUTHTOKEN" ]; then
+              ngrok config add-authtoken "$NGROK_AUTHTOKEN"
+              nohup ngrok http --url="https://$CLEAN_DOMAIN" 8000 --log=stdout > tunnel.log 2>&1 < /dev/null &
+              sleep 4
+              PUBLIC_URL="https://$CLEAN_DOMAIN"
+              TUNNEL_MODE="Fallback Runner Static Domain (ngrok)"
+            else
+              curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+              sudo dpkg -i cloudflared.deb
+              nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8000 > tunnel.log 2>&1 < /dev/null &
+              for i in {1..20}; do
+                PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' tunnel.log | head -n 1 || true)
+                if [ -n "$PUBLIC_URL" ]; then
+                  break
+                fi
+                sleep 1
+              done
+              TUNNEL_MODE="Fallback Temporary Cloudflare Tunnel"
+            fi
+
+            WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws"
+            echo "🔍 Running fanpage crawler & unified event extractor..."
+            SCRAPE_RESULT=$(curl -sS -X POST http://127.0.0.1:8000/api/scrape || echo '{"status":"error"}')
+            echo "Scrape response: $SCRAPE_RESULT"
+            python main.py list
+          fi
 
           {
             echo "PUBLIC_URL=$PUBLIC_URL"
@@ -105,33 +185,12 @@ jobs:
             echo "TUNNEL_MODE=$TUNNEL_MODE"
           } >> "$GITHUB_ENV"
 
-          echo "=================================================================="
-          echo "⏰ SERVER ACTIVATED AT  : $(date '+%Y-%m-%d %H:%M:%S %z')"
-          echo "🌐 TUNNEL MODE         : $TUNNEL_MODE"
-          echo "🚀 NGROK DASHBOARD     : $PUBLIC_URL/"
-          echo "📥 CLIENT EMAIL INBOX  : $PUBLIC_URL/api/inbox"
-          echo "🗂️  DIRECTORY TREE API  : $PUBLIC_URL/api/tree"
-          echo "📅 ALL EVENTS JSON     : $PUBLIC_URL/feeds/all/events.json"
-          echo "📧 EMAIL EVENTS JSON   : $PUBLIC_URL/feeds/emails/events.json"
-          echo "⚙️  ADMIN PANEL         : $PUBLIC_URL/admin"
-          echo "📖 OPENAPI DOCS        : $PUBLIC_URL/docs"
-          echo "🔌 WEBSOCKET ENDPOINT  : $WS_URL"
-          echo "📰 ALL RSS XML FEED    : $PUBLIC_URL/feeds/all.xml"
-          echo "=================================================================="
-
-          # 3. Trigger immediate scrape + unified event extraction
-          echo "🔍 Running fanpage crawler & unified event extractor..."
-          SCRAPE_RESULT=$(curl -sS -X POST http://127.0.0.1:8000/api/scrape || echo '{"status":"error"}')
-          echo "Scrape response: $SCRAPE_RESULT"
-          python main.py list
-
-          # 4. Write clean Markdown summary with clickable Ngrok links
           {
-            echo "## 🚀 Event Extractor Hub — Ngrok Server Live"
+            echo "## 🚀 Scheduled Crawler & Ngrok Sync"
             echo ""
-            echo "- **Activated At:** \`$(date '+%Y-%m-%d %H:%M:%S %Z (%z)')\`"
-            echo "- **Tunnel Mode:** $TUNNEL_MODE"
-            echo "- **Scrape Result:** \`$SCRAPE_RESULT\`"
+            echo "- **Ran At:** \`$(date '+%Y-%m-%d %H:%M:%S %Z (%z)')\`"
+            echo "- **Mode:** $TUNNEL_MODE"
+            echo "- **Sync Result:** \`$SCRAPE_RESULT\`"
             echo ""
             echo "| Endpoint | Link |"
             echo "| :--- | :--- |"
@@ -146,12 +205,16 @@ jobs:
             echo "| 🔌 **WebSocket Feed** | \`$WS_URL\` |"
             echo "| 📰 **Combined RSS XML Feed** | [$PUBLIC_URL/feeds/all.xml]($PUBLIC_URL/feeds/all.xml) |"
           } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          TARGET_URL_VAL: https://${{ secrets.NGROK_DOMAIN || 'stimulus-rectangle-ship.ngrok-free.dev' }}
+          CLEAN_DOMAIN_VAL: ${{ secrets.NGROK_DOMAIN || 'stimulus-rectangle-ship.ngrok-free.dev' }}
 
-      - name: Stay Awake (Cover Target Hour Window & Client Requests)
+      - name: Fallback Stay-Awake Window (Only when 24/7 Ngrok host was offline)
+        if: env.LIVE_SERVER_UP != 'true'
         run: |
           WAIT_MIN="${{ github.event.inputs.stay_awake_minutes }}"
           if [ -z "$WAIT_MIN" ]; then
-            WAIT_MIN=5
+            WAIT_MIN=10
           fi
 
           NOW_TS=$(date +%s)
@@ -165,12 +228,10 @@ jobs:
           MIN_WAIT_SEC=$(( WAIT_MIN * 60 ))
           TARGET_WAIT_SEC=$MIN_WAIT_SEC
 
-          # If triggered during pre-hour ramp (07:45-07:59, 13:45-13:59, 19:45-19:59 ICT),
-          # keep Ngrok awake across the target hour up to X+1:05 ICT so clients connecting at 08:00/14:00/20:00 succeed.
           if [ "$CURRENT_MINUTE" -ge 45 ] && { [ "$CURRENT_HOUR" -eq 7 ] || [ "$CURRENT_HOUR" -eq 13 ] || [ "$CURRENT_HOUR" -eq 19 ]; }; then
             TARGET_WAIT_SEC=$(( (65 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
-          elif [ "$CURRENT_MINUTE" -lt 5 ]; then
-            TARGET_WAIT_SEC=$(( (5 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
+          elif [ "$CURRENT_MINUTE" -lt 10 ]; then
+            TARGET_WAIT_SEC=$(( (10 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
           fi
 
           if [ "$TARGET_WAIT_SEC" -gt "$MIN_WAIT_SEC" ]; then
@@ -179,14 +240,13 @@ jobs:
             SLEEP_SEC=$MIN_WAIT_SEC
           fi
 
-          # Safety cap at 18 minutes so the job always finishes commit & Pages deploy within timeout-minutes: 25
           MAX_SLEEP_SEC=$(( 18 * 60 ))
           if [ "$SLEEP_SEC" -gt "$MAX_SLEEP_SEC" ]; then
             SLEEP_SEC=$MAX_SLEEP_SEC
           fi
 
           END_TIME=$(( NOW_TS + SLEEP_SEC ))
-          echo "🟢 Ngrok server ($PUBLIC_URL) waiting for client requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
+          echo "🟢 Fallback runner Ngrok server ($PUBLIC_URL) waiting until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
 
           LAST_LINE=0
           while [ $(date +%s) -lt $END_TIME ]; do
@@ -200,9 +260,7 @@ jobs:
             sleep 10
           done
 
-          echo "💤 Client request window ended at $(date '+%Y-%m-%d %H:%M:%S %z'). Preparing to save & sleep..."
-
-      - name: Save SQLite DB & Distributed JSON/XML Feeds Before Sleeping
+      - name: Save SQLite DB & Distributed JSON/XML Feeds
         if: always()
         run: |
           git config user.name "github-actions[bot]"
@@ -211,7 +269,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No database or feed changes to commit."
           else
-            git commit -m "chore(rss): scheduled scrape, email inbox extraction & feed sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
+            git commit -m "chore(rss): scheduled crawl & feed sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin ${{ github.ref_name }} || true
           fi
