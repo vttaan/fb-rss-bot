@@ -11,7 +11,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from config import DEFAULT_INTERVAL_SECONDS, FEEDS_DIR
+from config import DEFAULT_SCRAPE_HOURS, FEEDS_DIR
 from database.models import ensure_local_tz
 from database import (
     add_fanpage,
@@ -122,16 +122,21 @@ def cmd_fetch(
 @app.command("start")
 def cmd_start(
     urls: Optional[List[str]] = typer.Argument(
-        None, help="Optional fanpage URL(s) to add before starting the 1-hour scraper loop."
+        None, help="Optional fanpage URL(s) to add before starting the scheduled scraper."
     ),
-    interval: int = typer.Option(
-        DEFAULT_INTERVAL_SECONDS,
+    hours: str = typer.Option(
+        DEFAULT_SCRAPE_HOURS,
+        "--hours",
+        help="Comma-separated daily scrape hours in Asia/Ho_Chi_Minh (default: 8,14,20).",
+    ),
+    interval: Optional[int] = typer.Option(
+        None,
         "--interval",
         "-i",
-        help="Refresh interval in seconds (default: 3600 = 1 hour).",
+        help="Optional fixed interval in seconds (overrides --hours daily cron mode).",
     ),
 ) -> None:
-    """Start the continuous RSS scraper bot (fetches every 1 hour by default)."""
+    """Start the continuous RSS scraper bot (default: 3x daily at 08:00, 14:00, 20:00 ICT)."""
     init_db()
     if urls:
         for raw_url in urls:
@@ -143,7 +148,7 @@ def cmd_start(
                 console.print(f"[red]x Invalid URL '{raw_url}': {exc}[/red]")
 
     try:
-        asyncio.run(start_scheduler_async(interval_seconds=interval))
+        asyncio.run(start_scheduler_async(interval_seconds=interval, hours_str=hours))
     except KeyboardInterrupt:
         console.print("\n[yellow]Stopped by user.[/yellow]")
 
@@ -199,25 +204,37 @@ def cmd_export_rss() -> None:
 def cmd_serve(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host address to bind."),
     port: int = typer.Option(8000, "--port", "-p", help="Port number to bind."),
-    interval: int = typer.Option(
-        DEFAULT_INTERVAL_SECONDS,
+    hours: str = typer.Option(
+        DEFAULT_SCRAPE_HOURS,
+        "--hours",
+        help="Comma-separated daily scrape hours in Asia/Ho_Chi_Minh (default: 8,14,20).",
+    ),
+    interval: Optional[int] = typer.Option(
+        None,
         "--interval",
         "-i",
-        help="Background scrape refresh interval in seconds (default: 3600 = 1 hour).",
+        help="Optional fixed refresh interval in seconds (overrides --hours daily cron mode).",
     ),
 ) -> None:
-    """Host the FastAPI + WebSocket + RSS server for multi-user fanpage subscriptions."""
+    """Host the FastAPI + WebSocket + Inbox + Directory Tree Server."""
     import uvicorn
     import server
 
     server.SERVER_INTERVAL_SECONDS = interval
+    server.SERVER_SCRAPE_HOURS = hours
+    schedule_desc = (
+        f"Every {interval}s ({interval / 3600:.2f} hr)"
+        if interval is not None
+        else f"Daily Cron at [{hours}] (Asia/Ho_Chi_Minh, UTC+7)"
+    )
     console.print(
-        f"[bold green]Starting Facebook Fanpage WebSocket & RSS Server[/bold green]\n"
-        f"  Dashboard & Test UI : [underline cyan]http://{host}:{port}/[/underline cyan]\n"
+        f"[bold green]Starting Event Extractor Hub & RSS Server[/bold green]\n"
+        f"  Dashboard & Tree UI : [underline cyan]http://{host}:{port}/[/underline cyan]\n"
+        f"  Client Email Inbox  : [cyan]http://{host}:{port}/api/inbox[/cyan]\n"
         f"  WebSocket Endpoint  : [cyan]ws://{host}:{port}/ws/<client_id>[/cyan]\n"
         f"  User RSS XML Feed   : [cyan]http://{host}:{port}/users/<client_id>/rss.xml[/cyan]\n"
         f"  OpenAPI Docs        : [cyan]http://{host}:{port}/docs[/cyan]\n"
-        f"  Scrape Interval     : {interval}s ({interval / 3600:.2f} hr)\n"
+        f"  Scrape Schedule     : {schedule_desc}\n"
     )
     uvicorn.run(server.app, host=host, port=port, log_level="info")
 

@@ -1,10 +1,16 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Timezone Configuration (Default: Local system timezone / GMT+7)
-LOCAL_TIMEZONE = datetime.now().astimezone().tzinfo or timezone(timedelta(hours=7))
+# Timezone Configuration (Asia/Ho_Chi_Minh / GMT+7)
+try:
+    SCRAPE_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+except Exception:
+    SCRAPE_TIMEZONE = timezone(timedelta(hours=7))
+
+LOCAL_TIMEZONE = datetime.now().astimezone().tzinfo or SCRAPE_TIMEZONE
 
 # SQLite Database Configuration
 DB_PATH = BASE_DIR / "rss_bot.db"
@@ -19,7 +25,10 @@ PUBLIC_NGROK_DOMAIN = "stimulus-rectangle-ship.ngrok-free.dev"
 PUBLIC_NGROK_URL = f"https://{PUBLIC_NGROK_DOMAIN}"
 
 # Scraping & Scheduler Settings
-DEFAULT_INTERVAL_SECONDS = 3600  # 1 hour
+DEFAULT_INTERVAL_SECONDS = 3600  # 1 hour (when explicitly using interval mode)
+DEFAULT_SCRAPE_HOURS = "8,14,20"  # 3 times daily at 08:00, 14:00, 20:00 ICT
+DEFAULT_SCRAPE_MINUTE = 0
+SCRAPE_MISFIRE_GRACE_SECONDS = 900  # 15-minute grace window so delayed/paused runs still fire
 SCROLL_COUNT = 4                 # Number of scrolls per fanpage to load recent posts
 SCROLL_DELAY_MS = 2500           # Wait time between scrolls in milliseconds
 PAGE_TIMEOUT_MS = 45000          # Page navigation timeout

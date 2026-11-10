@@ -1,14 +1,17 @@
 name: Scheduled Scrape (08:00, 14:00, 20:00 ICT) & Publish XML/JSON to Ngrok & GitHub Pages
 
 on:
-  # 08:00, 14:00, 20:00 Asia/Ho_Chi_Minh (UTC+7) = 01:00, 07:00, 13:00 UTC
+  # Trigger ~13 minutes early at off-peak minute (:47) so GitHub Actions queue delay +
+  # setup (~2-3 mins) finish before 08:00, 14:00, and 20:00 Asia/Ho_Chi_Minh (UTC+7).
+  # Avoiding ":00" prevents GitHub cron throttling/drops (which caused 2x/day or off-hour runs).
   schedule:
-    - cron: "0 1,7,13 * * *"
-  # Also allows manual trigger anytime for testing
+    - cron: "47 0 * * *"   # ~07:47 ICT -> live & scraped for 08:00 ICT
+    - cron: "47 6 * * *"   # ~13:47 ICT -> live & scraped for 14:00 ICT
+    - cron: "47 12 * * *"  # ~19:47 ICT -> live & scraped for 20:00 ICT
   workflow_dispatch:
     inputs:
       stay_awake_minutes:
-        description: "Minutes to stay awake waiting for client RSS/WebSocket/Inbox requests (default: 5)"
+        description: "Minutes to keep Ngrok live after scraping (default: 5)"
         required: false
         default: "5"
 
@@ -22,7 +25,7 @@ permissions:
   id-token: write
 
 jobs:
-  hourly-scrape-and-serve:
+  scheduled-scrape-and-serve:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -58,11 +61,16 @@ jobs:
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Start Live Server, Open Public Tunnel & Scrape Fanpages
+      - name: Start Live Server, Open Ngrok Tunnel & Run Scrape + Extractor
         run: |
-          # 1. Start the FastAPI + WebSocket + Inbox + Directory Tree server immediately
-          nohup python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 < /dev/null &
-          sleep 3
+          # 1. Start the FastAPI + Directory Tree + Email Inbox server
+          nohup python main.py serve --host 127.0.0.1 --port 8000 --hours "8,14,20" > server.log 2>&1 < /dev/null &
+          for i in {1..15}; do
+            if curl -fsS http://127.0.0.1:8000/api/schedule >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
 
           PUBLIC_URL=""
 
@@ -91,35 +99,55 @@ jobs:
 
           WS_URL="${PUBLIC_URL/https:\/\//wss:\/\/}/ws/user_1"
 
-          echo "=================================================================="
-          echo "⏰ SERVER ACTIVATED AT : $(date '+%Y-%m-%d %H:%M:%S %z')"
-          echo "🌐 TUNNEL MODE        : $TUNNEL_MODE"
-          echo "🚀 LIVE DIRECTORY TREE: $PUBLIC_URL"
-          echo "📥 CLIENT EMAIL INBOX : $PUBLIC_URL/api/inbox"
-          echo "🗂️ ALL EVENTS JSON    : $PUBLIC_URL/feeds/all/events.json"
-          echo "📧 EMAIL EVENTS JSON  : $PUBLIC_URL/feeds/emails/events.json"
-          echo "🔌 WEBSOCKET ENDPOINT : $WS_URL"
-          echo "📰 ALL RSS XML FEED   : $PUBLIC_URL/feeds/all.xml"
-          echo "=================================================================="
-
           {
-            echo "### 🚀 Event Extractor Hub & Directory Tree Activated!"
-            echo "- **Activated At:** \`$(date '+%Y-%m-%d %H:%M:%S %z')\`"
-            echo "- **Directory Tree & Inbox UI:** [$PUBLIC_URL]($PUBLIC_URL)"
-            echo "- **Client Email Inbox POST Endpoint:** \`$PUBLIC_URL/api/inbox\`"
-            echo "- **All Unified Events JSON:** [$PUBLIC_URL/feeds/all/events.json]($PUBLIC_URL/feeds/all/events.json)"
-            echo "- **Email Events JSON:** [$PUBLIC_URL/feeds/emails/events.json]($PUBLIC_URL/feeds/emails/events.json)"
-            echo "- **WebSocket Endpoint:** \`$WS_URL\`"
-            echo "- **Combined RSS XML Feed:** [$PUBLIC_URL/feeds/all.xml]($PUBLIC_URL/feeds/all.xml)"
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "PUBLIC_URL=$PUBLIC_URL"
+            echo "WS_URL=$WS_URL"
+            echo "TUNNEL_MODE=$TUNNEL_MODE"
+          } >> "$GITHUB_ENV"
 
-          # 3. Trigger immediate scrape + unified event extraction inside the running server
-          echo "🔍 Scraping newly uploaded posts across tracked fanpages and running extractor..."
-          curl -sS -X POST http://127.0.0.1:8000/api/scrape
-          echo ""
+          echo "=================================================================="
+          echo "⏰ SERVER ACTIVATED AT  : $(date '+%Y-%m-%d %H:%M:%S %z')"
+          echo "🌐 TUNNEL MODE         : $TUNNEL_MODE"
+          echo "🚀 NGROK DASHBOARD     : $PUBLIC_URL/"
+          echo "📥 CLIENT EMAIL INBOX  : $PUBLIC_URL/api/inbox"
+          echo "🗂️  DIRECTORY TREE API  : $PUBLIC_URL/api/tree"
+          echo "📅 ALL EVENTS JSON     : $PUBLIC_URL/feeds/all/events.json"
+          echo "📧 EMAIL EVENTS JSON   : $PUBLIC_URL/feeds/emails/events.json"
+          echo "⚙️  ADMIN PANEL         : $PUBLIC_URL/admin"
+          echo "📖 OPENAPI DOCS        : $PUBLIC_URL/docs"
+          echo "🔌 WEBSOCKET ENDPOINT  : $WS_URL"
+          echo "📰 ALL RSS XML FEED    : $PUBLIC_URL/feeds/all.xml"
+          echo "=================================================================="
+
+          # 3. Trigger immediate scrape + unified event extraction
+          echo "🔍 Running fanpage crawler & unified event extractor..."
+          SCRAPE_RESULT=$(curl -sS -X POST http://127.0.0.1:8000/api/scrape || echo '{"status":"error"}')
+          echo "Scrape response: $SCRAPE_RESULT"
           python main.py list
 
-      - name: Stay Awake Until X:05 (Window for Client Fetch & Email Inbox Requests)
+          # 4. Write clean Markdown summary with clickable Ngrok links
+          {
+            echo "## 🚀 Event Extractor Hub — Ngrok Server Live"
+            echo ""
+            echo "- **Activated At:** \`$(date '+%Y-%m-%d %H:%M:%S %Z (%z)')\`"
+            echo "- **Tunnel Mode:** $TUNNEL_MODE"
+            echo "- **Scrape Result:** \`$SCRAPE_RESULT\`"
+            echo ""
+            echo "| Endpoint | Link |"
+            echo "| :--- | :--- |"
+            echo "| 🌐 **Live Dashboard & Directory Tree** | [$PUBLIC_URL/]($PUBLIC_URL/) |"
+            echo "| 📥 **Client Email Inbox (`POST`)** | \`$PUBLIC_URL/api/inbox\` |"
+            echo "| 🗂️ **Directory Tree Index (`GET`)** | [$PUBLIC_URL/api/tree]($PUBLIC_URL/api/tree) |"
+            echo "| 📅 **All Unified Events JSON** | [$PUBLIC_URL/feeds/all/events.json]($PUBLIC_URL/feeds/all/events.json) |"
+            echo "| 📧 **Email Events JSON** | [$PUBLIC_URL/feeds/emails/events.json]($PUBLIC_URL/feeds/emails/events.json) |"
+            echo "| ⚙️ **Admin Panel** | [$PUBLIC_URL/admin]($PUBLIC_URL/admin) |"
+            echo "| ⏰ **Schedule Status** | [$PUBLIC_URL/api/schedule]($PUBLIC_URL/api/schedule) |"
+            echo "| 📖 **OpenAPI / Swagger Docs** | [$PUBLIC_URL/docs]($PUBLIC_URL/docs) |"
+            echo "| 🔌 **WebSocket Feed** | \`$WS_URL\` |"
+            echo "| 📰 **Combined RSS XML Feed** | [$PUBLIC_URL/feeds/all.xml]($PUBLIC_URL/feeds/all.xml) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stay Awake (Cover Target Hour Window & Client Requests)
         run: |
           WAIT_MIN="${{ github.event.inputs.stay_awake_minutes }}"
           if [ -z "$WAIT_MIN" ]; then
@@ -127,27 +155,38 @@ jobs:
           fi
 
           NOW_TS=$(date +%s)
+          CURRENT_HOUR=$(date +%H | sed 's/^0*//')
           CURRENT_MINUTE=$(date +%M | sed 's/^0*//')
           CURRENT_SECOND=$(date +%S | sed 's/^0*//')
+          CURRENT_HOUR=${CURRENT_HOUR:-0}
           CURRENT_MINUTE=${CURRENT_MINUTE:-0}
           CURRENT_SECOND=${CURRENT_SECOND:-0}
 
-          # Calculate seconds remaining until X:05:59, and ensure at least WAIT_MIN (5 mins) awake window
           MIN_WAIT_SEC=$(( WAIT_MIN * 60 ))
-          if [ "$CURRENT_MINUTE" -lt 5 ]; then
-            UNTIL_X05=$(( (5 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
-          else
-            UNTIL_X05=$MIN_WAIT_SEC
+          TARGET_WAIT_SEC=$MIN_WAIT_SEC
+
+          # If triggered during pre-hour ramp (07:45-07:59, 13:45-13:59, 19:45-19:59 ICT),
+          # keep Ngrok awake across the target hour up to X+1:05 ICT so clients connecting at 08:00/14:00/20:00 succeed.
+          if [ "$CURRENT_MINUTE" -ge 45 ] && { [ "$CURRENT_HOUR" -eq 7 ] || [ "$CURRENT_HOUR" -eq 13 ] || [ "$CURRENT_HOUR" -eq 19 ]; }; then
+            TARGET_WAIT_SEC=$(( (65 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
+          elif [ "$CURRENT_MINUTE" -lt 5 ]; then
+            TARGET_WAIT_SEC=$(( (5 - CURRENT_MINUTE) * 60 - CURRENT_SECOND ))
           fi
 
-          if [ "$UNTIL_X05" -gt "$MIN_WAIT_SEC" ]; then
-            SLEEP_SEC=$UNTIL_X05
+          if [ "$TARGET_WAIT_SEC" -gt "$MIN_WAIT_SEC" ]; then
+            SLEEP_SEC=$TARGET_WAIT_SEC
           else
             SLEEP_SEC=$MIN_WAIT_SEC
           fi
 
+          # Safety cap at 18 minutes so the job always finishes commit & Pages deploy within timeout-minutes: 25
+          MAX_SLEEP_SEC=$(( 18 * 60 ))
+          if [ "$SLEEP_SEC" -gt "$MAX_SLEEP_SEC" ]; then
+            SLEEP_SEC=$MAX_SLEEP_SEC
+          fi
+
           END_TIME=$(( NOW_TS + SLEEP_SEC ))
-          echo "🟢 Server is now waiting for client JSON fetch & email inbox POST requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
+          echo "🟢 Ngrok server ($PUBLIC_URL) waiting for client requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
 
           LAST_LINE=0
           while [ $(date +%s) -lt $END_TIME ]; do
@@ -161,7 +200,7 @@ jobs:
             sleep 10
           done
 
-          echo "💤 Client request window ended at $(date '+%Y-%m-%d %H:%M:%S %z'). Preparing to sleep..."
+          echo "💤 Client request window ended at $(date '+%Y-%m-%d %H:%M:%S %z'). Preparing to save & sleep..."
 
       - name: Save SQLite DB & Distributed JSON/XML Feeds Before Sleeping
         if: always()
@@ -213,34 +252,64 @@ jobs:
           if [ -d "feeds/inbox" ]; then
             cp -r feeds/inbox/* site/inbox/ 2>/dev/null || true
           fi
+
+          LIVE_URL="${PUBLIC_URL:-https://stimulus-rectangle-ship.ngrok-free.dev}"
           UPDATED=$(date '+%Y-%m-%d %H:%M %Z')
-          {
-            echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            echo '<title>Event Extractor Directory Tree</title><style>'
-            echo 'body{font-family:system-ui,sans-serif;background:#f6f3ff;color:#3b3552;margin:0;padding:40px}'
-            echo '.wrap{max-width:1100px;margin:0 auto}.card{background:#fff;border-radius:18px;padding:24px 28px;margin-bottom:20px;box-shadow:0 4px 18px #b8a9e822}'
-            echo 'h1{margin-top:0}h2{color:#7a6bb8;margin-top:0;font-family:monospace}a{color:#5b7fd6;text-decoration:none}li{margin:8px 0;font-family:monospace}.muted{color:#8c86a3}'
-            echo '</style></head><body><div class="wrap"><div class="card"><h1>Event Extractor — Distributed Directory Tree</h1>'
-            echo "<p class=\"muted\">Updated at $UPDATED. Live Ngrok Server &amp; Email Inbox: <a href=\"https://stimulus-rectangle-ship.ngrok-free.dev/\">https://stimulus-rectangle-ship.ngrok-free.dev/</a></p></div>"
-            for d in all fanpages emails inbox users; do
-              echo "<div class=\"card\"><h2>📂 /$d/</h2><ul>"
-              for f in $(find "site/$d" -type f \( -name "*.json" -o -name "*.xml" \) | sort); do
-                [ -e "$f" ] || continue
-                N=${f#site/$d/}
-                echo "<li>├─ 📄 <a href=\"$d/$N\">$d/$N</a></li>"
-              done
-              echo '</ul></div>'
+          cat << EOF > site/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+            <title>Event Extractor — Distributed Directory Tree</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #f6f3ff 0%, #eaf4ff 55%, #fff1f6 100%); color: #3b3552; margin: 0; padding: 36px 24px; }
+              .wrap { max-width: 1080px; margin: 0 auto; }
+              .card { background: #fff; border-radius: 18px; padding: 24px 28px; margin-bottom: 20px; box-shadow: 0 6px 22px #b8a9e822; }
+              h1 { margin: 0 0 8px 0; font-size: 24px; }
+              h2 { color: #6957b8; margin: 0 0 12px 0; font-family: ui-monospace, Consolas, monospace; font-size: 18px; }
+              .muted { color: #7e7896; margin: 0 0 16px 0; font-size: 14px; }
+              .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+              .btn { display: inline-block; padding: 10px 16px; border-radius: 10px; background: #7c69ef; color: #fff; font-weight: 600; font-size: 14px; text-decoration: none; }
+              .btn.secondary { background: #ece8ff; color: #5242a8; }
+              ul { list-style: none; padding-left: 8px; margin: 0; }
+              li { margin: 8px 0; font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
+              a { color: #4b6fd4; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <div class="wrap">
+              <div class="card">
+                <h1>Event Extractor — Distributed Directory Tree</h1>
+                <p class="muted">Updated at <strong>$UPDATED</strong> · Scheduled daily at <strong>08:00, 14:00, 20:00 ICT (UTC+7)</strong>.</p>
+                <div class="btn-row">
+                  <a class="btn" href="$LIVE_URL/" target="_blank">🚀 Open Live Ngrok Dashboard &amp; Inbox</a>
+                  <a class="btn secondary" href="$LIVE_URL/api/tree" target="_blank">🗂️ API Directory Tree</a>
+                  <a class="btn secondary" href="$LIVE_URL/admin" target="_blank">⚙️ Admin Panel</a>
+                  <a class="btn secondary" href="all/events.json" target="_blank">📅 All Events JSON</a>
+                </div>
+              </div>
+          EOF
+          for d in all fanpages emails inbox users; do
+            echo "<div class=\"card\"><h2>📂 /$d/</h2><ul>" >> site/index.html
+            for f in $(find "site/$d" -type f \( -name "*.json" -o -name "*.xml" \) | sort); do
+              [ -e "$f" ] || continue
+              N=${f#site/$d/}
+              echo "<li>├─ 📄 <a href=\"$d/$N\">$d/$N</a></li>" >> site/index.html
             done
-            echo '</div></body></html>'
-          } > site/index.html
+            echo '</ul></div>' >> site/index.html
+          done
+          echo '</div></body></html>' >> site/index.html
 
       - name: Upload GitHub Pages Artifact
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
           path: "site"
+
   deploy-github-pages:
-    needs: hourly-scrape-and-serve
+    needs: scheduled-scrape-and-serve
     if: always()
     runs-on: ubuntu-latest
     permissions:

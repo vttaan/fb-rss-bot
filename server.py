@@ -11,7 +11,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from config import DEFAULT_INTERVAL_SECONDS, FEEDS_DIR, LOCAL_TIMEZONE, PUBLIC_NGROK_URL
+from config import (
+    DEFAULT_INTERVAL_SECONDS,
+    DEFAULT_SCRAPE_HOURS,
+    DEFAULT_SCRAPE_MINUTE,
+    FEEDS_DIR,
+    LOCAL_TIMEZONE,
+    PUBLIC_NGROK_URL,
+    SCRAPE_MISFIRE_GRACE_SECONDS,
+    SCRAPE_TIMEZONE,
+)
 from database import (
     Fanpage,
     Post,
@@ -28,7 +37,7 @@ from database import (
 )
 from events import ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
-from scheduler import run_scrape_cycle
+from scheduler import build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
 
 
 class SubscribeRequest(BaseModel):
@@ -102,15 +111,17 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
-scheduler = AsyncIOScheduler()
-SERVER_INTERVAL_SECONDS = DEFAULT_INTERVAL_SECONDS
+scheduler = AsyncIOScheduler(timezone=SCRAPE_TIMEZONE)
+SERVER_INTERVAL_SECONDS: Optional[int] = None
+SERVER_SCRAPE_HOURS: str = DEFAULT_SCRAPE_HOURS
+SERVER_SCRAPE_MINUTE: int = DEFAULT_SCRAPE_MINUTE
 
 
 async def scheduled_scrape_task() -> None:
     if manager.scrape_lock.locked():
         return
     async with manager.scrape_lock:
-        await manager.broadcast_to_all({"event": "status", "message": "Running scheduled 1-hour fanpage scrape..."})
+        await manager.broadcast_to_all({"event": "status", "message": "Running scheduled fanpage scrape & extractor..."})
         new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
         await manager.broadcast_to_all(
             {
@@ -143,14 +154,25 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
 async def lifespan(app: FastAPI):
     init_db()
     await asyncio.to_thread(sync_all_event_folders)
-    scheduler.add_job(
-        scheduled_scrape_task,
-        trigger="interval",
-        seconds=SERVER_INTERVAL_SECONDS,
-        id="server_hourly_scrape",
-        max_instances=1,
-        coalesce=True,
-    )
+    if SERVER_INTERVAL_SECONDS is not None:
+        scheduler.add_job(
+            scheduled_scrape_task,
+            trigger="interval",
+            seconds=SERVER_INTERVAL_SECONDS,
+            id="server_scheduled_scrape",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+        )
+    else:
+        scheduler.add_job(
+            scheduled_scrape_task,
+            trigger=build_daily_cron_trigger(hours_str=SERVER_SCRAPE_HOURS, minute=SERVER_SCRAPE_MINUTE),
+            id="server_scheduled_scrape",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+        )
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -288,6 +310,21 @@ def _build_feeds_directory_tree() -> Dict[str, Any]:
 def api_get_directory_tree():
     """Return the complete folder tree of distributed JSON and XML files for clients to discover & fetch."""
     return _build_feeds_directory_tree()
+
+
+@app.get("/api/schedule")
+def api_get_schedule():
+    """Return the active scrape schedule configuration and next run timestamp."""
+    job = scheduler.get_job("server_scheduled_scrape")
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    parsed_hours = parse_scrape_hours(SERVER_SCRAPE_HOURS)
+    return {
+        "mode": "interval" if SERVER_INTERVAL_SECONDS is not None else "daily_cron",
+        "timezone": str(SCRAPE_TIMEZONE),
+        "interval_seconds": SERVER_INTERVAL_SECONDS,
+        "scheduled_times_ict": [f"{h:02d}:{SERVER_SCRAPE_MINUTE:02d}" for h in parsed_hours],
+        "next_run_at": next_run,
+    }
 
 
 @app.post("/api/inbox")

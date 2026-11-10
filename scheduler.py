@@ -9,11 +9,19 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from config import DEFAULT_INTERVAL_SECONDS, FEEDS_DIR
+from config import (
+    DEFAULT_INTERVAL_SECONDS,
+    DEFAULT_SCRAPE_HOURS,
+    DEFAULT_SCRAPE_MINUTE,
+    FEEDS_DIR,
+    SCRAPE_MISFIRE_GRACE_SECONDS,
+    SCRAPE_TIMEZONE,
+)
 from database import (
     Fanpage,
     Post,
@@ -135,40 +143,112 @@ async def run_scrape_cycle(
     return total_new_posts
 
 
+def parse_scrape_hours(hours_str: str = DEFAULT_SCRAPE_HOURS) -> List[int]:
+    """Parse a comma-separated list of hours (0-23), falling back to [8, 14, 20]."""
+    hours: List[int] = []
+    for part in (hours_str or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        val = int(part)
+        if 0 <= val <= 23 and val not in hours:
+            hours.append(val)
+    return sorted(hours) if hours else [8, 14, 20]
+
+
+def build_daily_cron_trigger(
+    hours_str: str = DEFAULT_SCRAPE_HOURS,
+    minute: int = DEFAULT_SCRAPE_MINUTE,
+) -> CronTrigger:
+    """Build an APScheduler CronTrigger locked to `Asia/Ho_Chi_Minh` (UTC+7)."""
+    hours = parse_scrape_hours(hours_str)
+    return CronTrigger(
+        hour=",".join(str(h) for h in hours),
+        minute=minute,
+        second=0,
+        timezone=SCRAPE_TIMEZONE,
+    )
+
+
+async def _scheduled_cron_job(hours_str: str, minute: int) -> None:
+    await run_scrape_cycle()
+    trigger = build_daily_cron_trigger(hours_str=hours_str, minute=minute)
+    next_run = trigger.get_next_fire_time(None, datetime.now(SCRAPE_TIMEZONE))
+    if next_run:
+        console.print(
+            f"[dim]Next scheduled fetch at {next_run.strftime('%Y-%m-%d %H:%M:%S %Z')} "
+            f"(3x daily). Press Ctrl+C to stop.[/dim]"
+        )
+
+
 async def _scheduled_job(interval_seconds: int) -> None:
     await run_scrape_cycle()
-    next_run = datetime.now() + timedelta(seconds=interval_seconds)
+    next_run = datetime.now(SCRAPE_TIMEZONE) + timedelta(seconds=interval_seconds)
     console.print(
-        f"[dim]Next automatic fetch scheduled at {next_run.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"[dim]Next automatic fetch scheduled at {next_run.strftime('%Y-%m-%d %H:%M:%S %Z')} "
         f"(in {interval_seconds // 60} mins). Press Ctrl+C to stop.[/dim]"
     )
 
 
-async def start_scheduler_async(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> None:
-    """Run an immediate scrape cycle and then schedule recurring runs every `interval_seconds` (default 1 hour)."""
-    console.print(
-        Panel(
-            f"[bold green]Facebook RSS Bot Daemon Started[/bold green]\n"
-            f"Refresh Interval: [bold]{interval_seconds} seconds ({interval_seconds / 3600:.2f} hour(s))[/bold]\n"
-            f"RSS Output Directory: [cyan]{FEEDS_DIR}[/cyan]\n"
-            f"Press [bold]Ctrl+C[/bold] at any time to stop.",
-            expand=False,
+async def start_scheduler_async(
+    interval_seconds: Optional[int] = None,
+    hours_str: str = DEFAULT_SCRAPE_HOURS,
+    minute: int = DEFAULT_SCRAPE_MINUTE,
+    run_immediately: bool = True,
+) -> None:
+    """
+    Start the scraper daemon.
+    - Default (when `interval_seconds` is None): runs 3x daily at `hours_str` (08:00, 14:00, 20:00 ICT).
+    - If `interval_seconds` is explicitly provided: runs on a fixed second interval.
+    """
+    scheduler = AsyncIOScheduler(timezone=SCRAPE_TIMEZONE)
+
+    if interval_seconds is not None:
+        console.print(
+            Panel(
+                f"[bold green]Facebook RSS Bot Daemon Started (Interval Mode)[/bold green]\n"
+                f"Refresh Interval: [bold]{interval_seconds} seconds ({interval_seconds / 3600:.2f} hour(s))[/bold]\n"
+                f"RSS Output Directory: [cyan]{FEEDS_DIR}[/cyan]\n"
+                f"Press [bold]Ctrl+C[/bold] at any time to stop.",
+                expand=False,
+            )
         )
-    )
+        if run_immediately:
+            await _scheduled_job(interval_seconds)
+        scheduler.add_job(
+            _scheduled_job,
+            trigger="interval",
+            seconds=interval_seconds,
+            args=[interval_seconds],
+            id="fb_rss_scrape_job",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+        )
+    else:
+        parsed_hours = parse_scrape_hours(hours_str)
+        schedule_label = ", ".join(f"{h:02d}:{minute:02d}" for h in parsed_hours) + " ICT (UTC+7)"
+        console.print(
+            Panel(
+                f"[bold green]Facebook RSS Bot Daemon Started (Daily Cron Mode)[/bold green]\n"
+                f"Scheduled Times: [bold]{schedule_label}[/bold]\n"
+                f"RSS Output Directory: [cyan]{FEEDS_DIR}[/cyan]\n"
+                f"Press [bold]Ctrl+C[/bold] at any time to stop.",
+                expand=False,
+            )
+        )
+        if run_immediately:
+            await _scheduled_cron_job(hours_str, minute)
+        scheduler.add_job(
+            _scheduled_cron_job,
+            trigger=build_daily_cron_trigger(hours_str=hours_str, minute=minute),
+            args=[hours_str, minute],
+            id="fb_rss_scrape_job",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=SCRAPE_MISFIRE_GRACE_SECONDS,
+        )
 
-    # Run first fetch immediately
-    await _scheduled_job(interval_seconds)
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        _scheduled_job,
-        trigger="interval",
-        seconds=interval_seconds,
-        args=[interval_seconds],
-        id="fb_rss_scrape_job",
-        max_instances=1,
-        coalesce=True,
-    )
     scheduler.start()
 
     stop_event = asyncio.Event()
