@@ -1,7 +1,7 @@
 name: Manual CLI Scrape Only (No Server)
 
 on:
-  # Manual-only workflow (hourly cron is handled by live_server_demo.yml)
+  # Manual-only workflow (scheduled cron is handled by live_server_demo.yml)
   workflow_dispatch:
     inputs:
       add_fanpage_url:
@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Ho_Chi_Minh
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
 
     steps:
       - name: Checkout repository
@@ -39,12 +41,12 @@ jobs:
         run: |
           python main.py add "${{ github.event.inputs.add_fanpage_url }}"
 
-      - name: Run Facebook Fanpage Scrape Cycle
+      - name: Run Facebook Fanpage Scrape & Event Extractor Cycle
         run: |
           python main.py fetch
           python main.py list
 
-      - name: Commit updated SQLite DB & XML RSS feeds back to repo
+      - name: Commit updated SQLite DB & XML/JSON feeds back to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -52,7 +54,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No new posts or database changes to commit."
           else
-            git commit -m "chore(rss): auto-update scraped posts and XML feeds [skip ci]"
+            git commit -m "chore(rss): auto-update scraped posts and extracted event feeds [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push origin ${{ github.ref_name }}
           fi

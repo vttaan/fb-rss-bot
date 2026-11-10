@@ -1,4 +1,4 @@
-name: Scheduled Scrape (08:00, 14:00, 20:00 ICT) & Publish XML to GitHub Pages
+name: Scheduled Scrape (08:00, 14:00, 20:00 ICT) & Publish XML/JSON to Ngrok & GitHub Pages
 
 on:
   # 08:00, 14:00, 20:00 Asia/Ho_Chi_Minh (UTC+7) = 01:00, 07:00, 13:00 UTC
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       stay_awake_minutes:
-        description: "Minutes to stay awake waiting for client RSS/WebSocket requests (default: 5)"
+        description: "Minutes to stay awake waiting for client RSS/WebSocket/Inbox requests (default: 5)"
         required: false
         default: "5"
 
@@ -60,16 +60,17 @@ jobs:
 
       - name: Start Live Server, Open Public Tunnel & Scrape Fanpages
         run: |
-          # 1. Start the FastAPI + WebSocket + RSS server immediately so clients can connect right away
+          # 1. Start the FastAPI + WebSocket + Inbox + Directory Tree server immediately
           nohup python main.py serve --host 127.0.0.1 --port 8000 --interval 3600 > server.log 2>&1 < /dev/null &
           sleep 3
 
           PUBLIC_URL=""
 
-          # 2. Open permanent ngrok domain (or Cloudflare fallback)
-          if [ -n "$NGROK_AUTHTOKEN" ] && [ -n "$NGROK_DOMAIN" ]; then
+          # 2. Open permanent ngrok domain (defaulting to stimulus-rectangle-ship.ngrok-free.dev)
+          if [ -n "$NGROK_AUTHTOKEN" ]; then
             ngrok config add-authtoken "$NGROK_AUTHTOKEN"
-            CLEAN_DOMAIN="${NGROK_DOMAIN#https://}"
+            RAW_DOMAIN="${NGROK_DOMAIN:-stimulus-rectangle-ship.ngrok-free.dev}"
+            CLEAN_DOMAIN="${RAW_DOMAIN#https://}"
             CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
             CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
             nohup ngrok http --url="https://$CLEAN_DOMAIN" 8000 --log=stdout > tunnel.log 2>&1 < /dev/null &
@@ -93,28 +94,32 @@ jobs:
           echo "=================================================================="
           echo "⏰ SERVER ACTIVATED AT : $(date '+%Y-%m-%d %H:%M:%S %z')"
           echo "🌐 TUNNEL MODE        : $TUNNEL_MODE"
-          echo "🚀 LIVE DASHBOARD URL : $PUBLIC_URL"
+          echo "🚀 LIVE DIRECTORY TREE: $PUBLIC_URL"
+          echo "📥 CLIENT EMAIL INBOX : $PUBLIC_URL/api/inbox"
+          echo "🗂️ ALL EVENTS JSON    : $PUBLIC_URL/feeds/all/events.json"
+          echo "📧 EMAIL EVENTS JSON  : $PUBLIC_URL/feeds/emails/events.json"
           echo "🔌 WEBSOCKET ENDPOINT : $WS_URL"
           echo "📰 ALL RSS XML FEED   : $PUBLIC_URL/feeds/all.xml"
-          echo "📰 USER RSS XML FEED  : $PUBLIC_URL/users/user_1/rss.xml"
           echo "=================================================================="
 
           {
-            echo "### 🚀 Hourly Facebook RSS Server Activated!"
+            echo "### 🚀 Event Extractor Hub & Directory Tree Activated!"
             echo "- **Activated At:** \`$(date '+%Y-%m-%d %H:%M:%S %z')\`"
-            echo "- **Live Dashboard:** [$PUBLIC_URL]($PUBLIC_URL)"
+            echo "- **Directory Tree & Inbox UI:** [$PUBLIC_URL]($PUBLIC_URL)"
+            echo "- **Client Email Inbox POST Endpoint:** \`$PUBLIC_URL/api/inbox\`"
+            echo "- **All Unified Events JSON:** [$PUBLIC_URL/feeds/all/events.json]($PUBLIC_URL/feeds/all/events.json)"
+            echo "- **Email Events JSON:** [$PUBLIC_URL/feeds/emails/events.json]($PUBLIC_URL/feeds/emails/events.json)"
             echo "- **WebSocket Endpoint:** \`$WS_URL\`"
             echo "- **Combined RSS XML Feed:** [$PUBLIC_URL/feeds/all.xml]($PUBLIC_URL/feeds/all.xml)"
-            echo "- **User RSS XML Feed:** [$PUBLIC_URL/users/user_1/rss.xml]($PUBLIC_URL/users/user_1/rss.xml)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # 3. Trigger immediate scrape inside the running server (updates SQLite + .xml feeds + pushes to WebSockets)
-          echo "🔍 Scraping newly uploaded posts across tracked fanpages..."
+          # 3. Trigger immediate scrape + unified event extraction inside the running server
+          echo "🔍 Scraping newly uploaded posts across tracked fanpages and running extractor..."
           curl -sS -X POST http://127.0.0.1:8000/api/scrape
           echo ""
           python main.py list
 
-      - name: Stay Awake Until X:05 (5-Minute Window for Client Requests)
+      - name: Stay Awake Until X:05 (Window for Client Fetch & Email Inbox Requests)
         run: |
           WAIT_MIN="${{ github.event.inputs.stay_awake_minutes }}"
           if [ -z "$WAIT_MIN" ]; then
@@ -142,7 +147,7 @@ jobs:
           fi
 
           END_TIME=$(( NOW_TS + SLEEP_SEC ))
-          echo "🟢 Server is now waiting for client RSS/WebSocket requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
+          echo "🟢 Server is now waiting for client JSON fetch & email inbox POST requests until $(date -d @$END_TIME '+%H:%M:%S %z') (${SLEEP_SEC}s)..."
 
           LAST_LINE=0
           while [ $(date +%s) -lt $END_TIME ]; do
@@ -158,24 +163,24 @@ jobs:
 
           echo "💤 Client request window ended at $(date '+%Y-%m-%d %H:%M:%S %z'). Preparing to sleep..."
 
-      - name: Save SQLite DB & XML RSS Feeds Before Sleeping
+      - name: Save SQLite DB & Distributed JSON/XML Feeds Before Sleeping
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add rss_bot.db feeds/
           if git diff --staged --quiet; then
-            echo "No database or XML feed changes to commit."
+            echo "No database or feed changes to commit."
           else
-            git commit -m "chore(rss): hourly scrape & client sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
+            git commit -m "chore(rss): scheduled scrape, email inbox extraction & feed sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
             git pull --rebase origin ${{ github.ref_name }} || true
             git push origin ${{ github.ref_name }} || true
           fi
 
-      - name: Prepare GitHub Pages Payload (XML in folders)
+      - name: Prepare GitHub Pages Payload (Distributed Directory Tree)
         if: always()
         run: |
-          rm -rf site && mkdir -p site/all site/fanpages site/users
+          rm -rf site && mkdir -p site/all site/fanpages site/emails site/inbox site/users
           for f in feeds/*.xml; do
             [ -e "$f" ] || continue
             NAME=$(basename "$f")
@@ -185,29 +190,44 @@ jobs:
               *)          cp "$f" site/fanpages/ ;;
             esac
           done
+          if [ -f "feeds/all/events.json" ]; then
+            cp "feeds/all/events.json" "site/all/events.json"
+          fi
+          if [ -d "feeds/fanpages" ]; then
+            cp -r feeds/fanpages/* site/fanpages/ 2>/dev/null || true
+          fi
           for d in feeds/*/; do
             [ -d "$d" ] || continue
             SLUG=$(basename "$d")
+            case "$SLUG" in
+              all|fanpages|emails|inbox|users) continue ;;
+            esac
             if [ -f "$d/events.json" ]; then
               mkdir -p "site/fanpages/$SLUG"
               cp "$d/events.json" "site/fanpages/$SLUG/events.json"
             fi
           done
+          if [ -d "feeds/emails" ]; then
+            cp -r feeds/emails/* site/emails/ 2>/dev/null || true
+          fi
+          if [ -d "feeds/inbox" ]; then
+            cp -r feeds/inbox/* site/inbox/ 2>/dev/null || true
+          fi
           UPDATED=$(date '+%Y-%m-%d %H:%M %Z')
           {
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            echo '<title>Fanpage RSS Feeds</title><style>'
+            echo '<title>Event Extractor Directory Tree</title><style>'
             echo 'body{font-family:system-ui,sans-serif;background:#f6f3ff;color:#3b3552;margin:0;padding:40px}'
             echo '.wrap{max-width:1100px;margin:0 auto}.card{background:#fff;border-radius:18px;padding:24px 28px;margin-bottom:20px;box-shadow:0 4px 18px #b8a9e822}'
-            echo 'h1{margin-top:0}h2{color:#7a6bb8;margin-top:0}a{color:#5b7fd6;text-decoration:none}li{margin:10px 0}.muted{color:#8c86a3}'
-            echo '</style></head><body><div class="wrap"><div class="card"><h1>Facebook Fanpage RSS Feeds</h1>'
-            echo "<p class=\"muted\">Updated at $UPDATED. Refreshed 3 times a day (08:00, 14:00, 20:00 ICT).</p></div>"
-            for d in all fanpages users; do
-              echo "<div class=\"card\"><h2>/$d/</h2><ul>"
-              for f in site/$d/*.xml site/$d/*/events.json; do
+            echo 'h1{margin-top:0}h2{color:#7a6bb8;margin-top:0;font-family:monospace}a{color:#5b7fd6;text-decoration:none}li{margin:8px 0;font-family:monospace}.muted{color:#8c86a3}'
+            echo '</style></head><body><div class="wrap"><div class="card"><h1>Event Extractor — Distributed Directory Tree</h1>'
+            echo "<p class=\"muted\">Updated at $UPDATED. Live Ngrok Server &amp; Email Inbox: <a href=\"https://stimulus-rectangle-ship.ngrok-free.dev/\">https://stimulus-rectangle-ship.ngrok-free.dev/</a></p></div>"
+            for d in all fanpages emails inbox users; do
+              echo "<div class=\"card\"><h2>📂 /$d/</h2><ul>"
+              for f in $(find "site/$d" -type f \( -name "*.json" -o -name "*.xml" \) | sort); do
                 [ -e "$f" ] || continue
                 N=${f#site/$d/}
-                echo "<li><a href=\"$d/$N\">$N</a></li>"
+                echo "<li>├─ 📄 <a href=\"$d/$N\">$d/$N</a></li>"
               done
               echo '</ul></div>'
             done

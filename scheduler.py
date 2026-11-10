@@ -22,7 +22,7 @@ from database import (
     update_fanpage_metadata,
 )
 from rss import generate_all_rss, generate_fanpage_rss
-from events import analyze_fanpage_posts
+from events import analyze_fanpage_posts, sync_all_event_folders
 from scraper import scrape_fanpage
 
 console = Console()
@@ -122,6 +122,10 @@ async def run_scrape_cycle(
             await asyncio.sleep(3.5)
 
     all_xml_path = generate_all_rss()
+    try:
+        await asyncio.to_thread(sync_all_event_folders)
+    except Exception as sync_exc:
+        console.print(f"[yellow]Warning syncing event folders: {sync_exc}[/yellow]")
     console.print(summary_table)
     console.print(
         f"[bold green]Cycle complete![/bold green] Added [bold]{total_new_posts}[/bold] new post(s). "

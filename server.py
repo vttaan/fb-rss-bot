@@ -1,18 +1,22 @@
 import asyncio
+import json
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
-from pydantic import BaseModel
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel, Field
 
-from config import DEFAULT_INTERVAL_SECONDS, FEEDS_DIR
+from config import DEFAULT_INTERVAL_SECONDS, FEEDS_DIR, LOCAL_TIMEZONE, PUBLIC_NGROK_URL
 from database import (
     Fanpage,
     Post,
+    get_all_events,
+    get_inbox_messages,
     get_or_create_user,
     get_posts_for_user,
     get_subscribers_for_fanpage,
@@ -22,12 +26,27 @@ from database import (
     subscribe_user_to_fanpages,
     unsubscribe_user_from_fanpage,
 )
+from events import ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
 from scheduler import run_scrape_cycle
 
 
 class SubscribeRequest(BaseModel):
     urls: List[str]
+
+
+class EmailIngestRequest(BaseModel):
+    client_id: str = Field("anonymous", description="Client or user identifier submitting the email")
+    message_id: Optional[str] = Field(None, description="Unique Email Message-ID header or UID")
+    subject: str = Field("", description="Email subject line")
+    sender: Optional[str] = Field(None, description="Sender email address or display name")
+    received_at: Optional[str] = Field(None, description="ISO 8601 timestamp when email was received")
+    content: str = Field(..., description="Plain-text email body content")
+    media_urls: List[str] = Field(default_factory=list, description="Optional poster/attachment image URLs")
+
+
+class BatchEmailIngestRequest(BaseModel):
+    emails: List[EmailIngestRequest]
 
 
 class ConnectionManager:
@@ -94,7 +113,11 @@ async def scheduled_scrape_task() -> None:
         await manager.broadcast_to_all({"event": "status", "message": "Running scheduled 1-hour fanpage scrape..."})
         new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
         await manager.broadcast_to_all(
-            {"event": "status", "message": f"Scrape cycle finished ({new_count} new post(s) discovered)."}
+            {
+                "event": "status",
+                "message": f"Scrape cycle finished ({new_count} new post(s) discovered).",
+                "refresh_tree": True,
+            }
         )
 
 
@@ -108,13 +131,18 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
             on_new_posts=manager.on_new_posts_scraped,
         )
         await manager.broadcast_to_all(
-            {"event": "status", "message": f"Scrape finished! Found {new_count} new post(s)."}
+            {
+                "event": "status",
+                "message": f"Scrape finished! Found {new_count} new post(s).",
+                "refresh_tree": True,
+            }
         )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    await asyncio.to_thread(sync_all_event_folders)
     scheduler.add_job(
         scheduled_scrape_task,
         trigger="interval",
@@ -129,9 +157,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Facebook Fanpage RSS & WebSocket Push Server",
-    description="Scrapes public Facebook fanpages every 1 hour and streams new posts to subscribed users over WebSocket & RSS XML.",
-    version="1.0.0",
+    title="Facebook Fanpage & Email Event Extractor Server",
+    description=(
+        "Scrapes public Facebook fanpages, receives client email entries via Inbox API, "
+        "runs unified event extraction + deduplication/update, and distributes JSON/XML feeds by folders."
+    ),
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -148,7 +179,209 @@ from admin import router as admin_router  # noqa: E402
 app.include_router(admin_router)
 
 
+# --- Directory Tree Helper ---
+
+
+def _inspect_feed_file(file_path: Path) -> Dict[str, Any]:
+    rel = file_path.relative_to(FEEDS_DIR).as_posix()
+    stat = file_path.stat()
+    mtime_iso = datetime.fromtimestamp(stat.st_mtime, tz=LOCAL_TIMEZONE).isoformat()
+    item_count: Optional[int] = None
+    if file_path.suffix.lower() == ".json":
+        try:
+            doc = json.loads(file_path.read_text(encoding="utf-8"))
+            if isinstance(doc, dict):
+                item_count = doc.get("count")
+        except Exception:
+            pass
+    return {
+        "name": file_path.name,
+        "path": f"/feeds/{rel}",
+        "relative_path": rel,
+        "type": file_path.suffix.lstrip(".").lower() or "file",
+        "size_bytes": stat.st_size,
+        "updated_at": mtime_iso,
+        "count": item_count,
+    }
+
+
+def _build_feeds_directory_tree() -> Dict[str, Any]:
+    """
+    Build a structured directory tree of `feeds/` organized into logical folders so clients
+    can easily browse and fetch extracted JSON and XML files.
+    """
+    sync_all_event_folders()
+    folders: Dict[str, List[Dict[str, Any]]] = {
+        "all": [],
+        "fanpages": [],
+        "emails": [],
+        "inbox": [],
+        "rss": [],
+    }
+
+    for p in sorted(FEEDS_DIR.rglob("*")):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in (".json", ".xml"):
+            continue
+        rel_parts = p.relative_to(FEEDS_DIR).parts
+        info = _inspect_feed_file(p)
+
+        if rel_parts[0] == "all":
+            folders["all"].append(info)
+        elif rel_parts[0] == "fanpages":
+            folders["fanpages"].append(info)
+        elif rel_parts[0] == "emails":
+            folders["emails"].append(info)
+        elif rel_parts[0] == "inbox":
+            folders["inbox"].append(info)
+        elif len(rel_parts) == 1 and p.suffix.lower() == ".xml":
+            folders["rss"].append(info)
+            if p.name == "all.xml":
+                folders["all"].append(info)
+        elif len(rel_parts) == 2 and p.name == "events.json":
+            # Legacy `feeds/<slug>/events.json` is already mirrored under `feeds/fanpages/<slug>/events.json`
+            continue
+
+    return {
+        "public_url": PUBLIC_NGROK_URL,
+        "updated_at": datetime.now(LOCAL_TIMEZONE).isoformat(),
+        "folders": [
+            {
+                "folder": "/feeds/all/",
+                "key": "all",
+                "description": "Combined deduplicated events.json & all.xml across all sources",
+                "files": folders["all"],
+            },
+            {
+                "folder": "/feeds/fanpages/",
+                "key": "fanpages",
+                "description": "Extracted events.json distributed per Facebook fanpage folder (<slug>/events.json)",
+                "files": folders["fanpages"],
+            },
+            {
+                "folder": "/feeds/emails/",
+                "key": "emails",
+                "description": "Extracted events.json from client email submissions (global & per-client folders)",
+                "files": folders["emails"],
+            },
+            {
+                "folder": "/feeds/inbox/",
+                "key": "inbox",
+                "description": "Client Email Inbox messages log and extraction statuses",
+                "files": folders["inbox"],
+            },
+            {
+                "folder": "/feeds/rss/",
+                "key": "rss",
+                "description": "Raw RSS 2.0 XML feeds for fanpages and subscribed users",
+                "files": folders["rss"],
+            },
+        ],
+    }
+
+
 # --- REST API Endpoints ---
+
+
+@app.get("/api/tree")
+def api_get_directory_tree():
+    """Return the complete folder tree of distributed JSON and XML files for clients to discover & fetch."""
+    return _build_feeds_directory_tree()
+
+
+@app.post("/api/inbox")
+@app.post("/api/events/ingest-email")
+async def api_ingest_email(body: EmailIngestRequest):
+    """
+    Inbox endpoint to receive an event-related email entry from a client, move it to the
+    Unified Extractor, compare anchor fields (title, format online/offline, date, time, location)
+    for deduplication or event update, gather remaining event details, and update JSON folders.
+    """
+    if not body.content or not body.content.strip():
+        raise HTTPException(status_code=400, detail="Email content must not be empty.")
+
+    get_or_create_user(body.client_id or "anonymous")
+    result = await asyncio.to_thread(
+        ingest_email_message,
+        content=body.content,
+        subject=body.subject,
+        client_id=body.client_id,
+        message_id=body.message_id,
+        sender=body.sender,
+        received_at=body.received_at,
+        media_urls=body.media_urls,
+    )
+
+    await manager.broadcast_to_all(
+        {
+            "event": "inbox_updated",
+            "result": result,
+            "refresh_tree": True,
+        }
+    )
+    return result
+
+
+@app.post("/api/inbox/batch")
+async def api_ingest_email_batch(body: BatchEmailIngestRequest):
+    """Batch upload endpoint for clients submitting multiple filtered emails at once."""
+    results = []
+    for item in body.emails:
+        if not item.content or not item.content.strip():
+            continue
+        get_or_create_user(item.client_id or "anonymous")
+        res = await asyncio.to_thread(
+            ingest_email_message,
+            content=item.content,
+            subject=item.subject,
+            client_id=item.client_id,
+            message_id=item.message_id,
+            sender=item.sender,
+            received_at=item.received_at,
+            media_urls=item.media_urls,
+        )
+        results.append(res)
+
+    await manager.broadcast_to_all({"event": "inbox_updated", "refresh_tree": True})
+    return {
+        "processed": len(results),
+        "created": sum(1 for r in results if r["status"] == "created"),
+        "updated": sum(1 for r in results if r["status"] == "updated"),
+        "duplicates": sum(1 for r in results if r["status"] == "duplicate"),
+        "ignored": sum(1 for r in results if r["status"] == "ignored"),
+        "results": results,
+    }
+
+
+@app.get("/api/inbox")
+def api_list_inbox_messages(
+    client_id: Optional[str] = Query(None, description="Optional client_id filter"),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """List received client email entries in the server Inbox along with their extraction statuses."""
+    rows = get_inbox_messages(client_id=client_id, limit=limit)
+    items = [r.to_dict() for r in rows]
+    return {
+        "count": len(items),
+        "messages": items,
+    }
+
+
+@app.get("/api/events")
+def api_list_unified_events(
+    source_type: Optional[str] = Query(None, description="Filter by 'facebook' or 'email'"),
+    client_id: Optional[str] = Query(None, description="Filter by client_id"),
+    fanpage_id: Optional[int] = Query(None, description="Filter by fanpage_id"),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """Return deduplicated & updated events from the unified EventRecord table."""
+    rows = get_all_events(source_type=source_type, client_id=client_id, fanpage_id=fanpage_id, limit=limit)
+    items = [r.to_dict() for r in rows]
+    return {
+        "count": len(items),
+        "events": items,
+    }
 
 
 @app.get("/api/fanpages")
@@ -167,7 +400,11 @@ async def api_run_scrape_now():
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
         new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
         await manager.broadcast_to_all(
-            {"event": "status", "message": f"Scrape finished! Found {new_count} new post(s)."}
+            {
+                "event": "status",
+                "message": f"Scrape finished! Found {new_count} new post(s).",
+                "refresh_tree": True,
+            }
         )
     return {"status": "ok", "new_posts_count": new_count}
 
@@ -252,14 +489,44 @@ def api_get_user_rss(client_id: str):
     return Response(content=xml_content, media_type="application/rss+xml; charset=utf-8")
 
 
-@app.get("/feeds/{filename}")
-def serve_feed_file(filename: str):
-    """Serve static .xml feed files from `feeds/` directory."""
-    safe_name = Path(filename).name
-    file_path = FEEDS_DIR / safe_name
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Feed XML file not found.")
-    return FileResponse(file_path, media_type="application/rss+xml; charset=utf-8")
+@app.get("/feeds")
+@app.get("/feeds/")
+def serve_feeds_root():
+    """Return the JSON directory tree index of `/feeds/`."""
+    return _build_feeds_directory_tree()
+
+
+@app.get("/feeds/{file_path:path}")
+def serve_feed_file(file_path: str):
+    """
+    Serve distributed `.json` (`events.json`, `messages.json`) and `.xml` files
+    from `feeds/` and its subdirectories (`all/`, `fanpages/<slug>/`, `emails/<client_id>/`, `inbox/`).
+    """
+    base = FEEDS_DIR.resolve()
+    target = (FEEDS_DIR / file_path).resolve()
+    if base not in target.parents and target != base:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    if target.is_dir():
+        files = [
+            _inspect_feed_file(p)
+            for p in sorted(target.rglob("*"))
+            if p.is_file() and p.suffix.lower() in (".json", ".xml")
+        ]
+        return JSONResponse(
+            content={
+                "folder": f"/feeds/{file_path.strip('/')}/",
+                "count": len(files),
+                "files": files,
+            }
+        )
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"Feed file '{file_path}' not found.")
+
+    if target.suffix.lower() == ".json":
+        return FileResponse(target, media_type="application/json; charset=utf-8")
+    return FileResponse(target, media_type="application/rss+xml; charset=utf-8")
 
 
 # --- WebSocket Endpoint ---
@@ -345,83 +612,538 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         manager.disconnect(client_id, websocket)
 
 
-# --- Built-in Interactive Web Dashboard for Testing ---
+# --- Built-in Directory Tree + Client Email Inbox + Live Feed Dashboard ---
 
 
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Facebook Fanpage RSS & WebSocket Live Feed</title>
+  <title>Event Extractor Hub — Directory Tree & Client Email Inbox</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --bg: #f6f3ff; --card: #ffffff; --accent: #9b8cf0; --accent-soft: #ece8ff; --mint: #d6f5e8; --mint-text: #2f8f6b; --peach: #ffe8dc; --rose: #ffdce6; --sky: #dcecff; --text: #3b3552; --muted: #8c86a3; --border: #e6e0f7; }
+    :root {
+      --bg: #f6f3ff;
+      --card: #ffffff;
+      --accent: #7c69ef;
+      --accent-soft: #ece8ff;
+      --mint: #d6f5e8;
+      --mint-text: #1f7a58;
+      --amber: #fff0d6;
+      --amber-text: #9c6514;
+      --rose: #ffdce6;
+      --rose-text: #b83b5e;
+      --sky: #dcecff;
+      --sky-text: #2e62a6;
+      --text: #2f2a44;
+      --muted: #7e7896;
+      --border: #e5dff7;
+      --code-bg: #1f1d2e;
+      --code-text: #e6e1ff;
+    }
     * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #f6f3ff 0%, #eaf4ff 55%, #fff1f6 100%); background-attachment: fixed; color: var(--text); margin: 0; padding: 32px 40px; font-size: 16px; }
-    .container { max-width: 1400px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; background: var(--card); padding: 22px 28px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 6px 24px #b8a9e822; }
-    .header h2 { font-size: 24px; }
-    .badge { padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--mint); color: var(--mint-text); }
-    .panel { background: var(--card); padding: 24px 28px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 6px 24px #b8a9e822; }
-    input { background: #faf9ff; border: 2px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 12px; width: 320px; font-size: 15px; outline: none; }
-    input:focus { border-color: var(--accent); }
-    button { background: var(--accent); color: #fff; border: none; padding: 12px 20px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15px; transition: transform .1s, filter .15s; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f6f3ff 0%, #eaf4ff 55%, #fff1f6 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      margin: 0;
+      padding: 28px 36px;
+      font-size: 15px;
+    }
+    .container { max-width: 1440px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      background: var(--card);
+      padding: 22px 28px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 6px 24px #b8a9e822;
+    }
+    .header h2 { margin: 0; font-size: 23px; }
+    .sub-links { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 6px; font-size: 13.5px; }
+    .badge { padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--mint); color: var(--mint-text); }
+    .badge.sky { background: var(--sky); color: var(--sky-text); }
+    .badge.amber { background: var(--amber); color: var(--amber-text); }
+    .badge.rose { background: var(--rose); color: var(--rose-text); }
+    .badge.muted { background: #efedf7; color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: 1.08fr 1fr; gap: 24px; align-items: start; margin-bottom: 24px; }
+    .panel {
+      background: var(--card);
+      padding: 24px 26px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 6px 24px #b8a9e822;
+    }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .panel-title h3 { margin: 0; font-size: 19px; }
+    input, textarea {
+      background: #faf9ff;
+      border: 2px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 11px;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      width: 100%;
+    }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    textarea { min-height: 110px; resize: vertical; }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 11px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: transform .1s, filter .15s;
+    }
     button:hover { filter: brightness(1.06); transform: translateY(-1px); }
-    button.secondary { background: var(--sky); color: #3d6fb5; }
-    button.danger { background: var(--rose); color: #c2476b; padding: 4px 10px; font-size: 13px; margin-left: 10px; border-radius: 8px; }
-    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-    .chip { background: var(--accent-soft); padding: 8px 14px; border-radius: 999px; display: flex; align-items: center; font-size: 14px; }
-    #postsContainer { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 22px; }
-    .post { background: var(--card); padding: 22px 24px; border-radius: 20px; border-top: 6px solid var(--accent); box-shadow: 0 6px 24px #b8a9e822; }
-    .post:nth-child(4n+2) { border-top-color: #8fd3b6; }
-    .post:nth-child(4n+3) { border-top-color: #ffb89a; }
-    .post:nth-child(4n+4) { border-top-color: #8fbdf2; }
-    .post-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
-    .post-content { white-space: pre-wrap; line-height: 1.7; margin-bottom: 14px; word-break: break-word; }
+    button.secondary { background: var(--sky); color: var(--sky-text); }
+    button.ghost { background: var(--accent-soft); color: var(--accent); padding: 5px 11px; font-size: 12.5px; border-radius: 8px; }
+    button.danger { background: var(--rose); color: var(--rose-text); padding: 4px 10px; font-size: 12.5px; margin-left: 8px; border-radius: 8px; }
+
+    /* Directory Tree Styles */
+    .tree-root {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      background: #fbfaff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    details.tree-folder {
+      margin: 6px 0;
+      border-left: 2px dashed #d7cff5;
+      padding-left: 12px;
+    }
+    details.tree-folder > summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #463a7c;
+      padding: 6px 8px;
+      border-radius: 8px;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    details.tree-folder > summary:hover { background: var(--accent-soft); }
+    .tree-folder-desc { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12.5px; color: var(--muted); margin: 2px 0 8px 8px; }
+    .tree-files { list-style: none; padding-left: 18px; margin: 4px 0 10px 0; }
+    .tree-file {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      border-bottom: 1px solid #f1eefb;
+    }
+    .tree-file:hover { background: #f3f0ff; }
+    .tree-file-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; word-break: break-all; }
+    .tree-file-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    /* Inbox Form & List */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .inbox-list { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+    .inbox-item {
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fcfbff;
+    }
+    .inbox-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+    .changes-box {
+      background: var(--amber);
+      color: var(--amber-text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    pre.code-block {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 14px 16px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 12.5px;
+      line-height: 1.5;
+      margin: 10px 0 0 0;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .chip { background: var(--accent-soft); padding: 7px 14px; border-radius: 999px; display: flex; align-items: center; font-size: 13.5px; }
+    #postsContainer { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+    .post { background: var(--card); padding: 20px 22px; border-radius: 18px; border-top: 6px solid var(--accent); box-shadow: 0 6px 24px #b8a9e822; }
+    .post-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 13.5px; margin-bottom: 10px; }
+    .post-content { white-space: pre-wrap; line-height: 1.65; margin-bottom: 12px; word-break: break-word; }
     .post-imgs { display: flex; gap: 10px; overflow-x: auto; }
-    .post-imgs img { max-height: 260px; border-radius: 12px; }
-    h3 { font-size: 20px; }
-    a { color: #5b7fd6; text-decoration: none; }
+    .post-imgs img { max-height: 220px; border-radius: 10px; }
+    a { color: #526fd4; text-decoration: none; font-weight: 500; }
     a:hover { text-decoration: underline; }
-    #status { color: var(--muted); font-size: 14px; margin-top: 8px; }
-    @media (max-width: 700px) { body { padding: 16px; } #postsContainer { grid-template-columns: 1fr; } input { width: 100%; } }
+    #status { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+    #jsonModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(25, 20, 45, 0.55);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-card {
+      background: var(--card);
+      width: min(920px, 96vw);
+      max-height: 86vh;
+      border-radius: 20px;
+      padding: 22px 26px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+    }
+    @media (max-width: 980px) {
+      body { padding: 16px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      #postsContainer { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Top Header -->
     <div class="header">
       <div>
-        <h2 style="margin:0;">Facebook Fanpage WebSocket + RSS Server</h2>
-        <div id="status">Connecting WebSocket...</div>
+        <h2>Event Extractor Hub — Directory Tree &amp; Client Email Inbox</h2>
+        <div id="status">Connecting real-time WebSocket...</div>
+        <div class="sub-links">
+          <span>🌐 Public Endpoint: <a href="https://stimulus-rectangle-ship.ngrok-free.dev/" target="_blank">https://stimulus-rectangle-ship.ngrok-free.dev/</a></span>
+          <span>· <a href="/feeds/all/events.json" target="_blank">All Events JSON ↗</a></span>
+          <span>· <a href="/feeds/emails/events.json" target="_blank">Email Events JSON ↗</a></span>
+          <span>· <a href="/api/tree" target="_blank">API Tree Index ↗</a></span>
+          <span>· <a href="/docs" target="_blank">OpenAPI Docs ↗</a></span>
+          <span>· <a href="/admin">Admin ⚙</a></span>
+        </div>
       </div>
-      <div>
-        <label>User ID: </label>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label style="font-weight:600; font-size:13.5px;">Client ID:</label>
         <input id="userInput" value="user_1" style="width:120px;" />
-        <button onclick="connectWS()">Switch User</button>
+        <button onclick="connectWS()">Switch Client</button>
         <span id="wsBadge" class="badge">Disconnected</span>
       </div>
     </div>
 
-    <div class="panel">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0;">Your Selected Fanpages</h3>
-        <span><a href="/admin" style="margin-right:16px;">Admin ⚙</a><a id="rssLink" href="/users/user_1/rss.xml" target="_blank">Personal RSS Feed (.xml) ↗</a></span>
+    <!-- Main 2-Column Grid: Directory Tree (Left) + Email Inbox (Right) -->
+    <div class="grid-2">
+      <!-- Column 1: Directory Tree of Distributed JSON & XML Feeds -->
+      <div class="panel" style="margin-bottom:0;">
+        <div class="panel-title">
+          <div>
+            <h3>📁 Distributed Feeds Directory Tree</h3>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">
+              Extracted <code>events.json</code> &amp; <code>.xml</code> files organized by folder for easy client fetching
+            </div>
+          </div>
+          <button class="secondary" onclick="loadDirectoryTree()">↻ Refresh Tree</button>
+        </div>
+
+        <div id="directoryTreeContainer" class="tree-root">
+          Loading directory tree...
+        </div>
       </div>
-      <div style="margin-top:12px; display:flex; gap:8px;">
-        <input id="fanpageInput" placeholder="https://www.facebook.com/nasa or TechCrunch" style="flex:1;" />
+
+      <!-- Column 2: Client Email Inbox -->
+      <div class="panel" style="margin-bottom:0;">
+        <div class="panel-title">
+          <div>
+            <h3>📥 Client Email Inbox &rarr; Extractor</h3>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">
+              Receive event-related emails from clients, compare anchor fields (Title, Format, Date, Time, Location), deduplicate or update, and extract JSON
+            </div>
+          </div>
+          <span class="badge sky">POST /api/inbox</span>
+        </div>
+
+        <!-- Submit Email Form -->
+        <div class="form-grid">
+          <input id="emailClientId" placeholder="Client ID (e.g. client_team_1)" value="client_team_1" />
+          <input id="emailSender" placeholder="Sender (e.g. clb-ai@fit.hcmus.edu.vn)" />
+        </div>
+        <div class="form-grid">
+          <input id="emailSubject" placeholder="Email Subject (Event title / announcement)" />
+          <input id="emailMessageId" placeholder="Message-ID (optional, auto-hashed if blank)" />
+        </div>
+        <div style="margin-bottom:10px;">
+          <textarea id="emailContent" placeholder="Paste email content here... (e.g. Dear students, join our AI Workshop on 2026-11-20 at 14:00 at Hall I, HCMUS. Register at https://forms.gle/demo)"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+          <input id="emailMediaUrls" placeholder="Optional Poster/QR Image URL(s), comma-separated" style="flex:1;" />
+          <button onclick="submitInboxEmail()" id="submitEmailBtn">Send to Extractor &rarr;</button>
+        </div>
+        <div id="inboxSubmitMsg" style="font-size:13.5px; min-height:20px;"></div>
+
+        <details style="margin-top:8px;">
+          <summary style="cursor:pointer; font-size:13px; color:var(--accent); font-weight:600;">
+            💻 Teammate Client API Snippet (POST to Server Inbox)
+          </summary>
+          <pre class="code-block">POST https://stimulus-rectangle-ship.ngrok-free.dev/api/inbox
+Content-Type: application/json
+
+{
+  "client_id": "client_team_1",
+  "message_id": "msg-2026-001@mail.gmail.com",
+  "subject": "[WORKSHOP] Building Agentic AI Systems",
+  "sender": "fit-events@hcmus.edu.vn",
+  "received_at": "2026-11-09T15:30:00+07:00",
+  "content": "Time: 09:00 20/11/2026\\nLocation: Hall I (Offline)\\nRegister: https://forms.gle/abc",
+  "media_urls": []
+}</pre>
+        </details>
+
+        <hr style="border:none; border-top:1.5px solid var(--border); margin:16px 0 12px 0;" />
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>Recent Inbox Entries (<span id="inboxCount">0</span>)</strong>
+          <button class="ghost" onclick="loadInboxMessages()">↻ Refresh Inbox</button>
+        </div>
+        <div id="inboxListContainer" class="inbox-list"></div>
+      </div>
+    </div>
+
+    <!-- Fanpage Subscriptions & Crawler Controls -->
+    <div class="panel">
+      <div class="panel-title">
+        <h3 style="margin:0;">📡 Tracked Facebook Fanpages &amp; Daily Crawler</h3>
+        <span>
+          <a id="rssLink" href="/users/user_1/rss.xml" target="_blank">Personal RSS Feed (.xml) ↗</a>
+        </span>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input id="fanpageInput" placeholder="https://www.facebook.com/nasa or sab.ctda" style="flex:1; min-width:260px;" />
         <button onclick="subscribeFanpage()">+ Subscribe Fanpage</button>
-        <button class="secondary" onclick="triggerRefresh()">Scrape Now</button>
+        <button class="secondary" onclick="triggerRefresh()">Run Crawler &amp; Extractor Now</button>
       </div>
       <div id="subsContainer" class="chips"></div>
     </div>
 
-    <h3>Live Feed (<span id="postCount">0</span> posts)</h3>
+    <h3>Live Scraped Posts (<span id="postCount">0</span> posts)</h3>
     <div id="postsContainer"></div>
+  </div>
+
+  <!-- JSON Preview Modal -->
+  <div id="jsonModal" onclick="if(event.target.id==='jsonModal') closeJsonModal()">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong id="jsonModalTitle" style="font-size:16px;">JSON Preview</strong>
+        <button class="ghost" onclick="closeJsonModal()">✕ Close</button>
+      </div>
+      <pre id="jsonModalBody" class="code-block" style="flex:1; overflow:auto; margin:0;"></pre>
+    </div>
   </div>
 
   <script>
     let ws = null;
     let currentPosts = [];
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    async function loadDirectoryTree() {
+      const container = document.getElementById('directoryTreeContainer');
+      try {
+        const res = await fetch('/api/tree');
+        const data = await res.json();
+        const foldersHtml = (data.folders || []).map((f, idx) => {
+          const files = f.files || [];
+          const filesHtml = files.length
+            ? `<ul class="tree-files">` + files.map(file => {
+                const icon = file.type === 'json' ? '📄' : '📰';
+                const countBadge = file.count !== null && file.count !== undefined
+                  ? `<span class="badge ${file.count > 0 ? '' : 'muted'}">${file.count} item(s)</span>`
+                  : '';
+                const kb = (file.size_bytes / 1024).toFixed(1) + ' KB';
+                return `
+                  <li class="tree-file">
+                    <div class="tree-file-left">
+                      <span>├─ ${icon}</span>
+                      <a href="${esc(file.path)}" target="_blank">${esc(file.relative_path)}</a>
+                      ${countBadge}
+                      <span style="color:var(--muted); font-size:12px;">(${kb})</span>
+                    </div>
+                    <div class="tree-file-actions">
+                      ${file.type === 'json' ? `<button class="ghost" onclick="previewJson('${esc(file.path)}')">Preview</button>` : ''}
+                      <button class="ghost" onclick="copyFetchUrl('${esc(file.path)}', this)">Copy URL</button>
+                    </div>
+                  </li>
+                `;
+              }).join('') + `</ul>`
+            : `<div style="padding:4px 0 8px 20px; color:var(--muted); font-size:12.5px;">(empty folder)</div>`;
+
+          return `
+            <details class="tree-folder" ${idx < 4 ? 'open' : ''}>
+              <summary>
+                <span>📂 ${esc(f.folder)}</span>
+                <span class="badge sky">${files.length} file(s)</span>
+              </summary>
+              <div class="tree-folder-desc">${esc(f.description || '')}</div>
+              ${filesHtml}
+            </details>
+          `;
+        }).join('');
+
+        container.innerHTML = `
+          <div style="font-weight:700; margin-bottom:6px; color:#2f2a44;">
+            🌐 /feeds/ <span style="font-weight:400; font-size:12px; color:var(--muted);">(Updated: ${new Date(data.updated_at).toLocaleTimeString()})</span>
+          </div>
+          ${foldersHtml}
+        `;
+      } catch (err) {
+        container.innerHTML = `<div style="color:var(--rose-text);">Failed to load directory tree: ${esc(err.message)}</div>`;
+      }
+    }
+
+    async function previewJson(path) {
+      const modal = document.getElementById('jsonModal');
+      const title = document.getElementById('jsonModalTitle');
+      const body = document.getElementById('jsonModalBody');
+      title.textContent = path;
+      body.textContent = 'Loading...';
+      modal.style.display = 'flex';
+      try {
+        const res = await fetch(path);
+        const json = await res.json();
+        body.textContent = JSON.stringify(json, null, 2);
+      } catch (e) {
+        body.textContent = 'Error loading JSON: ' + e.message;
+      }
+    }
+
+    function closeJsonModal() {
+      document.getElementById('jsonModal').style.display = 'none';
+    }
+
+    function copyFetchUrl(path, btn) {
+      const fullUrl = window.location.origin + path;
+      navigator.clipboard.writeText(fullUrl);
+      const old = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = old; }, 1500);
+    }
+
+    function statusBadgeHtml(status) {
+      if (status === 'created') return `<span class="badge">✨ NEW EVENT</span>`;
+      if (status === 'updated') return `<span class="badge amber">🔄 UPDATED EVENT</span>`;
+      if (status === 'duplicate') return `<span class="badge sky">📌 DUPLICATE</span>`;
+      if (status === 'ignored') return `<span class="badge muted">⏭ NOT AN EVENT</span>`;
+      return `<span class="badge muted">${esc(status)}</span>`;
+    }
+
+    async function loadInboxMessages() {
+      const listEl = document.getElementById('inboxListContainer');
+      try {
+        const res = await fetch('/api/inbox?limit=30');
+        const data = await res.json();
+        const msgs = data.messages || [];
+        document.getElementById('inboxCount').textContent = msgs.length;
+        if (!msgs.length) {
+          listEl.innerHTML = `<div style="color:var(--muted); font-size:13.5px; padding:8px 0;">No email entries received yet. Submit one above or POST to <code>/api/inbox</code>!</div>`;
+          return;
+        }
+        listEl.innerHTML = msgs.map(m => {
+          const changes = m.changes || {};
+          const changeKeys = Object.keys(changes);
+          const changesHtml = changeKeys.length
+            ? `<div class="changes-box"><strong>Updated Anchor Fields:</strong> ` +
+              changeKeys.map(k => `<code>${esc(k)}</code>: ${esc(changes[k].old || 'null')} &rarr; <strong>${esc(changes[k].new)}</strong>`).join(' · ') +
+              `</div>`
+            : '';
+          const ev = m.event;
+          const evSummaryHtml = ev
+            ? `<div style="margin-top:8px; font-size:13px; background:#f4f1ff; padding:8px 12px; border-radius:9px;">
+                 <div><strong>Event:</strong> ${esc(ev.title)}</div>
+                 <div style="color:var(--muted); margin-top:2px;">
+                   📅 Date: <strong>${esc(ev.date || ev.start_datetime || 'TBA')}</strong> ·
+                   ⏰ Time: <strong>${esc(ev.time || 'TBA')}</strong> ·
+                   📍 Location: <strong>${esc(ev.location || 'TBA')}</strong> ·
+                   🌐 Mode: <strong>${esc(ev.online_mode || (ev.is_online ? 'online' : 'offline'))}</strong>
+                 </div>
+               </div>`
+            : '';
+          return `
+            <div class="inbox-item">
+              <div class="inbox-meta">
+                <span><strong>${esc(m.client_id)}</strong> · ${esc(m.sender || 'no-sender')} · <code style="font-size:11.5px;">${esc(m.message_id)}</code></span>
+                ${statusBadgeHtml(m.status)}
+              </div>
+              <div style="font-weight:600; margin-bottom:4px;">${esc(m.subject || '(No Subject)')}</div>
+              <div style="font-size:13px; color:#4b4468; white-space:pre-wrap;">${esc((m.content || '').slice(0, 220))}${(m.content || '').length > 220 ? '...' : ''}</div>
+              ${changesHtml}
+              ${evSummaryHtml}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        listEl.innerHTML = `<div style="color:var(--rose-text);">Error loading inbox: ${esc(err.message)}</div>`;
+      }
+    }
+
+    async function submitInboxEmail() {
+      const btn = document.getElementById('submitEmailBtn');
+      const msgEl = document.getElementById('inboxSubmitMsg');
+      const client_id = document.getElementById('emailClientId').value.trim() || 'anonymous';
+      const sender = document.getElementById('emailSender').value.trim() || null;
+      const subject = document.getElementById('emailSubject').value.trim();
+      const message_id = document.getElementById('emailMessageId').value.trim() || null;
+      const content = document.getElementById('emailContent').value.trim();
+      const rawMedia = document.getElementById('emailMediaUrls').value.trim();
+      const media_urls = rawMedia ? rawMedia.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+      if (!content) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = 'Please enter email content to extract.';
+        return;
+      }
+
+      btn.disabled = true;
+      msgEl.style.color = '#7e7896';
+      msgEl.textContent = 'Running unified extractor & anchor-field comparison...';
+
+      try {
+        const res = await fetch('/api/inbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id, message_id, subject, sender, content, media_urls }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+
+        msgEl.style.color = '#1f7a58';
+        msgEl.innerHTML = `Result: ${statusBadgeHtml(data.status)} ${data.event ? '— <strong>' + esc(data.event.title) + '</strong>' : ''}`;
+        document.getElementById('emailMessageId').value = '';
+        await loadInboxMessages();
+        await loadDirectoryTree();
+      } catch (err) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = 'Error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     function connectWS() {
       const userId = document.getElementById('userInput').value.trim() || 'user_1';
@@ -433,7 +1155,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       ws.onopen = () => {
         document.getElementById('wsBadge').textContent = 'Connected (' + userId + ')';
-        document.getElementById('status').textContent = 'Listening for real-time fanpage updates (1-hour auto cycle)...';
+        document.getElementById('status').textContent = 'Listening for real-time crawler & client inbox events...';
       };
 
       ws.onmessage = (evt) => {
@@ -446,8 +1168,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           document.getElementById('status').textContent = `New post(s) arrived from ${msg.fanpage.name}!`;
           currentPosts = [...msg.posts, ...currentPosts];
           renderPosts();
+          loadDirectoryTree();
+        } else if (msg.event === 'inbox_updated') {
+          loadInboxMessages();
+          loadDirectoryTree();
         } else if (msg.event === 'status' || msg.event === 'error') {
           document.getElementById('status').textContent = msg.message;
+          if (msg.refresh_tree) loadDirectoryTree();
         }
       };
 
@@ -477,13 +1204,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function renderSubs(subs) {
       const el = document.getElementById('subsContainer');
       if (!subs.length) {
-        el.innerHTML = '<span style="color:#8c86a3;font-size:14px;">No fanpages selected yet. Add one above!</span>';
+        el.innerHTML = '<span style="color:#8c86a3;font-size:14px;">No fanpages selected for this user yet. Add one above!</span>';
         return;
       }
       el.innerHTML = subs.map(s => `
         <div class="chip">
-          <span><strong>${s.name}</strong> (${s.url})</span>
-          <button class="danger" onclick="unsubscribeFanpage('${s.url}')">✕</button>
+          <span><strong>${esc(s.name)}</strong> (<a href="/feeds/fanpages/${encodeURIComponent(s.slug)}/events.json" target="_blank">events.json</a>)</span>
+          <button class="danger" onclick="unsubscribeFanpage('${esc(s.url)}')">✕</button>
         </div>
       `).join('');
     }
@@ -494,17 +1221,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       el.innerHTML = currentPosts.map(p => `
         <div class="post">
           <div class="post-meta">
-            <strong>${p.fanpage_name || 'Fanpage'}</strong>
-            <span>${p.published_at ? new Date(p.published_at).toLocaleString() : ''} · <a href="${p.post_url}" target="_blank">View on FB ↗</a></span>
+            <strong>${esc(p.fanpage_name || 'Fanpage')}</strong>
+            <span>${p.published_at ? new Date(p.published_at).toLocaleString() : ''} · <a href="${esc(p.post_url)}" target="_blank">View on FB ↗</a></span>
           </div>
-          <div class="post-content">${(p.content || '').replace(/</g, '&lt;')}</div>
+          <div class="post-content">${esc(p.content || '')}</div>
           <div class="post-imgs">
-            ${(p.media_urls || []).map(u => `<img src="${u}" loading="lazy" />`).join('')}
+            ${(p.media_urls || []).map(u => `<img src="${esc(u)}" loading="lazy" />`).join('')}
           </div>
         </div>
       `).join('');
     }
 
+    loadDirectoryTree();
+    loadInboxMessages();
     connectWS();
   </script>
 </body>

@@ -14,6 +14,10 @@ DATABASE_URL = f"sqlite:///{DB_PATH.as_posix()}"
 FEEDS_DIR = BASE_DIR / "feeds"
 FEEDS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Public Ngrok Domain
+PUBLIC_NGROK_DOMAIN = "stimulus-rectangle-ship.ngrok-free.dev"
+PUBLIC_NGROK_URL = f"https://{PUBLIC_NGROK_DOMAIN}"
+
 # Scraping & Scheduler Settings
 DEFAULT_INTERVAL_SECONDS = 3600  # 1 hour
 SCROLL_COUNT = 4                 # Number of scrolls per fanpage to load recent posts

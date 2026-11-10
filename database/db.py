@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import Session, sessionmaker, joinedload
 
 from config import DATABASE_URL, LOCAL_TIMEZONE
-from .models import Base, Fanpage, Post, User, UserSubscription, ensure_local_tz
+from .models import Base, EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, User, UserSubscription, ensure_local_tz
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
@@ -356,4 +356,35 @@ def get_subscribers_for_fanpage(fanpage_id: int) -> List[str]:
             .join(UserSubscription, UserSubscription.user_id == User.id)
             .where(UserSubscription.fanpage_id == fanpage_id)
         )
+        return list(session.scalars(stmt).all())
+
+
+def get_inbox_messages(client_id: Optional[str] = None, limit: int = 100) -> List[EmailMessage]:
+    """Retrieve recent email entries received in the server inbox."""
+    init_db()
+    with get_session() as session:
+        stmt = select(EmailMessage).order_by(EmailMessage.ingested_at.desc(), EmailMessage.id.desc())
+        if client_id:
+            stmt = stmt.where(EmailMessage.client_id == client_id.strip())
+        stmt = stmt.limit(limit)
+        return list(session.scalars(stmt).all())
+
+
+def get_all_events(
+    source_type: Optional[str] = None,
+    client_id: Optional[str] = None,
+    fanpage_id: Optional[int] = None,
+    limit: int = 200,
+) -> List[EventRecord]:
+    """Retrieve deduplicated events from the unified EventRecord table."""
+    init_db()
+    with get_session() as session:
+        stmt = select(EventRecord).order_by(EventRecord.updated_at.desc(), EventRecord.id.desc())
+        if source_type:
+            stmt = stmt.where(EventRecord.source_type == source_type)
+        if client_id:
+            stmt = stmt.where(EventRecord.client_id == client_id.strip())
+        if fanpage_id is not None:
+            stmt = stmt.where(EventRecord.fanpage_id == fanpage_id)
+        stmt = stmt.limit(limit)
         return list(session.scalars(stmt).all())

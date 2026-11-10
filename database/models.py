@@ -151,3 +151,116 @@ class PostAnalysis(Base):
     is_event: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     event_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now)
+
+
+class EventRecord(Base):
+    """Unified deduplicated event store across Facebook fanpage posts and client email entries."""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    normalized_title: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    online_mode: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    is_online: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    event_date: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    event_time: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    start_datetime: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    end_datetime: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    normalized_location: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    source_type: Mapped[str] = mapped_column(String(32), default="facebook", nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    fanpage_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("fanpages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    client_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    event_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now)
+
+    def to_dict(self) -> Dict[str, Any]:
+        try:
+            extra = json.loads(self.event_json or "{}")
+        except Exception:
+            extra = {}
+        created_dt = ensure_local_tz(self.created_at)
+        updated_dt = ensure_local_tz(self.updated_at)
+        return {
+            "event_id": self.id,
+            "title": self.title,
+            "online_mode": self.online_mode,
+            "is_online": self.is_online,
+            "date": self.event_date,
+            "time": self.event_time,
+            "start_datetime": self.start_datetime,
+            "end_datetime": self.end_datetime,
+            "location": self.location,
+            "source_type": self.source_type,
+            "source_id": self.source_id,
+            "fanpage_id": self.fanpage_id,
+            "client_id": self.client_id,
+            "version": self.version,
+            "created_at": created_dt.isoformat() if created_dt else None,
+            "updated_at": updated_dt.isoformat() if updated_dt else None,
+            **extra,
+        }
+
+
+class EmailMessage(Base):
+    """Client-submitted email entries sent to the server inbox for event extraction."""
+
+    __tablename__ = "email_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    message_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    client_id: Mapped[str] = mapped_column(String(128), default="anonymous", nullable=False, index=True)
+    subject: Mapped[str] = mapped_column(String(512), default="", nullable=False)
+    sender: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    media_urls_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now, index=True)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=local_now)
+    status: Mapped[str] = mapped_column(String(64), default="pending", nullable=False)
+    is_event: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    event_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    changes_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    analysis_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+
+    @property
+    def media_urls(self) -> List[str]:
+        try:
+            return json.loads(self.media_urls_json)
+        except Exception:
+            return []
+
+    def to_dict(self) -> Dict[str, Any]:
+        rec_dt = ensure_local_tz(self.received_at)
+        ing_dt = ensure_local_tz(self.ingested_at)
+        try:
+            changes = json.loads(self.changes_json or "{}")
+        except Exception:
+            changes = {}
+        try:
+            analysis = json.loads(self.analysis_json or "{}")
+        except Exception:
+            analysis = {}
+        return {
+            "id": self.id,
+            "message_id": self.message_id,
+            "client_id": self.client_id,
+            "subject": self.subject,
+            "sender": self.sender,
+            "content": self.content,
+            "media_urls": self.media_urls,
+            "received_at": rec_dt.isoformat() if rec_dt else None,
+            "ingested_at": ing_dt.isoformat() if ing_dt else None,
+            "status": self.status,
+            "is_event": self.is_event,
+            "event_id": self.event_id,
+            "changes": changes,
+            "event": analysis if self.is_event else None,
+        }
