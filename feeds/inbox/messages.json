@@ -1,69 +1,7 @@
 {
   "folder": "inbox",
   "description": "Client email inbox entries and extraction outcomes",
-  "updated_at": "2026-11-10T15:01:05.728664+07:00",
-  "count": 1,
-  "messages": [
-    {
-      "id": 1,
-      "message_id": "email_89af83834c100c1ac451",
-      "client_id": "client_team_1",
-      "subject": "THÔNG BÁO ĐĂNG KÝ THAM GIA CHUYÊN ĐỀ “BẪY LỪA KHÔNG XA – TỈNH TÁO ĐỂ KHÔNG SA”",
-      "sender": "moodlefit2@mso.hcmus.edu.v",
-      "content": "Nhằm trang bị cho sinh viên kiến thức và kỹ năng nhận diện, phòng tránh các thủ đoạn lừa đảo trong học tập và đời sống, Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM thông báo đăng ký tham gia chuyên đề “Bẫy lừa không xa – Tỉnh táo để không sa”.\n\nChương trình có sự chia sẻ của Đại úy Nguyễn Anh Quân – Phòng Cảnh sát hình sự, Công an Thành phố Hồ Chí Minh, tập trung vào những nội dung:\n\nNhận diện các thủ đoạn giả mạo học bổng, chương trình du học, hợp tác quốc tế và tuyển dụng việc làm.\nCảnh giác trước hành vi giả danh cơ quan chức năng, sử dụng thông tin cá nhân để tạo lòng tin và gây áp lực tâm lý.\nNhận biết nguy cơ từ các hoạt động lôi kéo đánh bạc, vay tiền để “gỡ”.\nTìm hiểu cách xác minh thông tin, bảo vệ bản thân và tìm kiếm hỗ trợ khi có dấu hiệu bị lừa đảo hoặc đã cung cấp thông tin, chuyển tiền.\nThông qua các câu chuyện thực tế và tình huống gần gũi với đời sống sinh viên, chương trình giúp người tham gia nâng cao ý thức cảnh giác, chủ động ứng phó và chia sẻ kiến thức để bảo vệ người thân, bạn bè.\n\nTHỜI GIAN, ĐỊA ĐIỂM VÀ ĐĂNG KÝ\n\nSinh viên lựa chọn đăng ký một trong hai buổi phù hợp:\n\nBuổi 1 – Cơ sở Chợ Quán\n\nThời gian: 08 giờ 30, ngày 08/11/2026.\nĐịa điểm: Giảng đường 1, cơ sở 227 Nguyễn Văn Cừ, phường Chợ Quán.\nĐăng ký: https://link.hcmus.edu.vn/talkshowBLKXTTDKS-0811\nBuổi 2 – Cơ sở Đông Hòa\n\nThời gian: 08 giờ 30, ngày 14/11/2026.\nĐịa điểm: Hội trường B, cơ sở Đông Hòa.\nĐăng ký: https://link.hcmus.edu.vn/talkshowBLKXTTDKS-1411\nLưu ý: Sinh viên đăng nhập Hệ thống quản lý hoạt động EMS bằng tài khoản Outlook sinh viên để đăng ký.\n\nGHI NHẬN THAM GIA\n\nHoạt động được ghi nhận đánh giá điểm rèn luyện mục 4.6 theo quy định và tích lũy chuyên đề B sinh hoạt công dân đầu năm học 2026–2027 dành cho sinh viên khóa 2024, 2025.\n\nKhoa Công nghệ thông tin đề nghị sinh viên quan tâm, chủ động đăng ký và tham gia đúng thời gian, địa điểm đã lựa chọn.\n\nMọi thắc mắc cần hỗ trợ, vui lòng liên hệ: tlsv@fit.hcmus.edu.vn.",
-      "media_urls": [],
-      "received_at": "2026-11-10T14:47:31.982463+07:00",
-      "ingested_at": "2026-11-10T14:47:32.413630+07:00",
-      "status": "created",
-      "is_event": true,
-      "event_id": 1,
-      "changes": {},
-      "event": {
-        "event_id": 1,
-        "title": "THÔNG BÁO ĐĂNG KÝ THAM GIA CHUYÊN ĐỀ “BẪY LỪA KHÔNG XA – TỈNH TÁO ĐỂ KHÔNG SA”",
-        "online_mode": "offline",
-        "is_online": false,
-        "date": "2026-11-08",
-        "time": null,
-        "start_datetime": "2026-11-08T00:00:00+07:00",
-        "end_datetime": null,
-        "location": null,
-        "source_type": "email",
-        "source_id": "email_89af83834c100c1ac451",
-        "fanpage_id": null,
-        "client_id": "client_team_1",
-        "version": 1,
-        "created_at": "2026-11-10T14:47:32.407195+07:00",
-        "updated_at": "2026-11-10T14:47:32.407195+07:00",
-        "description": "Nhằm trang bị cho sinh viên kiến thức và kỹ năng nhận diện, phòng tránh các thủ đoạn lừa đảo trong học tập và đời sống, Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM thông báo đăng ký tham gia chuyên đề “Bẫy lừa không...",
-        "organizer": "moodlefit2@mso.hcmus.edu.v",
-        "registration_url": "https://link.hcmus.edu.vn/talkshowBLKXTTDKS-0811",
-        "registration_status": "link",
-        "fee": null,
-        "target_audience": [
-          "sinh viên"
-        ],
-        "category": [
-          "tọa đàm"
-        ],
-        "format": [
-          "offline"
-        ],
-        "post_url": null,
-        "posted_at": "2026-11-10T14:47:31.982463+07:00",
-        "sources": [
-          {
-            "source_type": "email",
-            "source_id": "email_89af83834c100c1ac451",
-            "fanpage_id": null,
-            "client_id": "client_team_1",
-            "post_url": null,
-            "posted_at": "2026-11-10T14:47:31.982463+07:00",
-            "seen_at": "2026-11-10T14:47:32.407195+07:00"
-          }
-        ],
-        "update_history": []
-      }
-    }
-  ]
+  "updated_at": "2026-11-10T17:24:28.121883+07:00",
+  "count": 0,
+  "messages": []
 }
