@@ -214,7 +214,11 @@ class EmailMessage(Base):
     __tablename__ = "email_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Provenance: the email's own Message-ID header (or a server-made fallback id).
     message_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    # Exact-copy fingerprint computed by the client (SHA-256 hex). Separate from message_id so each
+    # column has one meaning. NULL for rows created before this column existed or without a hash.
+    content_hash: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True, index=True)
     client_id: Mapped[str] = mapped_column(String(128), default="anonymous", nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(512), default="", nullable=False)
     sender: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -237,7 +241,13 @@ class EmailMessage(Base):
         except Exception:
             return []
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, include_content: bool = False) -> Dict[str, Any]:
+        """Serialize for APIs, WebSocket broadcasts and `feeds/inbox/messages.json`.
+
+        The email body (`content`) is excluded by default: this dict ends up in public feeds,
+        broadcasts to every dashboard client, and git history. Pass `include_content=True` only
+        for trusted internal use.
+        """
         rec_dt = ensure_local_tz(self.received_at)
         ing_dt = ensure_local_tz(self.ingested_at)
         try:
@@ -248,13 +258,15 @@ class EmailMessage(Base):
             analysis = json.loads(self.analysis_json or "{}")
         except Exception:
             analysis = {}
+        content_part = {"content": self.content} if include_content else {}
         return {
             "id": self.id,
             "message_id": self.message_id,
+            "content_hash": self.content_hash,
             "client_id": self.client_id,
             "subject": self.subject,
             "sender": self.sender,
-            "content": self.content,
+            **content_part,
             "media_urls": self.media_urls,
             "received_at": rec_dt.isoformat() if rec_dt else None,
             "ingested_at": ing_dt.isoformat() if ing_dt else None,

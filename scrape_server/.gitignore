@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+.vscode/
+.idea/
+
+# Never commit raw SQLite database or client email inbox logs
+rss_bot.db
+feeds/inbox/
+

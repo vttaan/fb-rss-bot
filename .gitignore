@@ -7,3 +7,17 @@ env/
 .env
 .vscode/
 .idea/
+.DS_Store
+*.DS_Store
+
+# OAuth tokens, keys & client credentials
+credentials.json
+token.json
+msal_token_cache.json
+*.token
+*.key
+
+# Local SQLite databases & debug inbox logs
+*.db
+rss_bot.db
+feeds/inbox/

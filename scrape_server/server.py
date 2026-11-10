@@ -1,12 +1,16 @@
 import asyncio
+import hmac
 import json
+import os
+import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Deque, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
@@ -16,6 +20,10 @@ from config import (
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
     FEEDS_DIR,
+    INGEST_MAX_BATCH_SIZE,
+    INGEST_MAX_CONTENT_CHARS,
+    INGEST_MAX_HASHES_PER_CHECK,
+    INGEST_RATE_LIMIT_PER_MINUTE,
     LOCAL_TIMEZONE,
     PUBLIC_NGROK_URL,
     SCRAPE_MISFIRE_GRACE_SECONDS,
@@ -27,6 +35,7 @@ from database import (
     get_all_events,
     get_all_recent_posts,
     get_inbox_messages,
+    get_known_content_hashes,
     get_or_create_user,
     get_posts_for_user,
     get_subscribers_for_fanpage,
@@ -48,15 +57,44 @@ class SubscribeRequest(BaseModel):
 class EmailIngestRequest(BaseModel):
     client_id: str = Field("anonymous", description="Client or user identifier submitting the email")
     message_id: Optional[str] = Field(None, description="Unique Email Message-ID header or UID")
+    content_hash: Optional[str] = Field(None, description="SHA-256 fingerprint computed by the client")
     subject: str = Field("", description="Email subject line")
     sender: Optional[str] = Field(None, description="Sender email address or display name")
-    received_at: Optional[str] = Field(None, description="ISO 8601 timestamp when email was received")
+    received_at: Optional[str] = Field(None, description="ISO 8601 or RFC 2822 timestamp when email was received")
     content: str = Field(..., description="Plain-text email body content")
     media_urls: List[str] = Field(default_factory=list, description="Optional poster/attachment image URLs")
 
 
 class BatchEmailIngestRequest(BaseModel):
     emails: List[EmailIngestRequest]
+
+
+class HashCheckRequest(BaseModel):
+    hashes: List[str] = Field(..., description="List of client-computed SHA-256 content_hash strings to check")
+
+
+_ingest_rate_buckets: Dict[str, Deque[float]] = defaultdict(deque)
+
+
+def guard_ingest(request: Request, x_ingest_token: str = Header(default="")) -> None:
+    """Rate-limit and optionally authenticate public `/api/inbox*` and `/api/events/ingest-email` calls.
+
+    - If `INGEST_API_KEY` env var is set, callers must pass it via `X-Ingest-Token` header.
+    - Enforces a per-IP sliding-window limit of `INGEST_RATE_LIMIT_PER_MINUTE` requests/minute.
+    """
+    expected_key = os.environ.get("INGEST_API_KEY", "").strip()
+    if expected_key:
+        if not x_ingest_token or not hmac.compare_digest(x_ingest_token.encode(), expected_key.encode()):
+            raise HTTPException(status_code=401, detail="Invalid or missing X-Ingest-Token.")
+
+    client_ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")).split(",")[0].strip()
+    now = time.monotonic()
+    bucket = _ingest_rate_buckets[client_ip]
+    while bucket and now - bucket[0] > 60.0:
+        bucket.popleft()
+    if len(bucket) >= INGEST_RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for email ingestion.")
+    bucket.append(now)
 
 
 class ConnectionManager:
@@ -336,8 +374,26 @@ def api_get_schedule():
     }
 
 
-@app.post("/api/inbox")
-@app.post("/api/events/ingest-email")
+@app.post("/api/inbox/check", dependencies=[Depends(guard_ingest)])
+def api_check_inbox_hashes(body: HashCheckRequest):
+    """Pre-flight hash check so clients only upload email bodies the server has not seen yet."""
+    if len(body.hashes) > INGEST_MAX_HASHES_PER_CHECK:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many hashes in one check (max {INGEST_MAX_HASHES_PER_CHECK}).",
+        )
+    cleaned = [h.strip().lower() for h in body.hashes if h and h.strip()]
+    known = get_known_content_hashes(cleaned)
+    unknown = [h for h in cleaned if h not in known]
+    return {
+        "checked": len(cleaned),
+        "known": sorted(known),
+        "unknown": unknown,
+    }
+
+
+@app.post("/api/inbox", dependencies=[Depends(guard_ingest)])
+@app.post("/api/events/ingest-email", dependencies=[Depends(guard_ingest)])
 async def api_ingest_email(body: EmailIngestRequest):
     """
     Inbox endpoint to receive an event-related email entry from a client, move it to the
@@ -346,6 +402,11 @@ async def api_ingest_email(body: EmailIngestRequest):
     """
     if not body.content or not body.content.strip():
         raise HTTPException(status_code=400, detail="Email content must not be empty.")
+    if len(body.content) > INGEST_MAX_CONTENT_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
+        )
 
     get_or_create_user(body.client_id or "anonymous")
     result = await asyncio.to_thread(
@@ -354,9 +415,11 @@ async def api_ingest_email(body: EmailIngestRequest):
         subject=body.subject,
         client_id=body.client_id,
         message_id=body.message_id,
+        content_hash=body.content_hash,
         sender=body.sender,
         received_at=body.received_at,
         media_urls=body.media_urls,
+        sync_folders=True,
     )
 
     await manager.broadcast_to_all(
@@ -369,13 +432,24 @@ async def api_ingest_email(body: EmailIngestRequest):
     return result
 
 
-@app.post("/api/inbox/batch")
+@app.post("/api/inbox/batch", dependencies=[Depends(guard_ingest)])
 async def api_ingest_email_batch(body: BatchEmailIngestRequest):
     """Batch upload endpoint for clients submitting multiple filtered emails at once."""
+    if len(body.emails) > INGEST_MAX_BATCH_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Batch size exceeds {INGEST_MAX_BATCH_SIZE} emails.",
+        )
     results = []
+    any_mutated = False
     for item in body.emails:
         if not item.content or not item.content.strip():
             continue
+        if len(item.content) > INGEST_MAX_CONTENT_CHARS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
+            )
         get_or_create_user(item.client_id or "anonymous")
         res = await asyncio.to_thread(
             ingest_email_message,
@@ -383,11 +457,18 @@ async def api_ingest_email_batch(body: BatchEmailIngestRequest):
             subject=item.subject,
             client_id=item.client_id,
             message_id=item.message_id,
+            content_hash=item.content_hash,
             sender=item.sender,
             received_at=item.received_at,
             media_urls=item.media_urls,
+            sync_folders=False,
         )
+        if res.get("status") in ("created", "updated", "ignored"):
+            any_mutated = True
         results.append(res)
+
+    if any_mutated:
+        await asyncio.to_thread(sync_all_event_folders)
 
     await manager.broadcast_to_all({"event": "inbox_updated", "refresh_tree": True})
     return {

@@ -15,6 +15,7 @@ from .db import (
     get_posts_for_user,
     get_subscribers_for_fanpage,
     get_inbox_messages,
+    get_known_content_hashes,
     get_all_events,
 )
 from .models import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, User, UserSubscription, ensure_local_tz
@@ -36,6 +37,7 @@ __all__ = [
     "get_posts_for_user",
     "get_subscribers_for_fanpage",
     "get_inbox_messages",
+    "get_known_content_hashes",
     "get_all_events",
     "EmailMessage",
     "EventRecord",

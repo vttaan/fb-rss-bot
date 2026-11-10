@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 
-from config import FEEDS_DIR, LOCAL_TIMEZONE
+from config import FEEDS_DIR, LOCAL_TIMEZONE, STORE_EMAIL_CONTENT
 from database import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, ensure_local_tz, get_session, init_db
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -800,27 +800,45 @@ def ingest_email_message(
     sender: Optional[str] = None,
     received_at: Optional[str] = None,
     media_urls: Optional[List[str]] = None,
+    content_hash: Optional[str] = None,
+    sync_folders: bool = True,
 ) -> Dict[str, Any]:
     """
     Receive an email entry from a client into the server Inbox, move it to the Unified Extractor,
     compare anchor fields (title, format online/offline, date, time, location) to determine
     deduplication or update of an existing event, gather remaining information, and refresh
     all distributed JSON folders.
+
+    Two deduplication layers run in order, cheapest first:
+      1. EXACT copy  - `content_hash` (client fingerprint) or `message_id` already stored.
+                       One indexed lookup, no LLM call.
+      2. CONTEXTUAL  - anchor-field comparison after extraction (same event, changed details).
+
+    `sync_folders=False` lets a batch caller rewrite the feed files once at the end instead of
+    once per email.
     """
     init_db()
     clean_client = (client_id or "anonymous").strip() or "anonymous"
     clean_subject = (subject or "").strip()
     clean_content = (content or "").strip()
+    clean_hash = (content_hash or "").strip().lower() or None
     media = [u.strip() for u in (media_urls or []) if u and str(u).strip()]
+    # Data minimisation: the body is only needed during extraction, so by default it is not stored.
+    stored_content = clean_content if STORE_EMAIL_CONTENT else ""
 
-    # Parse received_at timestamp
+    # Parse received_at timestamp (accepts ISO 8601 and RFC 2822 email Date headers)
     rec_dt = datetime.now(LOCAL_TIMEZONE)
     if received_at:
         try:
             parsed = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
             rec_dt = ensure_local_tz(parsed) or rec_dt
         except Exception:
-            pass
+            try:
+                from email.utils import parsedate_to_datetime
+                parsed = parsedate_to_datetime(received_at)
+                rec_dt = ensure_local_tz(parsed) or rec_dt
+            except Exception:
+                pass
 
     # Deterministic message_id if client didn't supply one
     if not message_id or not str(message_id).strip():
@@ -832,10 +850,19 @@ def ingest_email_message(
         clean_msg_id = str(message_id).strip()
 
     with get_session() as session:
-        # 1. Message-ID level deduplication check
-        existing_msg = session.scalar(
-            select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
-        )
+        # 1. EXACT-copy deduplication (before any LLM work): content_hash first, then message_id
+        existing_msg = None
+        dup_reason = "message_id_already_processed"
+        if clean_hash:
+            existing_msg = session.scalar(
+                select(EmailMessage).where(EmailMessage.content_hash == clean_hash)
+            )
+            if existing_msg:
+                dup_reason = "content_hash_already_processed"
+        if not existing_msg:
+            existing_msg = session.scalar(
+                select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
+            )
         if existing_msg:
             ev_record = (
                 session.get(EventRecord, existing_msg.event_id)
@@ -844,7 +871,7 @@ def ingest_email_message(
             )
             return {
                 "status": "duplicate",
-                "reason": "message_id_already_processed",
+                "reason": dup_reason,
                 "is_event": existing_msg.is_event,
                 "is_duplicate": True,
                 "is_updated": False,
@@ -887,10 +914,11 @@ def ingest_email_message(
         if not is_event:
             msg_row = EmailMessage(
                 message_id=clean_msg_id,
+                content_hash=clean_hash,
                 client_id=clean_client,
                 subject=clean_subject,
                 sender=sender,
-                content=clean_content,
+                content=stored_content,
                 media_urls_json=json.dumps(media, ensure_ascii=False),
                 received_at=rec_dt,
                 ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -902,7 +930,8 @@ def ingest_email_message(
             )
             session.add(msg_row)
             session.commit()
-            sync_all_event_folders(session)
+            if sync_folders:
+                sync_all_event_folders(session)
             return {
                 "status": "ignored",
                 "is_event": False,
@@ -931,10 +960,11 @@ def ingest_email_message(
         ev_dict = ev_record.to_dict()
         msg_row = EmailMessage(
             message_id=clean_msg_id,
+            content_hash=clean_hash,
             client_id=clean_client,
             subject=clean_subject,
             sender=sender,
-            content=clean_content,
+            content=stored_content,
             media_urls_json=json.dumps(media, ensure_ascii=False),
             received_at=rec_dt,
             ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -946,7 +976,8 @@ def ingest_email_message(
         )
         session.add(msg_row)
         session.commit()
-        sync_all_event_folders(session)
+        if sync_folders:
+            sync_all_event_folders(session)
 
         return {
             "status": upsert_status,

@@ -40,3 +40,14 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/131.0.0.0 Safari/537.36"
 )
+
+# --- Email ingestion hardening ---
+# Privacy: when False (default) the full email body is NEVER written to the database,
+# the public feeds, or git. Only metadata + the extracted event are kept.
+STORE_EMAIL_CONTENT = False
+
+# Abuse limits for the public ingest endpoints (/api/inbox*, /api/events/ingest-email)
+INGEST_RATE_LIMIT_PER_MINUTE = 60    # requests per client IP per minute
+INGEST_MAX_BATCH_SIZE = 50           # emails per /api/inbox/batch request
+INGEST_MAX_CONTENT_CHARS = 50000     # characters per email body
+INGEST_MAX_HASHES_PER_CHECK = 500    # hashes per /api/inbox/check request

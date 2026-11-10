@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 
-from sqlalchemy import create_engine, select, func
+from sqlalchemy import create_engine, inspect, select, func, text
 from sqlalchemy.orm import Session, sessionmaker, joinedload
 
 from config import DATABASE_URL, LOCAL_TIMEZONE
@@ -14,9 +14,36 @@ engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
+_MIGRATIONS_DONE = False
+
+
+def _apply_lightweight_migrations() -> None:
+    """Bring an existing SQLite file up to date.
+
+    `create_all` only creates *missing tables*; it never adds columns to tables that already
+    exist. A database created before `email_messages.content_hash` existed would therefore crash
+    on the first query. This adds the column and its unique index when they are missing.
+    """
+    insp = inspect(engine)
+    if "email_messages" not in insp.get_table_names():
+        return
+    columns = {c["name"] for c in insp.get_columns("email_messages")}
+    with engine.begin() as conn:
+        if "content_hash" not in columns:
+            conn.execute(text("ALTER TABLE email_messages ADD COLUMN content_hash VARCHAR(128)"))
+        # SQLite lets many rows hold NULL in a unique index, so old rows without a hash are fine.
+        conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_email_messages_content_hash ON email_messages (content_hash)")
+        )
+
+
 def init_db() -> None:
-    """Create database tables if they do not exist."""
+    """Create database tables if they do not exist, then apply lightweight migrations once."""
+    global _MIGRATIONS_DONE
     Base.metadata.create_all(bind=engine)
+    if not _MIGRATIONS_DONE:
+        _apply_lightweight_migrations()
+        _MIGRATIONS_DONE = True
 
 
 def get_session() -> Session:
@@ -368,6 +395,19 @@ def get_inbox_messages(client_id: Optional[str] = None, limit: int = 100) -> Lis
             stmt = stmt.where(EmailMessage.client_id == client_id.strip())
         stmt = stmt.limit(limit)
         return list(session.scalars(stmt).all())
+
+
+def get_known_content_hashes(hashes: List[str]) -> set:
+    """Return the subset of `hashes` already stored in the inbox (exact-copy check, indexed lookup)."""
+    init_db()
+    wanted = list({h.strip().lower() for h in hashes if h and h.strip()})
+    if not wanted:
+        return set()
+    with get_session() as session:
+        rows = session.scalars(
+            select(EmailMessage.content_hash).where(EmailMessage.content_hash.in_(wanted))
+        ).all()
+        return set(rows)
 
 
 def get_all_events(
