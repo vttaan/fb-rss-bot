@@ -56,7 +56,7 @@ Return ONLY a JSON object with exactly these keys (use null when unknown, never 
 {{
   "is_event": boolean,
   "title": string|null,
-  "description": string|null,        // 1-2 sentence summary, same language as the post
+  "description": string|null,        // 1-2 sentence summary, same language as the post, don't just take the raw text, try to summarize what the event is about
   "start_datetime": string|null,     // ISO 8601, resolve relative dates using the publish date
   "end_datetime": string|null,
   "location": string|null,
