@@ -83,7 +83,7 @@ Post text:
 \"\"\"
 
 EXTRACTION RULES:
-- `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Ignore any prefix or postfix inside square brackets `[...]` (e.g. `[THÔNG BÁO]`, `[HCMUS]`) and ignore administrative lead-in words such as `v/v`, `V/v`, `thông báo về`, `thong bao ve`, `mời đăng ký`, `moi dang ky`, `thư mời`. Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
+- `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
 - `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
 - `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
@@ -96,7 +96,7 @@ EXTRACTION RULES:
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
 {{
   "is_event": boolean,
-  "title": string|null,               // clean event title, ignoring [...] brackets and "v/v", "thông báo về", "mời đăng ký"
+  "title": string|null,               // event title
   "description": string|null,         // summary of what the event is about and what benefits students will get (NOT raw intro text)
   "event_start_datetime": string|null,// ISO 8601 (+07:00), time event starts (XXh from XXh-YYh, or 00:00:00+07:00 if no time mentioned)
   "event_end_datetime": string|null,  // ISO 8601 (+07:00), time event ends (YYh from XXh-YYh, or 23:59:00+07:00 of end day if no time mentioned)
@@ -513,28 +513,9 @@ def _summarize_event_description(content: str) -> Optional[str]:
     return summary[:450] + ("..." if len(summary) > 450 else "")
 
 
-_TITLE_NOISE_PREFIX_RE = re.compile(
-    r"^\s*(?:v\s*/\s*v|v\s*\.\s*v|th[oô]ng\s*b[aá]o\s*v[eề]|thong\s*bao\s*ve|th[oô]ng\s*b[aá]o|thong\s*bao|"
-    r"m[oờ]i\s*[dđ][aă]ng\s*k[yý]|moi\s*dang\s*ky|th[uư]\s*m[oờ]i\s*tham\s*d[uự]|th[uư]\s*m[oờ]i|m[oờ]i\s*tham\s*gia)"
-    r"\s*[:\-–—.]?\s*",
-    flags=re.IGNORECASE,
-)
-
-
 def _clean_event_title(raw_title: Optional[str]) -> str:
-    """Remove bracketed tags '[...]' (prefix or postfix) and lead-in words like 'v/v', 'thông báo về', 'mời đăng ký'."""
-    t = (raw_title or "").strip()
-    if not t:
-        return "Untitled Event"
-    # Strip any [...] bracket blocks (prefix, inline, or postfix)
-    t = re.sub(r"\[[^\]]*\]", " ", t)
-    t = re.sub(r"\s+", " ", t).strip(" :-–—|•*")
-    # Repeatedly strip administrative lead-in words (e.g. "Thông báo về việc mời đăng ký ...")
-    for _ in range(3):
-        updated = _TITLE_NOISE_PREFIX_RE.sub("", t).strip(" :-–—|•*")
-        if updated == t:
-            break
-        t = updated
+    """Normalize whitespace in an extracted event title without stripping prefixes, postfixes, or brackets."""
+    t = re.sub(r"\s+", " ", (raw_title or "").strip())
     return t or "Untitled Event"
 
 
@@ -607,7 +588,7 @@ def _enrich_extracted_event_fields(
 ) -> Dict[str, Any]:
     """
     Post-process LLM / heuristic output to enforce field regulations:
-      - clean `title` (strip [...] and 'v/v', 'thông báo về', 'mời đăng ký')
+      - normalize `title` whitespace
       - fill `description`, `location`, `fee`
       - normalize `event_start_datetime` (00:00 default) & `event_end_datetime` (23:59 default)
       - preserve explicit `reg_start_datetime` / `reg_end_datetime` flags
@@ -703,7 +684,7 @@ def heuristic_extract_event(
     if not is_event:
         return {"is_event": False}
 
-    # Title: prefer subject, else first non-empty line, cleaned of [...] and lead-in noise
+    # Title: prefer subject, else first non-empty line, preserving brackets/prefixes/postfixes
     title = subject.strip()
     if not title:
         for line in content.splitlines():

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
@@ -244,6 +244,15 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Ensure API and dashboard endpoints always return valid JSON on unexpected errors."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {exc}"},
+    )
+
+
 from admin import router as admin_router  # noqa: E402
 
 app.include_router(admin_router)
@@ -392,17 +401,22 @@ async def api_ingest_email(body: EmailIngestRequest):
     if not body.content or not body.content.strip():
         raise HTTPException(status_code=400, detail="Email content must not be empty.")
 
-    get_or_create_user(body.client_id or "anonymous")
-    result = await asyncio.to_thread(
-        ingest_email_message,
-        content=body.content,
-        subject=body.subject,
-        client_id=body.client_id,
-        message_id=body.message_id,
-        sender=body.sender,
-        received_at=body.received_at,
-        media_urls=body.media_urls,
-    )
+    try:
+        get_or_create_user(body.client_id or "anonymous")
+        result = await asyncio.to_thread(
+            ingest_email_message,
+            content=body.content,
+            subject=body.subject,
+            client_id=body.client_id,
+            message_id=body.message_id,
+            sender=body.sender,
+            received_at=body.received_at,
+            media_urls=body.media_urls,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Inbox extraction failed: {exc}") from exc
 
     await manager.broadcast_to_all(
         {
@@ -1079,6 +1093,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           </summary>
           <pre class="code-block">POST https://stimulus-rectangle-ship.ngrok-free.dev/api/inbox
 Content-Type: application/json
+ngrok-skip-browser-warning: true
 
 {
   "client_id": "client_team_1",
@@ -1161,11 +1176,38 @@ Content-Type: application/json
 
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+    async function fetchJson(url, options = {}) {
+      const headers = {
+        'ngrok-skip-browser-warning': 'true',
+        ...(options.headers || {}),
+      };
+      const res = await fetch(url, { ...options, headers });
+      const rawText = await res.text();
+      let data = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (parseErr) {
+        const trimmed = (rawText || '').trim();
+        if (trimmed.startsWith('<')) {
+          const titleMatch = trimmed.match(/<title[^>]*>([^<]+)<\\/title>/i);
+          const pageTitle = titleMatch ? titleMatch[1].trim() : '';
+          throw new Error(
+            `Server returned HTML instead of JSON (HTTP ${res.status}${pageTitle ? ': ' + pageTitle : ''}). ` +
+            'The tunnel/server may be offline, timed out, or showing a proxy page.'
+          );
+        }
+        throw new Error(`Invalid JSON response (HTTP ${res.status}): ${trimmed.slice(0, 140) || res.statusText}`);
+      }
+      if (!res.ok) {
+        throw new Error((data && (data.detail || data.message)) || res.statusText || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
     async function loadDirectoryTree() {
       const container = document.getElementById('directoryTreeContainer');
       try {
-        const res = await fetch('/api/tree');
-        const data = await res.json();
+        const data = await fetchJson('/api/tree');
         const foldersHtml = (data.folders || []).map((f, idx) => {
           const files = f.files || [];
           const filesHtml = files.length
@@ -1223,8 +1265,7 @@ Content-Type: application/json
       body.textContent = 'Loading...';
       modal.style.display = 'flex';
       try {
-        const res = await fetch(path);
-        const json = await res.json();
+        const json = await fetchJson(path);
         body.textContent = JSON.stringify(json, null, 2);
       } catch (e) {
         body.textContent = 'Error loading JSON: ' + e.message;
@@ -1254,8 +1295,7 @@ Content-Type: application/json
     async function loadInboxMessages() {
       const listEl = document.getElementById('inboxListContainer');
       try {
-        const res = await fetch('/api/inbox?limit=30');
-        const data = await res.json();
+        const data = await fetchJson('/api/inbox?limit=30');
         const msgs = data.messages || [];
         document.getElementById('inboxCount').textContent = msgs.length;
         if (!msgs.length) {
@@ -1322,13 +1362,11 @@ Content-Type: application/json
       msgEl.textContent = 'Running unified extractor & anchor-field comparison...';
 
       try {
-        const res = await fetch('/api/inbox', {
+        const data = await fetchJson('/api/inbox', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ client_id, message_id, subject, sender, content, media_urls }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
 
         msgEl.style.color = '#1f7a58';
         msgEl.innerHTML = `Result: ${statusBadgeHtml(data.status)} ${data.event ? '— <strong>' + esc(data.event.title) + '</strong>' : ''}`;
@@ -1347,11 +1385,9 @@ Content-Type: application/json
       const saved = sessionStorage.getItem('adminToken');
       if (saved) {
         try {
-          const res = await fetch('/api/admin/verify', { headers: { 'X-Admin-Token': saved } });
-          if (res.ok) {
-            window.location.href = '/admin';
-            return;
-          }
+          await fetchJson('/api/admin/verify', { headers: { 'X-Admin-Token': saved } });
+          window.location.href = '/admin';
+          return;
         } catch (e) {}
       }
       document.getElementById('adminLoginMsg').textContent = '';
@@ -1377,9 +1413,7 @@ Content-Type: application/json
       msgEl.style.color = '#7e7896';
       msgEl.textContent = 'Verifying admin token...';
       try {
-        const res = await fetch('/api/admin/verify', { headers: { 'X-Admin-Token': token } });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.detail || res.statusText);
+        await fetchJson('/api/admin/verify', { headers: { 'X-Admin-Token': token } });
         sessionStorage.setItem('adminToken', token);
         window.location.href = '/admin';
       } catch (err) {
@@ -1392,8 +1426,7 @@ Content-Type: application/json
 
     async function loadScheduleBadge() {
       try {
-        const res = await fetch('/api/schedule');
-        const data = await res.json();
+        const data = await fetchJson('/api/schedule');
         const badge = document.getElementById('scheduleBadge');
         if (data.mode === 'daily_cron') {
           badge.textContent = 'Daily: ' + (data.scheduled_times_ict || []).join(', ') + ' ICT';
@@ -1445,8 +1478,7 @@ Content-Type: application/json
 
     async function loadFanpages() {
       try {
-        const res = await fetch('/api/fanpages');
-        const list = await res.json();
+        const list = await fetchJson('/api/fanpages');
         renderFanpages(list || []);
       } catch (e) {}
     }
@@ -1471,13 +1503,11 @@ Content-Type: application/json
       msgEl.style.color = 'var(--muted)';
       msgEl.textContent = 'Fetching Facebook post & running Event Extractor...';
       try {
-        const res = await fetch('/api/extract-post', {
+        const data = await fetchJson('/api/extract-post', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.detail || res.statusText);
         msgEl.style.color = data.is_event ? 'var(--mint-text)' : 'var(--muted)';
         msgEl.textContent = data.message || (data.is_event ? 'Event extracted!' : 'Not an event.');
         if (data.is_event) {

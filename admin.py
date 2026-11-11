@@ -435,11 +435,20 @@ ADMIN_HTML = """<!DOCTYPE html>
   <script>
     const msg = (t, bad, id = 'msg') => { const m = document.getElementById(id); if (!m) return; m.textContent = t; m.style.color = bad ? '#c2476b' : '#2f8f6b'; };
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const headers = () => ({ 'Content-Type': 'application/json', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' });
+    const headers = () => ({ 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' });
 
     async function api(method, path, body) {
       const res = await fetch(path, { method, headers: headers(), body: body ? JSON.stringify(body) : undefined });
-      const data = await res.json().catch(() => ({}));
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (e) {
+        if ((rawText || '').trim().startsWith('<')) {
+          throw new Error(`Server returned HTML instead of JSON (HTTP ${res.status}).`);
+        }
+        throw new Error(`Invalid JSON response (HTTP ${res.status}): ${rawText.slice(0, 140) || res.statusText}`);
+      }
       if (!res.ok) throw new Error(data.detail || res.statusText);
       return data;
     }
