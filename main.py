@@ -200,6 +200,89 @@ def cmd_export_rss() -> None:
         console.print(f"  - {p.name}")
 
 
+@app.command("extract")
+def cmd_extract(
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        help="Number of latest posts per fanpage to feed to the event extractor (0 = all posts).",
+    ),
+    recheck: bool = typer.Option(
+        False,
+        "--recheck",
+        "-r",
+        help="Re-evaluate posts previously marked as non-event within the limit.",
+    ),
+    target: Optional[str] = typer.Option(
+        None,
+        "--page",
+        "-p",
+        help="Optional fanpage ID, slug, or URL to filter.",
+    ),
+) -> None:
+    """Feed remaining/unanalyzed posts from each fanpage into the Event Extractor."""
+    from events import analyze_fanpage_posts, sync_all_event_folders
+
+    init_db()
+    rows = list_fanpages(active_only=True)
+    if target:
+        rows = [
+            (fp, count)
+            for fp, count in rows
+            if str(fp.id) == target
+            or fp.slug.lower() == target.lower()
+            or target.lower() in fp.url.lower()
+        ]
+
+    if not rows:
+        console.print("[yellow]No matching active fanpages found in database.[/yellow]")
+        return
+
+    per_page_limit = limit if limit and limit > 0 else None
+    table = Table(
+        title=f"Event Extraction Summary (Latest {per_page_limit or 'ALL'} Posts/Page)",
+        show_lines=True,
+    )
+    table.add_column("ID", justify="right", style="cyan")
+    table.add_column("Fanpage", style="bold")
+    table.add_column("Analyzed", justify="right")
+    table.add_column("LLM Calls", justify="right", style="magenta")
+    table.add_column("Events Found", justify="right", style="green")
+    table.add_column("Updated", justify="right", style="yellow")
+    table.add_column("Duplicates", justify="right", style="dim")
+    table.add_column("Errors", justify="right", style="red")
+
+    total_events = 0
+    total_llm = 0
+    for fp, _ in rows:
+        stats = analyze_fanpage_posts(
+            fp.id,
+            limit=per_page_limit,
+            force_recheck=recheck,
+        )
+        total_events += stats.get("events", 0)
+        total_llm += stats.get("llm_calls", 0)
+        table.add_row(
+            str(fp.id),
+            fp.name or fp.slug,
+            str(stats.get("analyzed", 0)),
+            str(stats.get("llm_calls", 0)),
+            str(stats.get("events", 0)),
+            str(stats.get("updated", 0)),
+            str(stats.get("duplicates", 0)),
+            str(stats.get("errors", 0)),
+        )
+
+    sync_all_event_folders()
+    regenerate_all_feeds()
+    console.print(table)
+    console.print(
+        f"[bold green]Extraction complete![/bold green] "
+        f"LLM calls: [bold]{total_llm}[/bold] | Newly extracted events: [bold]{total_events}[/bold]"
+    )
+
+
 @app.command("serve")
 def cmd_serve(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host address to bind."),

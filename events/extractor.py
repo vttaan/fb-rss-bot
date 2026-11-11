@@ -153,6 +153,36 @@ def looks_event_related(content: str) -> bool:
     return False
 
 
+FALLBACK_GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-flash-latest",
+]
+_WORKING_GEMINI_MODEL: Optional[str] = None
+
+
+def _candidate_gemini_models() -> List[str]:
+    """Return ordered list of Gemini model IDs to try, normalizing any `models/` prefix or retired 1.5 aliases."""
+    global _WORKING_GEMINI_MODEL
+    if _WORKING_GEMINI_MODEL:
+        return [_WORKING_GEMINI_MODEL] + [m for m in FALLBACK_GEMINI_MODELS if m != _WORKING_GEMINI_MODEL]
+
+    raw = (os.environ.get("GEMINI_MODEL") or "").strip().strip("'\"")
+    if raw.startswith("models/"):
+        raw = raw[len("models/"):].strip()
+
+    # Map retired Gemini 1.0/1.5 model names that now return HTTP 404 on v1beta
+    retired_prefixes = ("gemini-1.5", "gemini-1.0", "gemini-pro")
+    candidates: List[str] = []
+    if raw and not raw.lower().startswith(retired_prefixes):
+        candidates.append(raw)
+    for fallback in FALLBACK_GEMINI_MODELS:
+        if fallback not in candidates:
+            candidates.append(fallback)
+    return candidates
+
+
 def call_gemini_text(
     content: str,
     published_at_str: str,
@@ -160,26 +190,49 @@ def call_gemini_text(
     api_key: str,
 ) -> Optional[Dict[str, Any]]:
     """Send raw text (Facebook post or client Email content) to Gemini for structured event extraction."""
-    model = (os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash").strip()
-    body = {
-        "contents": [{"parts": [{"text": PROMPT.format(
-            published_at=published_at_str, fanpage=source_name, content=(content or "")[:6000]
-        )}]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
-    }
-    req = urllib.request.Request(
-        GEMINI_URL.format(model=model),
-        data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
-    text = payload["candidates"][0]["content"]["parts"][0]["text"]
-    data = json.loads(text)
-    if isinstance(data, list):
-        data = data[0] if data else {}
-    return data if isinstance(data, dict) else None
+    global _WORKING_GEMINI_MODEL
+    body_bytes = json.dumps(
+        {
+            "contents": [{
+                "parts": [{
+                    "text": PROMPT.format(
+                        published_at=published_at_str,
+                        fanpage=source_name,
+                        content=(content or "")[:6000],
+                    )
+                }]
+            }],
+            "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+        }
+    ).encode("utf-8")
+
+    last_exc: Optional[Exception] = None
+    for model in _candidate_gemini_models():
+        req = urllib.request.Request(
+            GEMINI_URL.format(model=model),
+            data=body_bytes,
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+            _WORKING_GEMINI_MODEL = model
+            text = payload["candidates"][0]["content"]["parts"][0]["text"]
+            data = json.loads(text)
+            if isinstance(data, list):
+                data = data[0] if data else {}
+            return data if isinstance(data, dict) else None
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            # On 404 (Not Found) or 400 (unsupported model), try the next fallback model
+            if exc.code in (400, 404):
+                continue
+            raise
+
+    if last_exc is not None:
+        raise last_exc
+    return None
 
 
 def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
@@ -1025,11 +1078,19 @@ def ingest_email_message(
         }
 
 
-def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
-    """Analyze not-yet-analyzed posts of a fanpage and refresh its events.json. Blocking (run in a thread)."""
+def analyze_fanpage_posts(
+    fanpage_id: int,
+    limit: Optional[int] = None,
+    force_recheck: bool = False,
+) -> Dict[str, int]:
+    """
+    Analyze remaining/unanalyzed posts of a fanpage (optionally scoped to the `limit` latest posts)
+    and refresh its events.json. Blocking (run in a thread).
+    """
     init_db()
     stats = {"analyzed": 0, "llm_calls": 0, "events": 0, "updated": 0, "duplicates": 0, "errors": 0}
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    max_llm_calls = max(MAX_LLM_CALLS_PER_FANPAGE, limit) if (limit and limit > 0) else MAX_LLM_CALLS_PER_FANPAGE
     with get_session() as session:
         fanpage = session.get(Fanpage, fanpage_id)
         if not fanpage:
@@ -1040,17 +1101,20 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
                 select(PostAnalysis).where(PostAnalysis.fanpage_id == fanpage_id)
             ).all()
         }
-        all_posts = session.scalars(
-            select(Post).where(Post.fanpage_id == fanpage_id).order_by(Post.published_at.desc())
-        ).all()
+        stmt = select(Post).where(Post.fanpage_id == fanpage_id).order_by(Post.published_at.desc(), Post.id.desc())
+        if limit is not None and limit > 0:
+            stmt = stmt.limit(limit)
+        all_posts = session.scalars(stmt).all()
 
         pending: List[Post] = []
         for p in all_posts:
             pa = existing_analyses.get(p.post_id)
             if pa is None:
                 pending.append(p)
-            elif not pa.is_event and (pa.event_json or "{}") == "{}" and looks_event_related(p.content):
-                # Re-queue legacy pre-filtered posts that now pass the refined event filter
+            elif not pa.is_event and (
+                force_recheck or (pa.event_json or "{}") == "{}"
+            ) and looks_event_related(p.content):
+                # Re-queue legacy pre-filtered posts (or force_recheck non-events) that pass the event filter
                 session.delete(pa)
                 session.flush()
                 pending.append(p)
@@ -1069,7 +1133,7 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
                 )
                 stats["analyzed"] += 1
                 continue
-            if not api_key or stats["llm_calls"] >= MAX_LLM_CALLS_PER_FANPAGE:
+            if not api_key or stats["llm_calls"] >= max_llm_calls:
                 continue  # leave uncached; retried next cycle
             try:
                 stats["llm_calls"] += 1
