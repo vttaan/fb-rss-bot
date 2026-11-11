@@ -109,27 +109,110 @@ def _find_first_key(obj: Any, target_key: str) -> Any:
     return None
 
 
-def _has_non_null_attached_story(obj: Any) -> bool:
-    """Check whether a Story node contains a shared/attached story from another post or page."""
+def _find_attached_story(obj: Any) -> Optional[Dict[str, Any]]:
+    """Recursively find a non-null shared/attached_story dict inside a Story unit."""
     if isinstance(obj, dict):
-        if obj.get("attached_story") is not None:
-            return True
+        att = obj.get("attached_story")
+        if isinstance(att, dict) and att:
+            return att
         for k, v in obj.items():
-            if k in ("feedback", "comments", "display_comments"):
+            if k in ("feedback", "comments", "display_comments", "comment_rendering_instance"):
                 continue
-            if _has_non_null_attached_story(v):
-                return True
+            res = _find_attached_story(v)
+            if res is not None:
+                return res
     elif isinstance(obj, list):
         for item in obj:
-            if _has_non_null_attached_story(item):
-                return True
-    return False
+            res = _find_attached_story(item)
+            if res is not None:
+                return res
+    return None
+
+
+def _find_post_permalink(obj: Any) -> Optional[str]:
+    """Find a Facebook post permalink URL inside metadata/context_layout (preferring URLs with a post ID)."""
+    if isinstance(obj, dict):
+        for k in ("wwwURL", "url"):
+            val = obj.get(k)
+            if isinstance(val, str) and _extract_post_id_from_url(val):
+                return val
+        for k, v in obj.items():
+            if k in SKIP_JSON_KEYS:
+                continue
+            res = _find_post_permalink(v)
+            if res:
+                return res
+    elif isinstance(obj, list):
+        for item in obj:
+            res = _find_post_permalink(item)
+            if res:
+                return res
+    return None
+
+
+def _extract_story_message(node: Any) -> str:
+    """Extract post message text from a Story or attached_story dict (excluding comments)."""
+    if not isinstance(node, dict):
+        return ""
+
+    msg_obj = node.get("message")
+    if isinstance(msg_obj, dict):
+        if isinstance(msg_obj.get("text"), str) and msg_obj["text"].strip():
+            return msg_obj["text"].strip()
+        inner = _extract_story_message(msg_obj.get("story"))
+        if inner:
+            return inner
+        t = _find_first_key(msg_obj, "text")
+        if isinstance(t, str) and t.strip():
+            return t.strip()
+
+    comet = node.get("comet_sections")
+    if isinstance(comet, dict):
+        for key in ("message", "message_container", "content"):
+            sub = comet.get(key)
+            if isinstance(sub, dict):
+                text = _extract_story_message(sub)
+                if text:
+                    return text
+                if key in ("message", "message_container"):
+                    t = _find_first_key(sub, "text")
+                    if isinstance(t, str) and t.strip():
+                        return t.strip()
+
+    if isinstance(node.get("story"), dict):
+        text = _extract_story_message(node["story"])
+        if text:
+            return text
+
+    for k, v in node.items():
+        if k in SKIP_JSON_KEYS or k in ("message", "comet_sections", "story"):
+            continue
+        if isinstance(v, (dict, list)):
+            msg = _find_first_key(v, "message")
+            if isinstance(msg, dict) and isinstance(msg.get("text"), str) and msg["text"].strip():
+                return msg["text"].strip()
+
+    return ""
+
+
+def _extract_attachment_card_text(node: Any) -> str:
+    """Fallback text extraction for shared event/link cards that store title/description in attachments."""
+    parts: List[str] = []
+    for key in ("title_with_entities", "card_title", "description"):
+        obj = _find_first_key(node, key)
+        if isinstance(obj, dict) and isinstance(obj.get("text"), str):
+            val = obj["text"].strip()
+            if val and val not in parts:
+                parts.append(val)
+    return "\n".join(parts)
 
 
 def _belongs_to_fanpage(actors: Any, permalink: Optional[str], page_slug: str) -> bool:
-    """Verify that the Story node was authored by the target fanpage and not another page or visitor."""
+    """Verify that the Story node was authored/shared by the target fanpage and not a visitor."""
     if not page_slug:
         return True
+
+    is_numeric_or_profile = page_slug.isdigit() or page_slug.startswith(("profile_", "people_"))
 
     if isinstance(actors, list) and actors:
         first_actor = actors[0]
@@ -137,37 +220,46 @@ def _belongs_to_fanpage(actors: Any, permalink: Optional[str], page_slug: str) -
             actor_url = (first_actor.get("url") or "").lower()
             if actor_url and "facebook.com/" in actor_url:
                 actor_slug = _extract_page_slug(actor_url)
-                if actor_slug and actor_slug != page_slug and not page_slug.startswith("profile_"):
+                if actor_slug and actor_slug != page_slug and not is_numeric_or_profile:
                     return False
 
     if isinstance(permalink, str) and "facebook.com/" in permalink:
         parsed = urlparse(permalink)
         parts = [p for p in parsed.path.strip("/").split("/") if p]
         if parts and parts[0].lower() == "people":
-            # If the target page is not a /people/ URL, reject visitor posts from /people/
-            if not page_slug.startswith("people_"):
+            if not is_numeric_or_profile and parts[-1].lower() != page_slug:
                 return False
         if len(parts) >= 2 and parts[1].lower() in ("posts", "videos", "photos"):
             owner_slug = parts[0].lower()
-            if owner_slug != page_slug and not page_slug.startswith("profile_"):
+            if owner_slug != page_slug and not is_numeric_or_profile:
                 return False
 
     return True
 
 
-def _collect_media_urls(node: Any, found: Set[str], actor_id: Optional[str] = None) -> None:
+def _collect_media_urls(
+    node: Any,
+    found: Set[str],
+    actor_id: Optional[str] = None,
+    allow_shared: bool = True,
+) -> None:
     """
-    Extract direct photo attachment URLs from a Story's attachments
-    (excluding shared media from other pages, videos from other owners, and comment images).
+    Extract photo attachment URLs from a Story's attachments (including shared post attachments
+    when `allow_shared=True`, while excluding comment images and unrelated sidebars).
     """
     if isinstance(node, dict):
         typename = node.get("__typename", "")
-        if typename in ("ExternalUrl", "Story"):
+        if typename == "ExternalUrl" or (typename == "Story" and not allow_shared):
             return
 
-        # If this node is a Media object (Photo/Video), verify its owner matches the fanpage actor_id
         owner = node.get("owner")
-        if isinstance(owner, dict) and actor_id and owner.get("id") and str(owner.get("id")) != str(actor_id):
+        if (
+            not allow_shared
+            and isinstance(owner, dict)
+            and actor_id
+            and owner.get("id")
+            and str(owner.get("id")) != str(actor_id)
+        ):
             return
 
         for img_key in ("photo_image", "image"):
@@ -183,12 +275,12 @@ def _collect_media_urls(node: Any, found: Set[str], actor_id: Optional[str] = No
                     found.add(uri)
 
         for k, v in node.items():
-            if k in SKIP_JSON_KEYS:
+            if k in SKIP_JSON_KEYS and not (allow_shared and k == "attached_story"):
                 continue
-            _collect_media_urls(v, found, actor_id=actor_id)
+            _collect_media_urls(v, found, actor_id=actor_id, allow_shared=allow_shared)
     elif isinstance(node, list):
         for item in node:
-            _collect_media_urls(item, found, actor_id=actor_id)
+            _collect_media_urls(item, found, actor_id=actor_id, allow_shared=allow_shared)
 
 
 def _extract_comet_story_unit(
@@ -199,14 +291,11 @@ def _extract_comet_story_unit(
 ) -> None:
     """
     Extract a single timeline post from a top-level Facebook Comet `Story` unit (containing `comet_sections`).
-    Strictly filters out shared posts (`attached_story`), posts by other pages, and comments.
+    Includes both original fanpage posts and posts shared by the fanpage (`attached_story`),
+    while filtering out visitor posts and comments.
     """
     comet = data.get("comet_sections")
     if not isinstance(comet, dict):
-        return
-
-    # 1. Reject if this timeline unit is a shared post (contains attached_story)
-    if _has_non_null_attached_story(data):
         return
 
     content_section = comet.get("content") or {}
@@ -215,25 +304,29 @@ def _extract_comet_story_unit(
         content_story = {}
 
     context_layout = comet.get("context_layout") or {}
+    attached_story = _find_attached_story(data)
 
-    # 2. Extract canonical numeric post_id
+    # 1. Extract canonical post_id (prefer outer fanpage story ID)
     post_id = str(
         content_story.get("post_id")
         or data.get("post_id")
         or _find_first_key(content_story, "post_id")
+        or _find_first_key(context_layout, "post_id")
         or ""
     ).strip()
 
-    # 3. Extract post permalink URL (strictly from content_story.wwwURL or context_layout metadata, NEVER from attachments)
+    # 2. Extract post permalink URL (preferring URLs that contain a canonical post ID)
     permalink = (
         content_story.get("wwwURL")
         or content_story.get("url")
         or data.get("wwwURL")
+        or _find_post_permalink(context_layout)
+        or _find_post_permalink(comet.get("timestamp"))
         or _find_first_key(context_layout, "url")
         or _find_first_key(comet.get("timestamp"), "url")
     )
 
-    # 4. Extract author/actor info and verify it belongs to this fanpage
+    # 3. Extract author/actor info of the outer timeline unit and verify it belongs to this fanpage
     actors = content_story.get("actors") or data.get("actors") or _find_first_key(context_layout, "actors")
     if not _belongs_to_fanpage(actors, permalink, page_slug):
         return
@@ -242,44 +335,55 @@ def _extract_comet_story_unit(
     if isinstance(actors, list) and actors and isinstance(actors[0], dict):
         actor_id = actors[0].get("id")
 
-    # 5. Extract only the fanpage's own post message text (never comments or shared text)
-    message_text = ""
-    msg_obj = content_story.get("message") or data.get("message")
-    if isinstance(msg_obj, dict) and isinstance(msg_obj.get("text"), str):
-        message_text = msg_obj["text"]
-    elif isinstance(content_section, dict):
-        # Sometimes message is nested inside content_section.story.comet_sections.message
-        msg_container = _find_first_key(content_story.get("comet_sections"), "message")
-        if isinstance(msg_container, dict) and isinstance(msg_container.get("text"), str):
-            message_text = msg_container["text"]
-        else:
-            text_val = _find_first_key(content_story.get("comet_sections"), "text")
-            if isinstance(text_val, str):
-                message_text = text_val
+    # 4. Extract outer fanpage message + shared post (`attached_story`) message if present
+    outer_text = _extract_story_message(content_story) or _extract_story_message(data)
+    shared_text = ""
+    if isinstance(attached_story, dict):
+        shared_text = _extract_story_message(attached_story)
+        if not shared_text:
+            shared_text = _extract_attachment_card_text(attached_story)
 
-    # 6. Extract creation_time from context_layout / metadata and convert to LOCAL_TIMEZONE (GMT+7)
+    if outer_text and shared_text and shared_text not in outer_text:
+        message_text = f"{outer_text}\n\n{shared_text}"
+    else:
+        message_text = outer_text or shared_text
+
+    if not message_text:
+        message_text = _extract_attachment_card_text(content_story)
+
+    # 5. Extract creation_time from context_layout / metadata (or fallback to attached_story)
     creation_time = (
         _find_first_key(context_layout, "creation_time")
         or _find_first_key(comet.get("timestamp"), "creation_time")
         or content_story.get("creation_time")
         or data.get("creation_time")
+        or ( _find_first_key(attached_story, "creation_time") if isinstance(attached_story, dict) else None )
     )
 
     if not post_id and isinstance(permalink, str):
         post_id = _extract_post_id_from_url(permalink) or ""
+    if not post_id and isinstance(attached_story, dict):
+        post_id = str(
+            attached_story.get("post_id")
+            or _find_first_key(attached_story, "post_id")
+            or _extract_post_id_from_url(str(_find_post_permalink(attached_story) or ""))
+            or ""
+        ).strip()
 
-    # 7. Extract direct attachments belonging to this fanpage
+    # 6. Extract media URLs from both the outer post and any shared/attached post
     media_set: Set[str] = set()
     attachments = content_story.get("attachments") or data.get("attachments")
     if attachments:
-        _collect_media_urls(attachments, media_set, actor_id=actor_id)
+        _collect_media_urls(attachments, media_set, actor_id=actor_id, allow_shared=True)
+    if isinstance(attached_story, dict):
+        _collect_media_urls(attached_story, media_set, actor_id=actor_id, allow_shared=True)
 
     if not post_id or (not message_text and not media_set):
         return
 
     clean_url = (
         _clean_post_url(permalink, page_url)
-        if isinstance(permalink, str) and "facebook.com" in permalink
+        if isinstance(permalink, str) and "facebook.com" in permalink and _extract_post_id_from_url(permalink)
         else f"{page_url.rstrip('/')}/posts/{post_id}"
     )
 
