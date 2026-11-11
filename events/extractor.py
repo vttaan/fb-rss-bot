@@ -28,45 +28,76 @@ from config import FEEDS_DIR, LOCAL_TIMEZONE
 from database import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, ensure_local_tz, get_session, init_db
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 5)  # distinct keywords needed to call the LLM
+MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
 
 # Compared against lowercase, diacritics-stripped text.
 EVENT_KEYWORDS = [
+    # English event types & actions
     "event", "workshop", "seminar", "webinar", "conference", "meetup", "festival", "concert",
     "hackathon", "contest", "competition", "launch", "livestream", "open day", "register",
     "registration", "ticket", "rsvp", "join us", "save the date", "exhibition", "talk",
-    "su kien", "hoi thao", "hoi nghi", "toa dam", "giao luu", "khai mac", "le hoi", "cuoc thi",
-    "dang ky", "tham gia", "sinh hoat", "buoi", "chuong trinh", "trien lam", "ngay hoi",
-    "tuyen sinh", "lich", "vao luc", "dia diem", "thoi gian",
+    "talkshow", "bootcamp", "orientation", "minigame", "esports", "tournament", "training",
+    "career fair", "job fair", "timeline", "deadline", "check in", "checkin", "online", "offline",
+    "zoom", "google meet", "ms teams",
+    # Vietnamese event types & activities
+    "su kien", "hoi thao", "hoi nghi", "toa dam", "giao luu", "khai mac", "be mac", "le hoi",
+    "cuoc thi", "hoi thi", "giai dau", "san choi", "sinh hoat", "buoi", "chuong trinh",
+    "trien lam", "ngay hoi", "dem nhac", "chao tan", "tap huan", "tuyen quan",
+    "tuyen thanh vien", "tuyen cong tac vien", "dai hoi", "chien dich", "tinh nguyen",
+    "mua he xanh", "xuan tinh nguyen", "hien mau", "hoc bong",
+    # Vietnamese logistics, stages & registration signals
+    "dang ky", "link dang ky", "form dang ky", "mo don", "dong don", "han chot", "tham gia",
+    "tham du", "tuyen sinh", "lich", "vao luc", "dia diem", "thoi gian", "hoi truong",
+    "giang duong", "co so", "so khao", "ban ket", "chung ket", "vong thi", "the le",
+    "giai thuong", "co cau giai thuong", "doi tuong", "quyen loi", "le phi", "mien phi",
+    "dien gia", "khach moi", "ban to chuc",
 ]
 
-PROMPT = """You analyze Facebook fanpage posts. Decide whether the post announces or promotes a
-specific upcoming or ongoing EVENT (workshop, seminar, concert, contest, launch, meetup, festival,
-livestream, etc.). General news, memes, or reminders with no event do NOT count.
+PROMPT = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
+Decide whether the post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
+
+WHAT COUNTS AS AN EVENT (`is_event: true`):
+- Workshops, seminars, webinars, talkshows, academic talks, training programs (tập huấn, sinh hoạt chuyên đề), orientations (chào tân sinh viên).
+- Contests, competitions, hackathons, academic olympiads, sports/esports tournaments, singing/talent contests, minigames (cuộc thi, hội thi, giải đấu, vòng sơ khảo, đêm chung kết).
+- Concerts, music nights (đêm nhạc), festivals, fairs, career/job fairs (ngày hội việc làm), exhibitions (triển lãm), open days.
+- Conferences, congresses, ceremonies, campaign launches (hội nghị, đại hội, lễ khai mạc, lễ phát động, ngày cao điểm).
+- Club/committee/project recruitment or audition drives with specific timeline/interview dates (tuyển quân, tuyển thành viên, tuyển CTV), volunteer campaigns (chiến dịch tình nguyện, hiến máu), or scholarship info sessions.
+- Registration countdowns ("3 days left", "còn X ngày", "gia hạn đăng ký") or round/mentor/sponsor announcements that still promote an ongoing/upcoming competition or event.
+
+WHAT DOES NOT COUNT (`is_event: false`):
+- Pure holiday/celebration greetings (e.g., 20/10, 20/11, New Year wishes) with no organized activity to attend or register for.
+- Pure post-event recaps, thank-you notes, or final winner/honor roll announcements (recap, bảng vàng vinh danh, tuyên dương gương Sinh viên 5 Tốt, đóng đơn/kết thúc hoàn toàn) where the event has ALREADY completely finished and no upcoming round or activity is mentioned.
+- General news, scam warnings, memes, or administrative notices with no event.
 
 Post published at: {published_at}
-Fanpage: {fanpage}
+Fanpage / Source: {fanpage}
 Post text:
 \"\"\"
 {content}
 \"\"\"
 
+EXTRACTION RULES:
+- `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Cuộc thi âm nhạc Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
+- `start_datetime` & `end_datetime`: ISO 8601 in Asia/Ho_Chi_Minh (+07:00), e.g. "2026-11-22T16:00:00+07:00" or "2026-11-22". Resolve relative dates and DD/MM dates using `published_at`. If a post lists multiple timeline milestones (e.g., registration period, preliminary round, final night), prefer the main upcoming event/round date-time (or registration start/end for recruitment/application posts).
+- `location`: Specific venue, lecture hall (giảng đường), auditorium (hội trường), room, campus (cơ sở), or online platform mentioned in the post.
+- `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
+
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
 {{
   "is_event": boolean,
   "title": string|null,
-  "description": string|null,        // 1-2 sentence summary, same language as the post, don't just take the raw text, try to summarize what the event is about
+  "description": string|null,        // 1-2 sentence summary in the same language as the post summarizing what the event is about
   "start_datetime": string|null,     // ISO 8601, resolve relative dates using the publish date
   "end_datetime": string|null,
   "location": string|null,
   "organizer": string|null,
-  "registration_url": string|null,   // only a URL that literally appears in the post text; null otherwise (never invent one)
-  "fee": string|null,                  // e.g., "miễn phí", "100.000 VND"
+  "registration_url": string|null,   // only a registration URL that literally appears in the post text; null otherwise
+  "fee": string|null,                // e.g., "miễn phí", "100.000 VND"
   "is_online": boolean|null,
-  "target_audience": string[]|null,  // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies student in any major or year, list them specifically (e.g., "sinh viên CNTT", "sinh viên năm 2"); if the post specifies a specific school, list it (e.g., "sinh viên Đại học Bách Khoa")
-  "category": string[],               // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện", "quyên góp","khác"; [] if unknown
-  "format": string[]                  // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
+  "target_audience": string[]|null,  // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies students in a major/year/school, list specifically (e.g., "sinh viên CNTT", "sinh viên K25, K26")
+  "category": string[],              // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện","quyên góp","khác"; [] if unknown
+  "format": string[]                 // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
 }}"""
 
 
@@ -84,8 +115,42 @@ def count_event_keywords(content: str) -> int:
     )
 
 
+STRONG_EVENT_SIGNAL_RE = re.compile(
+    r"\b(workshop|seminar|webinar|conference|hackathon|contest|competition|meetup|festival|concert|"
+    r"talkshow|bootcamp|orientation|open day|livestream|career fair|job fair|"
+    r"hoi thao|hoi nghi|toa dam|cuoc thi|hoi thi|ngay hoi|trien lam|le hoi|khai mac|"
+    r"tap huan|tuyen quan|tuyen thanh vien|tuyen cong tac vien|dem nhac|giai dau|chao tan)\b",
+    flags=re.IGNORECASE,
+)
+
+
 def looks_event_related(content: str) -> bool:
-    return count_event_keywords(content) >= MIN_KEYWORD_MATCHES
+    """
+    Fast pre-filter before calling Gemini:
+    Passes if:
+      - the post contains at least `MIN_KEYWORD_MATCHES` (default 2) distinct event keywords, OR
+      - the post contains at least 1 strong event-type keyword (e.g., workshop, seminar, hội nghị, cuộc thi), OR
+      - the post contains at least 1 event keyword accompanied by an explicit date, time, or URL.
+    """
+    if not content or not content.strip():
+        return False
+    stripped = _strip_accents(content).lower()
+    if STRONG_EVENT_SIGNAL_RE.search(stripped):
+        return True
+    kw_count = count_event_keywords(content)
+    if kw_count >= MIN_KEYWORD_MATCHES:
+        return True
+    if kw_count >= 1:
+        has_date_time_or_link = bool(
+            re.search(
+                r"(\b\d{1,2}[/-]\d{1,2}(?:[/-]20\d{2})?\b|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}[:h]\d{2}\b|https?://)",
+                content,
+                flags=re.IGNORECASE,
+            )
+        )
+        if has_date_time_or_link:
+            return True
+    return False
 
 
 def call_gemini_text(
@@ -969,20 +1034,39 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
         fanpage = session.get(Fanpage, fanpage_id)
         if not fanpage:
             return stats
-        done_ids = set(session.scalars(
-            select(PostAnalysis.post_id).where(PostAnalysis.fanpage_id == fanpage_id)
-        ).all())
-        pending = [
-            p for p in session.scalars(
-                select(Post).where(Post.fanpage_id == fanpage_id).order_by(Post.published_at.desc())
+        existing_analyses = {
+            pa.post_id: pa
+            for pa in session.scalars(
+                select(PostAnalysis).where(PostAnalysis.fanpage_id == fanpage_id)
             ).all()
-            if p.post_id not in done_ids
-        ]
+        }
+        all_posts = session.scalars(
+            select(Post).where(Post.fanpage_id == fanpage_id).order_by(Post.published_at.desc())
+        ).all()
+
+        pending: List[Post] = []
+        for p in all_posts:
+            pa = existing_analyses.get(p.post_id)
+            if pa is None:
+                pending.append(p)
+            elif not pa.is_event and (pa.event_json or "{}") == "{}" and looks_event_related(p.content):
+                # Re-queue legacy pre-filtered posts that now pass the refined event filter
+                session.delete(pa)
+                session.flush()
+                pending.append(p)
+
         name = fanpage.name or fanpage.slug
 
         for post in pending:
             if not looks_event_related(post.content):
-                session.add(PostAnalysis(post_id=post.post_id, fanpage_id=fanpage_id, is_event=False))
+                session.add(
+                    PostAnalysis(
+                        post_id=post.post_id,
+                        fanpage_id=fanpage_id,
+                        is_event=False,
+                        event_json='{"reason":"prefilter"}',
+                    )
+                )
                 stats["analyzed"] += 1
                 continue
             if not api_key or stats["llm_calls"] >= MAX_LLM_CALLS_PER_FANPAGE:
@@ -1023,7 +1107,7 @@ def analyze_fanpage_posts(fanpage_id: int) -> Dict[str, int]:
                 post_id=post.post_id,
                 fanpage_id=fanpage_id,
                 is_event=is_event,
-                event_json=json.dumps(data, ensure_ascii=False) if is_event else "{}",
+                event_json=json.dumps(data, ensure_ascii=False) if is_event else '{"reason":"llm_not_event"}',
             ))
             stats["analyzed"] += 1
             stats["events"] += int(is_event)
