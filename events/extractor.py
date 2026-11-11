@@ -78,9 +78,10 @@ Post text:
 \"\"\"
 
 EXTRACTION RULES:
+- `description`: Don't take the raw text from the post, try to summarize what the event is about, in the same language as the post. If the post is in Vietnamese, summarize in Vietnamese; if in English, summarize in English. Do NOT invent details; only summarize what is explicitly stated.
 - `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Cuộc thi âm nhạc Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
 - `start_datetime` & `end_datetime`: ISO 8601 in Asia/Ho_Chi_Minh (+07:00), e.g. "2026-11-22T16:00:00+07:00" or "2026-11-22". Resolve relative dates and DD/MM dates using `published_at`. If a post lists multiple timeline milestones (e.g., registration period, preliminary round, final night), prefer the main upcoming event/round date-time (or registration start/end for recruitment/application posts).
-- `location`: Specific venue, lecture hall (giảng đường), auditorium (hội trường), room, campus (cơ sở), or online platform mentioned in the post.
+- `location`: Specific venue, lecture hall (giảng đường), auditorium (hội trường), room, campus (cơ sở), or online platform mentioned in the post. If no specific room or hall is mentioned, use the campus or city (the address). If no location is mentioned, use null.
 - `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
