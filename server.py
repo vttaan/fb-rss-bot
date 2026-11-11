@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -149,6 +150,44 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
                 "refresh_tree": True,
             }
         )
+
+
+async def trigger_unified_scrape(target_slug_or_id: str | None = None, *, force_local: bool = False) -> Dict[str, Any]:
+    """
+    Unified scrape entrypoint for Ngrok web UI & APIs:
+    - If `GITHUB_TOKEN` is configured or `--no-scrape` (`SERVER_AUTO_SCRAPE=False`) is active,
+      dispatch the GitHub Actions workflow (`live_server_demo.yml`) so all crawling runs in Actions
+      and syncs back via `/api/admin/import-crawl`.
+    - Otherwise (e.g., inside the fallback Actions runner or pure local mode), run locally.
+    """
+    from admin import _trigger_github_actions_crawl
+
+    gh_token = os.environ.get("GITHUB_TOKEN", "").strip()
+    prefer_actions = (not force_local) and (not SERVER_AUTO_SCRAPE or bool(gh_token))
+
+    if prefer_actions:
+        dispatched = await asyncio.to_thread(_trigger_github_actions_crawl, target_slug_or_id)
+        if dispatched:
+            scope = f" for '{target_slug_or_id}'" if target_slug_or_id else ""
+            msg = f"Dispatched GitHub Actions crawler{scope} (results will sync back automatically)."
+            await manager.broadcast_to_all({"event": "status", "message": msg})
+            return {"status": "dispatched", "mode": "github_actions_dispatched", "message": msg}
+
+        if not SERVER_AUTO_SCRAPE:
+            msg = (
+                "GitHub Actions dispatch unavailable (set GITHUB_TOKEN on the Ngrok host); "
+                "queued for the next scheduled GitHub Actions crawl."
+            )
+            await manager.broadcast_to_all({"event": "status", "message": msg})
+            return {"status": "queued_for_actions", "mode": "queued_for_actions", "message": msg}
+
+    if manager.scrape_lock.locked():
+        msg = "A local scrape cycle is already in progress..."
+        return {"status": "busy", "mode": "local_background", "message": msg}
+
+    asyncio.create_task(trigger_background_scrape(target_slug_or_id))
+    msg = f"Started local background scrape ({target_slug_or_id or 'all'})."
+    return {"status": "started", "mode": "local_background", "message": msg}
 
 
 @asynccontextmanager
@@ -450,11 +489,14 @@ def api_list_all_posts(limit: int = Query(50, ge=1, le=200)):
 
 
 @app.post("/api/scrape")
-async def api_run_scrape_now():
-    """Run a full scrape cycle inside the server and broadcast new posts to WebSocket subscribers."""
+async def api_run_scrape_now(target: Optional[str] = Query(None, description="Optional fanpage slug/ID/URL")):
+    """Unified scrape trigger: dispatches GitHub Actions crawler when configured, or runs locally."""
+    if not SERVER_AUTO_SCRAPE or os.environ.get("GITHUB_TOKEN", "").strip():
+        return await trigger_unified_scrape(target_slug_or_id=target)
+
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
-        new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(target_slug_or_id=target, on_new_posts=manager.on_new_posts_scraped)
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -462,7 +504,7 @@ async def api_run_scrape_now():
                 "refresh_tree": True,
             }
         )
-    return {"status": "ok", "new_posts_count": new_count}
+    return {"status": "ok", "mode": "local", "new_posts_count": new_count}
 
 
 @app.get("/api/users/{client_id}/subscriptions")
@@ -496,9 +538,9 @@ async def api_subscribe_user(client_id: str, body: SubscribeRequest):
         },
     )
 
-    # If any subscribed fanpage has never been scraped, scrape it in background immediately
+    # If any subscribed fanpage has never been scraped, dispatch unified scrape (Actions or local)
     for fp in needs_scrape:
-        asyncio.create_task(trigger_background_scrape(fp.slug))
+        await trigger_unified_scrape(fp.slug)
 
     return {
         "client_id": client_id,
@@ -609,12 +651,9 @@ async def public_websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             if data.get("action") == "refresh":
-                if not manager.scrape_lock.locked():
-                    asyncio.create_task(trigger_background_scrape())
-                else:
-                    await websocket.send_json(
-                        {"event": "status", "message": "A scrape cycle is already in progress..."}
-                    )
+                res = await trigger_unified_scrape()
+                if res.get("status") == "busy":
+                    await websocket.send_json({"event": "status", "message": res["message"]})
     except WebSocketDisconnect:
         manager.disconnect("__public__", websocket)
     except Exception:
@@ -668,7 +707,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         },
                     )
                     for fp in needs_scrape:
-                        asyncio.create_task(trigger_background_scrape(fp.slug))
+                        await trigger_unified_scrape(fp.slug)
                 except ValueError as exc:
                     await websocket.send_json({"event": "error", "message": str(exc)})
 
@@ -688,12 +727,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 )
 
             elif action == "refresh":
-                if not manager.scrape_lock.locked():
-                    asyncio.create_task(trigger_background_scrape())
-                else:
-                    await websocket.send_json(
-                        {"event": "status", "message": "A scrape cycle is already in progress..."}
-                    )
+                res = await trigger_unified_scrape()
+                if res.get("status") == "busy":
+                    await websocket.send_json({"event": "status", "message": res["message"]})
 
     except WebSocketDisconnect:
         manager.disconnect(client_id, websocket)

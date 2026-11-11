@@ -13,6 +13,10 @@ on:
         description: "Fallback awake minutes if 24/7 Ngrok server is offline (default: 10)"
         required: false
         default: "10"
+      target_fanpage:
+        description: "Optional fanpage slug, ID, or URL to scrape (blank = all fanpages)"
+        required: false
+        default: ""
 
 concurrency:
   group: live-websocket-server
@@ -23,24 +27,29 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  TZ: Asia/Ho_Chi_Minh
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   scheduled-scrape-and-serve:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      TZ: Asia/Ho_Chi_Minh
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CALL_DELAY_SECONDS: "3.0"
+      GEMINI_MAX_RETRIES: "3"
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -138,7 +147,12 @@ jobs:
           PY
 
             # 2. Run Playwright crawler + extractor locally inside GitHub Actions (~2-5 mins)
-            python main.py fetch
+            TARGET_FP="${{ github.event.inputs.target_fanpage }}"
+            if [ -n "$TARGET_FP" ]; then
+              python main.py fetch "$TARGET_FP"
+            else
+              python main.py fetch
+            fi
             python main.py list
 
             # 3. Push freshly scraped posts & metadata to the 24/7 Ngrok server
@@ -349,8 +363,8 @@ jobs:
             echo "No database or feed changes to commit."
           else
             git commit -m "chore(rss): scheduled crawl & feed sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }} || true
-            git push origin ${{ github.ref_name }} || true
+            git pull --rebase --autostash origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
           fi
 
       - name: Prepare GitHub Pages Payload (Distributed Directory Tree)

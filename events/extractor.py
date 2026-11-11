@@ -15,6 +15,8 @@ import hashlib
 import json
 import os
 import re
+import socket
+import time
 import unicodedata
 import urllib.error
 import urllib.request
@@ -30,6 +32,9 @@ from database import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, ens
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
+GEMINI_CALL_DELAY_SECONDS = float(os.environ.get("GEMINI_CALL_DELAY_SECONDS") or 3.0)
+GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES") or 3)
+GEMINI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_SECONDS") or 90)
 
 # Compared against lowercase, diacritics-stripped text.
 EVENT_KEYWORDS = [
@@ -184,13 +189,25 @@ def _candidate_gemini_models() -> List[str]:
     return candidates
 
 
+def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float:
+    """Compute backoff delay in seconds, honoring Retry-After if provided."""
+    if isinstance(exc, urllib.error.HTTPError) and exc.headers:
+        ra = exc.headers.get("Retry-After")
+        if ra:
+            try:
+                return min(max(float(ra), 1.0), 30.0)
+            except ValueError:
+                pass
+    return min(3.0 * (2 ** attempt), 24.0)
+
+
 def call_gemini_text(
     content: str,
     published_at_str: str,
     source_name: str,
     api_key: str,
 ) -> Optional[Dict[str, Any]]:
-    """Send raw text (Facebook post or client Email content) to Gemini for structured event extraction."""
+    """Send raw text (Facebook post or client Email content) to Gemini with model fallback and retry backoff."""
     global _WORKING_GEMINI_MODEL
     body_bytes = json.dumps(
         {
@@ -209,27 +226,43 @@ def call_gemini_text(
 
     last_exc: Optional[Exception] = None
     for model in _candidate_gemini_models():
-        req = urllib.request.Request(
-            GEMINI_URL.format(model=model),
-            data=body_bytes,
-            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-            _WORKING_GEMINI_MODEL = model
-            text = payload["candidates"][0]["content"]["parts"][0]["text"]
-            data = json.loads(text)
-            if isinstance(data, list):
-                data = data[0] if data else {}
-            return data if isinstance(data, dict) else None
-        except urllib.error.HTTPError as exc:
-            last_exc = exc
-            # On 404 (Not Found) or 400 (unsupported model), try the next fallback model
-            if exc.code in (400, 404):
-                continue
-            raise
+        for attempt in range(GEMINI_MAX_RETRIES + 1):
+            req = urllib.request.Request(
+                GEMINI_URL.format(model=model),
+                data=body_bytes,
+                headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                _WORKING_GEMINI_MODEL = model
+                text = payload["candidates"][0]["content"]["parts"][0]["text"]
+                data = json.loads(text)
+                if isinstance(data, list):
+                    data = data[0] if data else {}
+                return data if isinstance(data, dict) else None
+            except urllib.error.HTTPError as exc:
+                last_exc = exc
+                if exc.code in (400, 404):
+                    break  # try next model
+                if exc.code in (429, 500, 502, 503, 504):
+                    if attempt < GEMINI_MAX_RETRIES:
+                        wait_s = _retry_delay_seconds(attempt, exc)
+                        print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
+                        time.sleep(wait_s)
+                        continue
+                    # Exhausted retries on this model (e.g. per-model quota/overload) -> try next fallback model
+                    break
+                raise
+            except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
+                last_exc = exc
+                if attempt < GEMINI_MAX_RETRIES:
+                    wait_s = _retry_delay_seconds(attempt, exc)
+                    print(f"[events] Gemini {model} network/timeout error ({exc}); retrying in {wait_s:.1f}s...")
+                    time.sleep(wait_s)
+                    continue
+                break
 
     if last_exc is not None:
         raise last_exc
@@ -1136,6 +1169,8 @@ def analyze_fanpage_posts(
                 continue
             if not api_key or stats["llm_calls"] >= max_llm_calls:
                 continue  # leave uncached; retried next cycle
+            if stats["llm_calls"] > 0 and GEMINI_CALL_DELAY_SECONDS > 0:
+                time.sleep(GEMINI_CALL_DELAY_SECONDS)
             try:
                 stats["llm_calls"] += 1
                 data = call_gemini(post, name, api_key)

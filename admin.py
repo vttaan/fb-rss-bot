@@ -42,6 +42,8 @@ class CrawledFanpagePayload(BaseModel):
 
 class ImportCrawlRequest(BaseModel):
     fanpages: List[CrawledFanpagePayload] = Field(default_factory=list)
+    extract_limit: Optional[int] = None
+    force_recheck: bool = False
 
 
 def require_admin(x_admin_token: str = Header(default="")) -> None:
@@ -69,12 +71,11 @@ def admin_verify_token():
 
 
 @router.post("/api/admin/scrape", dependencies=[Depends(require_admin)])
-async def admin_trigger_scrape():
-    """Trigger a full scrape + extractor cycle across all tracked Facebook fanpages."""
-    from server import trigger_background_scrape
+async def admin_trigger_scrape(target: Optional[str] = Query(None, description="Optional fanpage slug/ID/URL")):
+    """Unified scrape trigger: dispatches GitHub Actions crawler (or runs locally if fallback/no token)."""
+    from server import trigger_unified_scrape
 
-    asyncio.create_task(trigger_background_scrape())
-    return {"status": "started"}
+    return await trigger_unified_scrape(target_slug_or_id=target)
 
 
 @router.post("/api/admin/import-crawl", dependencies=[Depends(require_admin)])
@@ -122,7 +123,12 @@ async def admin_import_crawl(body: ImportCrawlRequest):
         total_new_posts += len(new_posts)
         generate_fanpage_rss(fp)
 
-        ev_stats = await asyncio.to_thread(analyze_fanpage_posts, fp.id)
+        ev_stats = await asyncio.to_thread(
+            analyze_fanpage_posts,
+            fp.id,
+            limit=body.extract_limit,
+            force_recheck=body.force_recheck,
+        )
         total_events += int(ev_stats.get("events", 0))
         fanpages_synced += 1
 
@@ -154,8 +160,8 @@ def admin_list_fanpages():
     ]
 
 
-def _trigger_github_actions_crawl() -> bool:
-    """Optionally trigger GitHub Actions live_server_demo.yml via workflow_dispatch when GITHUB_TOKEN is set."""
+def _trigger_github_actions_crawl(target_slug_or_id: Optional[str] = None) -> bool:
+    """Trigger GitHub Actions live_server_demo.yml via workflow_dispatch when GITHUB_TOKEN is set."""
     import json
     import urllib.request
 
@@ -163,10 +169,14 @@ def _trigger_github_actions_crawl() -> bool:
     if not gh_token:
         return False
     repo = os.environ.get("GITHUB_REPO", "vttaan/fb-rss-bot").strip()
+    ref = os.environ.get("GITHUB_REF", "main").strip() or "main"
     url = f"https://api.github.com/repos/{repo}/actions/workflows/live_server_demo.yml/dispatches"
+    payload: dict = {"ref": ref}
+    if target_slug_or_id:
+        payload["inputs"] = {"target_fanpage": str(target_slug_or_id)}
     req = urllib.request.Request(
         url,
-        data=json.dumps({"ref": "main"}).encode("utf-8"),
+        data=json.dumps(payload).encode("utf-8"),
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {gh_token}",
@@ -195,18 +205,9 @@ async def admin_add_fanpage(body: AddFanpageRequest):
     scrape_mode = "already_tracked"
     message = "Fanpage already tracked."
     if created:
-        if server.SERVER_AUTO_SCRAPE:
-            asyncio.create_task(server.trigger_background_scrape(fp.slug))
-            scrape_mode = "local_background"
-            message = "Added. Fetching 5 most recent posts in background."
-        else:
-            dispatched = await asyncio.to_thread(_trigger_github_actions_crawl)
-            if dispatched:
-                scrape_mode = "github_actions_dispatched"
-                message = "Added. Triggered GitHub Actions crawler to fetch 5 most recent posts."
-            else:
-                scrape_mode = "queued_for_actions"
-                message = "Added. GitHub Actions will fetch 5 most recent posts on the next scheduled/manual crawl."
+        res = await server.trigger_unified_scrape(fp.slug)
+        scrape_mode = res.get("mode", "queued_for_actions")
+        message = f"Added. {res.get('message', '')}".strip()
         await server.manager.broadcast_to_all({"event": "status", "message": f"Added fanpage: {fp.name or fp.slug}", "refresh_tree": True})
 
     return {"created": created, "scrape_mode": scrape_mode, "message": message, "fanpage": fp.to_dict()}
@@ -347,8 +348,8 @@ ADMIN_HTML = """<!DOCTYPE html>
 
     async function scrapeAll() {
       try {
-        await api('POST', '/api/admin/scrape');
-        msg('Background scrape & extraction started across all tracked fanpages.', false, 'actionMsg');
+        const r = await api('POST', '/api/admin/scrape');
+        msg(r.message || 'Scrape & extraction triggered across all tracked fanpages.', false, 'actionMsg');
       } catch (e) { msg(e.message, true, 'actionMsg'); }
     }
 

@@ -30,15 +30,17 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CALL_DELAY_SECONDS: "3.0"
+      GEMINI_MAX_RETRIES: "3"
       NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -83,13 +85,18 @@ jobs:
           if curl -fsS --max-time 8 -H "ngrok-skip-browser-warning: true" "$TARGET_URL/api/schedule" >/dev/null 2>&1; then
             echo "🟢 24/7 Ngrok server is ONLINE at $TARGET_URL — syncing posts & events..."
             LIMIT_VAL="${{ github.event.inputs.posts_per_page }}"
-            TARGET_URL_VAL="$TARGET_URL" LIMIT_VAL="${LIMIT_VAL:-10}" python - << 'PY'
+            RECHECK_VAL="${{ github.event.inputs.force_recheck }}"
+            TARGET_URL_VAL="$TARGET_URL" LIMIT_VAL="${LIMIT_VAL:-10}" FORCE_RECHECK_VAL="${RECHECK_VAL:-true}" python - << 'PY'
           import json, os, urllib.request
           from database import list_fanpages, get_posts_for_fanpage
 
           raw_limit = int(os.environ.get("LIMIT_VAL") or 10)
           post_limit = raw_limit if raw_limit > 0 else 50
-          payload = {"fanpages": []}
+          payload = {
+              "fanpages": [],
+              "extract_limit": raw_limit if raw_limit > 0 else None,
+              "force_recheck": os.environ.get("FORCE_RECHECK_VAL", "true").lower() == "true",
+          }
           for fp, _ in list_fanpages(active_only=True):
               posts = get_posts_for_fanpage(fp.id, limit=post_limit)
               payload["fanpages"].append({
