@@ -39,7 +39,7 @@ from database import (
 )
 from events import ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
-from scheduler import build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
+from scheduler import backup_state_to_git, build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
 
 
 class SubscribeRequest(BaseModel):
@@ -125,6 +125,7 @@ async def scheduled_scrape_task() -> None:
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Running scheduled fanpage scrape & extractor..."})
         new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        await asyncio.to_thread(backup_state_to_git, "scheduled VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -143,6 +144,7 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
             target_slug_or_id=target_slug_or_id,
             on_new_posts=manager.on_new_posts_scraped,
         )
+        await asyncio.to_thread(backup_state_to_git, "manual VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -155,15 +157,15 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
 async def trigger_unified_scrape(target_slug_or_id: str | None = None, *, force_local: bool = False) -> Dict[str, Any]:
     """
     Unified scrape entrypoint for Ngrok web UI & APIs:
-    - If `GITHUB_TOKEN` is configured or `--no-scrape` (`SERVER_AUTO_SCRAPE=False`) is active,
-      dispatch the GitHub Actions workflow (`live_server_demo.yml`) so all crawling runs in Actions
-      and syncs back via `/api/admin/import-crawl`.
-    - Otherwise (e.g., inside the fallback Actions runner or pure local mode), run locally.
+    - By default (`SERVER_AUTO_SCRAPE=True`), runs Playwright + Event Extractor directly on the VM
+      and backs up `rss_bot.db` + `feeds/` to GitHub automatically.
+    - If `--no-scrape` (`SERVER_AUTO_SCRAPE=False`) or `USE_GITHUB_ACTIONS_CRAWLER=true` is set,
+      dispatches the GitHub Actions workflow (`live_server_demo.yml`) instead.
     """
     from admin import _trigger_github_actions_crawl
 
-    gh_token = os.environ.get("GITHUB_TOKEN", "").strip()
-    prefer_actions = (not force_local) and (not SERVER_AUTO_SCRAPE or bool(gh_token))
+    use_actions_env = os.environ.get("USE_GITHUB_ACTIONS_CRAWLER", "").strip().lower() in ("1", "true", "yes")
+    prefer_actions = (not force_local) and (not SERVER_AUTO_SCRAPE or use_actions_env)
 
     if prefer_actions:
         dispatched = await asyncio.to_thread(_trigger_github_actions_crawl, target_slug_or_id)
@@ -186,7 +188,7 @@ async def trigger_unified_scrape(target_slug_or_id: str | None = None, *, force_
         return {"status": "busy", "mode": "local_background", "message": msg}
 
     asyncio.create_task(trigger_background_scrape(target_slug_or_id))
-    msg = f"Started local background scrape ({target_slug_or_id or 'all'})."
+    msg = f"Started VM scrape & extraction ({target_slug_or_id or 'all'})."
     return {"status": "started", "mode": "local_background", "message": msg}
 
 
@@ -490,13 +492,15 @@ def api_list_all_posts(limit: int = Query(50, ge=1, le=200)):
 
 @app.post("/api/scrape")
 async def api_run_scrape_now(target: Optional[str] = Query(None, description="Optional fanpage slug/ID/URL")):
-    """Unified scrape trigger: dispatches GitHub Actions crawler when configured, or runs locally."""
-    if not SERVER_AUTO_SCRAPE or os.environ.get("GITHUB_TOKEN", "").strip():
+    """Unified scrape trigger: runs locally on the VM by default, or dispatches GitHub Actions if --no-scrape."""
+    use_actions_env = os.environ.get("USE_GITHUB_ACTIONS_CRAWLER", "").strip().lower() in ("1", "true", "yes")
+    if not SERVER_AUTO_SCRAPE or use_actions_env:
         return await trigger_unified_scrape(target_slug_or_id=target)
 
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
         new_count = await run_scrape_cycle(target_slug_or_id=target, on_new_posts=manager.on_new_posts_scraped)
+        await asyncio.to_thread(backup_state_to_git, "API VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",

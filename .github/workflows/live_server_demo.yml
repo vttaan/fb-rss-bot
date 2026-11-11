@@ -1,12 +1,8 @@
 name: Scheduled Crawler (08:00, 14:00, 20:00 ICT) -> Sync to 24/7 Ngrok & GitHub Pages
 
 on:
-  # Trigger ~13 minutes early at off-peak minute (:47) so GitHub Actions queue delay +
-  # setup (~2-3 mins) finish in time for 08:00, 14:00, and 20:00 Asia/Ho_Chi_Minh (UTC+7).
-  schedule:
-    - cron: "47 0 * * *"   # ~07:47 ICT -> crawls & deploys for 08:00 ICT
-    - cron: "47 6 * * *"   # ~13:47 ICT -> crawls & deploys for 14:00 ICT
-    - cron: "47 12 * * *"  # ~19:47 ICT -> crawls & deploys for 20:00 ICT
+  # Scheduled cron is disabled now that the 24/7 Ngrok VM runs APScheduler at 08:00, 14:00, 20:00 ICT
+  # and auto-pushes rss_bot.db + feeds/ backups. Use workflow_dispatch for manual backup runs.
   workflow_dispatch:
     inputs:
       stay_awake_minutes:
