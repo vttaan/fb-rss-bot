@@ -1,3 +1,3 @@
-from .fb_scraper import scrape_fanpage, scrape_multiple_fanpages
+from .fb_scraper import is_facebook_post_url, scrape_fanpage, scrape_multiple_fanpages, scrape_single_post
 
-__all__ = ["scrape_fanpage", "scrape_multiple_fanpages"]
+__all__ = ["is_facebook_post_url", "scrape_fanpage", "scrape_multiple_fanpages", "scrape_single_post"]

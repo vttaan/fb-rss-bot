@@ -283,6 +283,35 @@ def cmd_extract(
     )
 
 
+@app.command("extract-post")
+def cmd_extract_post(
+    post_url: str = typer.Argument(..., help="Public Facebook post URL to fetch, extract, and auto-add fanpage if event."),
+) -> None:
+    """Fetch a single Facebook post URL, feed it to the Event Extractor, and add its fanpage if it is an event."""
+    from events import extract_single_post_url
+
+    init_db()
+    result = asyncio.run(extract_single_post_url(post_url))
+    if result.get("status") == "error":
+        console.print(f"[red]Error:[/red] {result.get('detail')}")
+        raise typer.Exit(code=1)
+
+    if result.get("is_event"):
+        ev = result.get("event") or {}
+        fp = result.get("fanpage")
+        console.print(f"[bold green]Event detected:[/bold green] {ev.get('title') or 'Untitled Event'}")
+        console.print(f"  Status        : {result.get('status')}")
+        console.print(f"  Start         : {ev.get('start_datetime') or '-'}")
+        console.print(f"  Location      : {ev.get('location') or '-'}")
+        if fp:
+            added_note = "[green](newly added!)[/green]" if result.get("fanpage_added") else "[dim](already tracked)[/dim]"
+            console.print(f"  Fanpage       : {fp.get('name')} ({fp.get('url')}) {added_note}")
+        else:
+            console.print("  Fanpage       : [yellow]Could not resolve fanpage URL from post[/yellow]")
+    else:
+        console.print(f"[yellow]Not an event:[/yellow] {result.get('detail')}")
+
+
 @app.command("serve")
 def cmd_serve(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host address to bind."),

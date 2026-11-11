@@ -395,6 +395,16 @@ def _extract_comet_story_unit(
     if isinstance(creation_time, (int, float)) and creation_time > 1000000000:
         published_dt = datetime.fromtimestamp(creation_time, tz=LOCAL_TIMEZONE)
 
+    actor_name: Optional[str] = None
+    actor_url: Optional[str] = None
+    if isinstance(actors, list) and actors and isinstance(actors[0], dict):
+        raw_name = actors[0].get("name")
+        if isinstance(raw_name, str) and raw_name.strip():
+            actor_name = raw_name.strip()
+        raw_actor_url = actors[0].get("url") or actors[0].get("wwwURL")
+        if isinstance(raw_actor_url, str) and "facebook.com" in raw_actor_url:
+            actor_url = raw_actor_url.strip()
+
     existing = collected.get(post_id)
     if not existing or (len(message_text) > len(existing.get("content", ""))):
         collected[post_id] = {
@@ -403,6 +413,8 @@ def _extract_comet_story_unit(
             "content": message_text.strip(),
             "media_urls": list(media_set),
             "published_at": published_dt,
+            "author_name": actor_name or (existing.get("author_name") if existing else None),
+            "author_url": actor_url or (existing.get("author_url") if existing else None),
         }
 
 
@@ -578,3 +590,221 @@ async def scrape_multiple_fanpages(
             await asyncio.sleep(delay_between_pages)
 
     return results
+
+
+_POST_URL_RE = re.compile(
+    r"(/posts/|/permalink\.php|/story\.php|/reel/|/videos/|/photos/|/photo(?:\.php|\?)|/share/)",
+    flags=re.IGNORECASE,
+)
+
+
+def is_facebook_post_url(url: str) -> bool:
+    """Return True if the given URL looks like a Facebook post/reel/photo/share URL rather than a fanpage root."""
+    if not url:
+        return False
+    s = url.strip()
+    if "facebook.com" not in s.lower() and "fb.com" not in s.lower():
+        return False
+    return bool(_POST_URL_RE.search(s))
+
+
+def _derive_fanpage_url_from_url(url: Optional[str]) -> Optional[str]:
+    """Derive a canonical Facebook fanpage URL from a post permalink or actor URL."""
+    if not url or "facebook.com" not in url.lower():
+        return None
+
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")
+    if not path:
+        return None
+
+    parts = [p for p in path.split("/") if p]
+    if not parts:
+        return None
+
+    first = parts[0].lower()
+    if first == "profile.php":
+        qs = parse_qs(parsed.query)
+        pid = qs.get("id", [""])[0]
+        return f"https://www.facebook.com/profile.php?id={pid}" if pid else None
+
+    if first in ("permalink.php", "story.php"):
+        qs = parse_qs(parsed.query)
+        pid = qs.get("id", [""])[0]
+        return f"https://www.facebook.com/profile.php?id={pid}" if pid else None
+
+    if first in ("people", "pages") and len(parts) >= 3:
+        return f"https://www.facebook.com/{parts[0]}/{parts[1]}/{parts[2]}"
+
+    reserved = {
+        "share", "reel", "watch", "photo", "photo.php", "photos",
+        "videos", "events", "groups", "story.php", "permalink.php",
+    }
+    if first in reserved:
+        return None
+
+    return f"https://www.facebook.com/{parts[0]}"
+
+
+async def scrape_single_post(post_url: str) -> Dict[str, Any]:
+    """
+    Scrape a single public Facebook post URL without logging in.
+    Returns dict with post_id, post_url, content, media_urls, published_at, fanpage_url, fanpage_name.
+    """
+    import hashlib
+
+    target_url = post_url.strip()
+    if not target_url.startswith(("http://", "https://")):
+        target_url = "https://" + target_url
+
+    collected_posts: Dict[str, Dict] = {}
+    final_url = target_url
+    page_title: Optional[str] = None
+    dom_fallback: Dict[str, Any] = {}
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-notifications",
+                "--no-sandbox",
+            ],
+        )
+        context = await browser.new_context(
+            user_agent=USER_AGENT,
+            viewport={"width": 1280, "height": 900},
+            locale="en-US",
+        )
+        page = await context.new_page()
+
+        async def handle_response(response: Response) -> None:
+            if "/api/graphql" in response.url and response.status == 200:
+                try:
+                    text = await response.text()
+                    for line in text.splitlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                            _walk_graphql_for_posts(data, final_url, "", collected_posts)
+                        except json.JSONDecodeError:
+                            continue
+                except Exception:
+                    pass
+
+        page.on("response", handle_response)
+
+        try:
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
+            await page.wait_for_timeout(2500)
+            final_url = page.url or target_url
+
+            raw_title = await page.title()
+            if raw_title:
+                page_title = re.sub(r"\s*\|\s*Facebook.*$", "", raw_title, flags=re.IGNORECASE).strip()
+                page_title = re.sub(r"^\(\d+\)\s*", "", page_title).strip()
+
+            await _dismiss_login_popup(page)
+
+            scripts_json = await page.evaluate(
+                """() => {
+                    return Array.from(document.querySelectorAll('script[type="application/json"]'))
+                        .map(s => s.textContent)
+                        .filter(Boolean);
+                }"""
+            )
+            for raw_script in scripts_json:
+                try:
+                    data = json.loads(raw_script)
+                    _walk_graphql_for_posts(data, final_url, "", collected_posts)
+                except Exception:
+                    continue
+
+            if not collected_posts:
+                await page.evaluate("window.scrollBy(0, 600)")
+                await page.wait_for_timeout(2000)
+
+            dom_fallback = await page.evaluate(
+                """() => {
+                    const meta = (prop) => {
+                        const el = document.querySelector(`meta[property="${prop}"], meta[name="${prop}"]`);
+                        return el ? (el.getAttribute('content') || '').trim() : '';
+                    };
+                    const msgEl = document.querySelector('div[data-ad-preview="message"], div[data-ad-comet-preview="message"]');
+                    const articleEl = document.querySelector('div[role="article"]');
+                    const authorLink = articleEl ? articleEl.querySelector('h2 a[href*="facebook.com"], h3 a[href*="facebook.com"], strong a[href*="facebook.com"]') : null;
+                    const canonicalEl = document.querySelector('link[rel="canonical"]');
+                    return {
+                        og_title: meta('og:title'),
+                        og_description: meta('og:description'),
+                        og_image: meta('og:image'),
+                        canonical: canonicalEl ? (canonicalEl.getAttribute('href') || '').trim() : '',
+                        msg_text: msgEl ? (msgEl.innerText || '').trim() : '',
+                        article_text: articleEl ? (articleEl.innerText || '').trim() : '',
+                        author_href: authorLink ? (authorLink.getAttribute('href') || '').trim() : '',
+                        author_text: authorLink ? (authorLink.innerText || '').trim() : '',
+                    };
+                }"""
+            )
+        finally:
+            await context.close()
+            await browser.close()
+
+    expected_ids = {
+        pid for pid in (
+            _extract_post_id_from_url(target_url),
+            _extract_post_id_from_url(final_url),
+            _extract_post_id_from_url(dom_fallback.get("canonical", "")),
+        ) if pid
+    }
+
+    chosen: Optional[Dict[str, Any]] = None
+    if collected_posts:
+        for pid in expected_ids:
+            if pid in collected_posts:
+                chosen = collected_posts[pid]
+                break
+        if chosen is None:
+            chosen = max(collected_posts.values(), key=lambda x: len(x.get("content", "")))
+
+    if chosen is None:
+        fallback_text = (
+            dom_fallback.get("msg_text")
+            or dom_fallback.get("og_description")
+            or dom_fallback.get("article_text")
+            or ""
+        ).strip()
+        fallback_media = [dom_fallback["og_image"]] if dom_fallback.get("og_image") else []
+        canon_or_final = dom_fallback.get("canonical") or final_url
+        pid = next(iter(expected_ids), None) or hashlib.sha256(canon_or_final.encode("utf-8")).hexdigest()[:16]
+        chosen = {
+            "post_id": pid,
+            "post_url": _clean_post_url(canon_or_final, target_url),
+            "content": fallback_text,
+            "media_urls": fallback_media,
+            "published_at": datetime.now(LOCAL_TIMEZONE),
+            "author_name": dom_fallback.get("author_text") or None,
+            "author_url": dom_fallback.get("author_href") or None,
+        }
+
+    fanpage_url = (
+        _derive_fanpage_url_from_url(chosen.get("author_url"))
+        or _derive_fanpage_url_from_url(chosen.get("post_url"))
+        or _derive_fanpage_url_from_url(dom_fallback.get("author_href"))
+        or _derive_fanpage_url_from_url(dom_fallback.get("canonical"))
+        or _derive_fanpage_url_from_url(final_url)
+    )
+    fanpage_name = (
+        chosen.get("author_name")
+        or dom_fallback.get("author_text")
+        or dom_fallback.get("og_title")
+        or page_title
+    )
+    if fanpage_name and "|" in fanpage_name:
+        fanpage_name = fanpage_name.split("|")[0].strip()
+
+    chosen["fanpage_url"] = fanpage_url
+    chosen["fanpage_name"] = fanpage_name or None
+    return chosen

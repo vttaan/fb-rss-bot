@@ -17,6 +17,7 @@ from config import FEEDS_DIR
 from database import add_fanpage, ensure_local_tz, list_fanpages, remove_fanpage, save_posts, update_fanpage_metadata
 from events import analyze_fanpage_posts, purge_fanpage_events, sync_all_event_folders
 from rss import generate_all_rss, generate_fanpage_rss
+from scraper import is_facebook_post_url
 
 router = APIRouter()
 
@@ -193,9 +194,25 @@ def _trigger_github_actions_crawl(target_slug_or_id: Optional[str] = None) -> bo
         return False
 
 
+@router.post("/api/admin/extract-post", dependencies=[Depends(require_admin)])
+async def admin_extract_post(body: AddFanpageRequest):
+    """Fetch a single Facebook post URL, feed it to the extractor, and add its fanpage if it is an event."""
+    import server
+
+    return await server.process_single_post_url(body.url)
+
+
 @router.post("/api/admin/fanpages", dependencies=[Depends(require_admin)])
 async def admin_add_fanpage(body: AddFanpageRequest):
     import server
+
+    if is_facebook_post_url(body.url):
+        res = await server.process_single_post_url(body.url)
+        return {
+            "created": bool(res.get("fanpage_added")),
+            "scrape_mode": "single_post_extract",
+            **res,
+        }
 
     try:
         fp, created = add_fanpage(body.url, body.name)
@@ -277,11 +294,11 @@ ADMIN_HTML = """<!DOCTYPE html>
 
     <div id="adminContent" style="display:none;">
       <div class="panel">
-        <h3 style="margin-top:0;">Add Facebook Fanpage</h3>
+        <h3 style="margin-top:0;">Add Facebook Fanpage or Extract Event from Post URL</h3>
         <div class="row">
-          <input id="url" placeholder="https://www.facebook.com/nasa or page name" />
-          <input id="name" placeholder="Display name (optional)" style="max-width:260px;" />
-          <button onclick="addFanpage()">+ Add &amp; Scrape</button>
+          <input id="url" placeholder="Fanpage URL (e.g. fb.com/nasa) OR Post URL (e.g. fb.com/.../posts/...)" onkeydown="if(event.key==='Enter')addFanpage()" />
+          <input id="name" placeholder="Display name (optional, fanpage only)" style="max-width:260px;" />
+          <button id="addExtractBtn" onclick="addFanpage()">+ Add / Extract</button>
         </div>
         <div id="actionMsg" style="margin-top:10px; font-size:14px; color:var(--muted);"></div>
       </div>
@@ -356,13 +373,37 @@ ADMIN_HTML = """<!DOCTYPE html>
     async function addFanpage() {
       const url = document.getElementById('url').value.trim();
       const name = document.getElementById('name').value.trim() || null;
+      const btn = document.getElementById('addExtractBtn');
       if (!url) return;
+
+      const isPostUrl = /(\\/posts\\/|\\/permalink\\.php|\\/story\\.php|\\/reel\\/|\\/videos\\/|\\/photos\\/|\\/photo(?:\\.php|\\?)|\\/share\\/)/i.test(url);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = isPostUrl ? 'Extracting...' : 'Adding...';
+      }
+      if (isPostUrl) {
+        msg('Fetching Facebook post & running Event Extractor...', false, 'actionMsg');
+      }
+
       try {
-        const r = await api('POST', '/api/admin/fanpages', { url, name });
-        msg(r.message || (r.created ? 'Added.' : 'Fanpage already tracked.'), false, 'actionMsg');
-        document.getElementById('url').value = ''; document.getElementById('name').value = '';
+        const endpoint = isPostUrl ? '/api/admin/extract-post' : '/api/admin/fanpages';
+        const payload = isPostUrl ? { url } : { url, name };
+        const r = await api('POST', endpoint, payload);
+        const bad = isPostUrl && r.is_event === false;
+        msg(r.message || (r.created ? 'Added.' : 'Fanpage already tracked.'), bad, 'actionMsg');
+        if (!isPostUrl || r.is_event) {
+          document.getElementById('url').value = '';
+          document.getElementById('name').value = '';
+        }
         load();
-      } catch (e) { msg(e.message, true, 'actionMsg'); }
+      } catch (e) {
+        msg(e.message, true, 'actionMsg');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '+ Add / Extract';
+        }
+      }
     }
 
     async function removeFanpage(btn) {

@@ -37,13 +37,17 @@ from database import (
     subscribe_user_to_fanpages,
     unsubscribe_user_from_fanpage,
 )
-from events import ingest_email_message, sync_all_event_folders
+from events import extract_single_post_url, ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
 from scheduler import backup_state_to_git, build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
 
 
 class SubscribeRequest(BaseModel):
     urls: List[str]
+
+
+class ExtractPostRequest(BaseModel):
+    url: str = Field(..., description="Public Facebook post URL to scrape and analyze")
 
 
 class EmailIngestRequest(BaseModel):
@@ -509,6 +513,48 @@ async def api_run_scrape_now(target: Optional[str] = Query(None, description="Op
             }
         )
     return {"status": "ok", "mode": "local", "new_posts_count": new_count}
+
+
+async def process_single_post_url(url: str) -> Dict[str, Any]:
+    """
+    Shared handler for scraping a single Facebook post URL, feeding it to the Event Extractor,
+    auto-adding its fanpage if it is an event, refreshing feeds, and backing up to Git.
+    """
+    clean_url = (url or "").strip()
+    if not clean_url:
+        raise HTTPException(status_code=400, detail="Post URL is required.")
+
+    result = await extract_single_post_url(clean_url)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=422, detail=result.get("detail") or "Failed to extract post.")
+
+    if result.get("is_event"):
+        ev_title = (result.get("event") or {}).get("title") or "Event"
+        fp = result.get("fanpage")
+        if result.get("fanpage_added") and fp:
+            msg = f"Event found: '{ev_title}'. Added fanpage '{fp.get('name') or fp.get('slug')}' to tracked list."
+        elif fp:
+            msg = f"Event found: '{ev_title}' (fanpage '{fp.get('name') or fp.get('slug')}' already tracked)."
+        else:
+            msg = f"Event found: '{ev_title}' (fanpage link could not be resolved)."
+
+        await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
+        if result.get("post") and fp:
+            await manager.send_to_user(
+                "__public__",
+                {"event": "new_posts", "fanpage": fp, "posts": [result["post"]]},
+            )
+        asyncio.create_task(asyncio.to_thread(backup_state_to_git, "single post extract"))
+    else:
+        msg = result.get("detail") or "Post fetched and analyzed, but it is not an event (fanpage not added)."
+
+    return {**result, "message": msg}
+
+
+@app.post("/api/extract-post")
+async def api_extract_single_post(body: ExtractPostRequest):
+    """Fetch a single Facebook post URL, feed it to the extractor, and add its fanpage if it is an event."""
+    return await process_single_post_url(body.url)
 
 
 @app.get("/api/users/{client_id}/subscriptions")
@@ -1060,7 +1106,7 @@ Content-Type: application/json
         <div>
           <h3 style="margin:0;">📡 Tracked Facebook Fanpages (<span id="fanpageCount">0</span>)</h3>
           <div style="font-size:13px; color:var(--muted); margin-top:3px;">
-            Unified crawler targets across the server. Add or remove fanpages in the Admin subpage.
+            Unified crawler targets across the server. Paste a single post URL below to extract an event &amp; auto-add its fanpage.
           </div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1068,6 +1114,11 @@ Content-Type: application/json
           <button onclick="openAdminLogin()">⚙ Manage Fanpages (Admin)</button>
         </div>
       </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <input id="postUrlInput" placeholder="Paste a Facebook post URL (e.g. https://www.facebook.com/.../posts/...) to extract event &amp; auto-add fanpage" style="flex:1; min-width:260px;" onkeydown="if(event.key==='Enter') extractSinglePostUrl()" />
+        <button id="extractPostBtn" onclick="extractSinglePostUrl()">🔎 Extract Post URL</button>
+      </div>
+      <div id="postExtractMsg" style="font-size:13.5px; min-height:20px; margin-bottom:8px;"></div>
       <div id="fanpagesContainer" class="chips"></div>
     </div>
 
@@ -1403,6 +1454,44 @@ Content-Type: application/json
     function triggerRefresh() {
       if (!ws) return;
       ws.send(JSON.stringify({ action: 'refresh' }));
+    }
+
+    async function extractSinglePostUrl() {
+      const input = document.getElementById('postUrlInput');
+      const msgEl = document.getElementById('postExtractMsg');
+      const btn = document.getElementById('extractPostBtn');
+      const url = (input.value || '').trim();
+      if (!url) {
+        msgEl.style.color = 'var(--rose-text)';
+        msgEl.textContent = 'Please paste a Facebook post URL.';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      msgEl.style.color = 'var(--muted)';
+      msgEl.textContent = 'Fetching Facebook post & running Event Extractor...';
+      try {
+        const res = await fetch('/api/extract-post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        msgEl.style.color = data.is_event ? 'var(--mint-text)' : 'var(--muted)';
+        msgEl.textContent = data.message || (data.is_event ? 'Event extracted!' : 'Not an event.');
+        if (data.is_event) {
+          input.value = '';
+          loadDirectoryTree();
+          loadFanpages();
+        }
+      } catch (err) {
+        msgEl.style.color = 'var(--rose-text)';
+        msgEl.textContent = 'Error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔎 Extract Post URL';
+      }
     }
 
     function renderFanpages(list) {

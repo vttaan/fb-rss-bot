@@ -1231,3 +1231,154 @@ def purge_fanpage_events(fanpage_id: int, slug: str) -> None:
         sync_all_event_folders(session)
     shutil.rmtree(FEEDS_DIR / slug, ignore_errors=True)
     shutil.rmtree(FEEDS_DIR / "fanpages" / slug, ignore_errors=True)
+
+
+def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Synchronous extraction & persistence for a scraped single Facebook post.
+    If `is_event` is True and `fanpage_url` is resolved, adds the fanpage if missing,
+    saves the post, generates RSS/JSON feeds, and upserts the unified EventRecord.
+    """
+    from database import add_fanpage, save_posts, update_fanpage_metadata
+    from rss import generate_all_rss, generate_fanpage_rss
+
+    init_db()
+    content = (post_data.get("content") or "").strip()
+    media_urls = post_data.get("media_urls") or []
+    post_id = str(post_data.get("post_id") or "").strip()
+    post_url = str(post_data.get("post_url") or "").strip()
+    published_at = post_data.get("published_at")
+    pub_iso = published_at.isoformat() if isinstance(published_at, datetime) else datetime.now(LOCAL_TIMEZONE).isoformat()
+    fanpage_url = post_data.get("fanpage_url")
+    fanpage_name = post_data.get("fanpage_name")
+
+    if not content and not media_urls:
+        return {
+            "status": "error",
+            "is_event": False,
+            "fanpage_added": False,
+            "fanpage": None,
+            "fanpage_url": fanpage_url,
+            "event": None,
+            "detail": "Could not extract any text or media from that Facebook post URL.",
+        }
+
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    source_label = fanpage_name or fanpage_url or "Facebook Post"
+    raw_data: Optional[Dict[str, Any]] = None
+    if api_key and content:
+        try:
+            raw_data = call_gemini_text(
+                content=content,
+                published_at_str=pub_iso,
+                source_name=source_label,
+                api_key=api_key,
+            )
+        except Exception as exc:
+            print(f"[events] Gemini error for single post {post_id}, falling back to heuristic: {exc}")
+
+    if raw_data is None:
+        raw_data = heuristic_extract_event(
+            content=content,
+            sender=fanpage_name,
+            published_at=published_at if isinstance(published_at, datetime) else None,
+        )
+
+    is_event = bool(raw_data.pop("is_event", False))
+    post_summary = {
+        "post_id": post_id,
+        "post_url": post_url,
+        "content": content,
+        "media_urls": media_urls,
+        "published_at": pub_iso,
+    }
+
+    if not is_event:
+        return {
+            "status": "not_event",
+            "is_event": False,
+            "fanpage_added": False,
+            "fanpage": None,
+            "fanpage_url": fanpage_url,
+            "event": None,
+            "post": post_summary,
+            "detail": "Post fetched and analyzed, but it does not announce an upcoming/ongoing event.",
+        }
+
+    fp: Optional[Fanpage] = None
+    fp_created = False
+    if fanpage_url:
+        try:
+            fp, fp_created = add_fanpage(fanpage_url, name=fanpage_name)
+            update_fanpage_metadata(fp.id, name=fanpage_name)
+            if fanpage_name:
+                fp.name = fanpage_name
+            save_posts(fp.id, [post_data])
+        except ValueError as exc:
+            print(f"[events] Could not add derived fanpage '{fanpage_url}': {exc}")
+            fp = None
+            fp_created = False
+
+    with get_session() as session:
+        upsert_status, ev_record, changes = upsert_unified_event(
+            session=session,
+            raw_data=raw_data,
+            source_type="facebook",
+            source_id=post_id,
+            media_urls=media_urls,
+            fanpage_id=fp.id if fp else None,
+            client_id=None,
+            post_url=post_url,
+            posted_at=pub_iso,
+        )
+        raw_data["dedup_status"] = upsert_status
+        if changes:
+            raw_data["updated_changes"] = changes
+
+        if fp is not None:
+            existing_pa = session.scalar(select(PostAnalysis).where(PostAnalysis.post_id == post_id))
+            if existing_pa:
+                existing_pa.is_event = True
+                existing_pa.event_json = json.dumps(raw_data, ensure_ascii=False)
+            else:
+                session.add(
+                    PostAnalysis(
+                        post_id=post_id,
+                        fanpage_id=fp.id,
+                        is_event=True,
+                        event_json=json.dumps(raw_data, ensure_ascii=False),
+                    )
+                )
+
+        session.commit()
+        if fp is not None:
+            _write_events_json(fp, session)
+        sync_all_event_folders(session)
+        ev_dict = ev_record.to_dict()
+
+    if fp is not None:
+        generate_fanpage_rss(fp)
+    generate_all_rss()
+
+    return {
+        "status": upsert_status,
+        "is_event": True,
+        "fanpage_added": fp_created,
+        "fanpage": fp.to_dict() if fp else None,
+        "fanpage_url": fp.url if fp else fanpage_url,
+        "changes": changes,
+        "event": ev_dict,
+        "post": post_summary,
+    }
+
+
+async def extract_single_post_url(post_url: str) -> Dict[str, Any]:
+    """
+    Scrape a single Facebook post URL, feed it to the Event Extractor, and if it is an event,
+    extract the fanpage link (if able) and add it to the tracked fanpages list if not already tracked.
+    """
+    import asyncio
+    from scraper import scrape_single_post
+
+    post_data = await scrape_single_post(post_url)
+    return await asyncio.to_thread(_process_single_post_extraction, post_data)
