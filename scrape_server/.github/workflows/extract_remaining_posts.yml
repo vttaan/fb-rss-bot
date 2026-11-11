@@ -1,0 +1,185 @@
+name: Extract Remaining Posts (Per-Page Latest Limit)
+
+on:
+  workflow_dispatch:
+    inputs:
+      posts_per_page:
+        description: "Number of latest posts per fanpage to feed to the extractor (0 = all remaining)"
+        required: true
+        default: "10"
+      force_recheck:
+        description: "Re-evaluate posts previously marked as non-event within the limit? (true/false)"
+        required: false
+        default: "true"
+      scrape_first:
+        description: "Also crawl fanpages for new/shared posts before extracting? (true/false)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  extract-remaining-posts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Ho_Chi_Minh
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CALL_DELAY_SECONDS: "3.0"
+      GEMINI_MAX_RETRIES: "3"
+      NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ "${{ github.event.inputs.scrape_first }}" = "true" ]; then
+            playwright install --with-deps chromium
+          fi
+
+      - name: Optional — Crawl Fanpages First
+        if: ${{ github.event.inputs.scrape_first == 'true' }}
+        run: |
+          python main.py fetch
+
+      - name: Feed Remaining Posts to Event Extractor
+        run: |
+          LIMIT_VAL="${{ github.event.inputs.posts_per_page }}"
+          if [ -z "$LIMIT_VAL" ]; then
+            LIMIT_VAL="10"
+          fi
+
+          RECHECK_FLAG=""
+          if [ "${{ github.event.inputs.force_recheck }}" = "true" ]; then
+            RECHECK_FLAG="--recheck"
+          fi
+
+          echo "🔎 Feeding up to $LIMIT_VAL latest post(s) per fanpage to Event Extractor ($RECHECK_FLAG)..."
+          python main.py extract --limit "$LIMIT_VAL" $RECHECK_FLAG
+          python main.py list
+
+      - name: Sync Extracted Events to 24/7 Ngrok Server (If Online)
+        run: |
+          RAW_DOMAIN="${NGROK_DOMAIN:-stimulus-rectangle-ship.ngrok-free.dev}"
+          CLEAN_DOMAIN="${RAW_DOMAIN#https://}"
+          CLEAN_DOMAIN="${CLEAN_DOMAIN#http://}"
+          CLEAN_DOMAIN="${CLEAN_DOMAIN%/}"
+          TARGET_URL="https://$CLEAN_DOMAIN"
+
+          if curl -fsS --max-time 8 -H "ngrok-skip-browser-warning: true" "$TARGET_URL/api/schedule" >/dev/null 2>&1; then
+            echo "🟢 24/7 Ngrok server is ONLINE at $TARGET_URL — syncing posts & events..."
+            LIMIT_VAL="${{ github.event.inputs.posts_per_page }}"
+            RECHECK_VAL="${{ github.event.inputs.force_recheck }}"
+            TARGET_URL_VAL="$TARGET_URL" LIMIT_VAL="${LIMIT_VAL:-10}" FORCE_RECHECK_VAL="${RECHECK_VAL:-true}" python - << 'PY'
+          import json, os, urllib.request
+          from database import list_fanpages, get_posts_for_fanpage
+
+          raw_limit = int(os.environ.get("LIMIT_VAL") or 10)
+          post_limit = raw_limit if raw_limit > 0 else 50
+          payload = {
+              "fanpages": [],
+              "extract_limit": raw_limit if raw_limit > 0 else None,
+              "force_recheck": os.environ.get("FORCE_RECHECK_VAL", "true").lower() == "true",
+          }
+          for fp, _ in list_fanpages(active_only=True):
+              posts = get_posts_for_fanpage(fp.id, limit=post_limit)
+              payload["fanpages"].append({
+                  "url": fp.url,
+                  "name": fp.name,
+                  "posts": [
+                      {
+                          "post_id": p.post_id,
+                          "post_url": p.post_url,
+                          "content": p.content,
+                          "media_urls": p.media_urls,
+                          "published_at": p.published_at.isoformat() if p.published_at else None,
+                      }
+                      for p in posts
+                  ],
+              })
+          target = os.environ["TARGET_URL_VAL"]
+          headers = {
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true",
+              "X-Admin-Token": os.environ.get("ADMIN_TOKEN", ""),
+          }
+          req = urllib.request.Request(
+              f"{target}/api/admin/import-crawl",
+              data=json.dumps(payload).encode("utf-8"),
+              headers=headers,
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  print("Live server sync response:", r.read().decode("utf-8"))
+          except Exception as exc:
+              print(f"Warning pushing to live server: {exc}")
+
+          # Pull updated events.json & messages.json files back from the 24/7 Ngrok server into repo feeds/
+          from pathlib import Path
+          from config import FEEDS_DIR
+          try:
+              tree_req = urllib.request.Request(
+                  f"{target}/api/tree",
+                  headers={"ngrok-skip-browser-warning": "true"},
+              )
+              with urllib.request.urlopen(tree_req, timeout=30) as tr:
+                  tree_data = json.loads(tr.read().decode("utf-8"))
+              pulled_files = 0
+              for folder in tree_data.get("folders", []):
+                  for f_info in folder.get("files", []):
+                      rel_path = f_info.get("relative_path")
+                      if not rel_path or not rel_path.endswith(".json"):
+                          continue
+                      file_req = urllib.request.Request(
+                          f"{target}/feeds/{rel_path}",
+                          headers={"ngrok-skip-browser-warning": "true"},
+                      )
+                      with urllib.request.urlopen(file_req, timeout=30) as fr:
+                          content_bytes = fr.read()
+                      dest = FEEDS_DIR / Path(rel_path)
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      dest.write_bytes(content_bytes)
+                      pulled_files += 1
+                      # Also mirror fanpages/<slug>/events.json to legacy feeds/<slug>/events.json
+                      parts = Path(rel_path).parts
+                      if len(parts) == 3 and parts[0] == "fanpages" and parts[2] == "events.json":
+                          legacy_dest = FEEDS_DIR / parts[1] / "events.json"
+                          legacy_dest.parent.mkdir(parents=True, exist_ok=True)
+                          legacy_dest.write_bytes(content_bytes)
+              print(f"Pulled {pulled_files} updated JSON file(s) from live Ngrok server into feeds/.")
+          except Exception as exc:
+              print(f"Warning pulling JSON feeds from live server: {exc}")
+          PY
+          else
+            echo "🟡 24/7 Ngrok server is offline — skipping live API push."
+          fi
+
+      - name: Commit Updated SQLite DB & Extracted Event Feeds
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rss_bot.db feeds/
+          if git diff --staged --quiet; then
+            echo "No database or event feed changes to commit."
+          else
+            git commit -m "chore(events): extract remaining posts (limit=${{ github.event.inputs.posts_per_page || '10' }}) at $(date '+%Y-%m-%d %H:%M') [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
+          fi

@@ -1,5 +1,8 @@
 import asyncio
+import os
+import subprocess
 import sys
+import threading
 from datetime import datetime, timedelta
 from typing import Awaitable, Callable, List, Optional
 
@@ -15,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from config import (
+    BASE_DIR,
     DEFAULT_INTERVAL_SECONDS,
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
@@ -36,6 +40,74 @@ from scraper import scrape_fanpage
 
 console = Console()
 NewPostsCallback = Callable[[Fanpage, List[Post]], Awaitable[None]]
+_GIT_BACKUP_LOCK = threading.Lock()
+
+
+def backup_state_to_git(reason: str = "scheduled crawl") -> bool:
+    """
+    Commit and push updated `rss_bot.db` and `feeds/` from the VM to GitHub as a backup.
+    Skips inside GitHub Actions or when `AUTO_GIT_BACKUP=false`. Never raises on git errors.
+    """
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        return False
+    if os.environ.get("AUTO_GIT_BACKUP", "true").strip().lower() in ("0", "false", "no", "off"):
+        return False
+
+    repo_dir = str(BASE_DIR)
+
+    def _run_git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", repo_dir, *args],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+    with _GIT_BACKUP_LOCK:
+        try:
+            inside = _run_git("rev-parse", "--is-inside-work-tree")
+            if inside.returncode != 0 or inside.stdout.strip() != "true":
+                return False
+
+            add_res = _run_git("add", "rss_bot.db", "feeds/")
+            if add_res.returncode != 0:
+                print(f"[git-backup] git add failed: {add_res.stderr.strip()}")
+                return False
+
+            diff_res = _run_git("diff", "--staged", "--quiet")
+            if diff_res.returncode == 0:
+                return False  # Nothing changed
+
+            branch_res = _run_git("rev-parse", "--abbrev-ref", "HEAD")
+            branch = branch_res.stdout.strip() if branch_res.returncode == 0 else "main"
+            if not branch or branch == "HEAD":
+                branch = "main"
+
+            stamp = datetime.now(SCRAPE_TIMEZONE).strftime("%Y-%m-%d %H:%M")
+            commit_res = _run_git(
+                "commit",
+                "-m",
+                f"chore(rss): {reason} & feed backup at {stamp} [skip ci]",
+            )
+            if commit_res.returncode != 0:
+                print(f"[git-backup] git commit failed: {commit_res.stderr.strip()}")
+                return False
+
+            pull_res = _run_git("pull", "--rebase", "--autostash", "origin", branch)
+            if pull_res.returncode != 0:
+                print(f"[git-backup] git pull --rebase warning: {pull_res.stderr.strip()}")
+
+            push_res = _run_git("push", "origin", branch)
+            if push_res.returncode != 0:
+                print(f"[git-backup] git push failed: {push_res.stderr.strip()}")
+                return False
+
+            print(f"[git-backup] Synced rss_bot.db & feeds/ to origin/{branch} at {stamp}.")
+            return True
+        except Exception as exc:
+            print(f"[git-backup] Unexpected error during backup: {exc}")
+            return False
 
 
 async def run_scrape_cycle(

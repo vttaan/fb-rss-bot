@@ -1,18 +1,18 @@
 name: Scheduled Crawler (08:00, 14:00, 20:00 ICT) -> Sync to 24/7 Ngrok & GitHub Pages
 
 on:
-  # Trigger ~13 minutes early at off-peak minute (:47) so GitHub Actions queue delay +
-  # setup (~2-3 mins) finish in time for 08:00, 14:00, and 20:00 Asia/Ho_Chi_Minh (UTC+7).
-  schedule:
-    - cron: "47 0 * * *"   # ~07:47 ICT -> crawls & deploys for 08:00 ICT
-    - cron: "47 6 * * *"   # ~13:47 ICT -> crawls & deploys for 14:00 ICT
-    - cron: "47 12 * * *"  # ~19:47 ICT -> crawls & deploys for 20:00 ICT
+  # Scheduled cron is disabled now that the 24/7 Ngrok VM runs APScheduler at 08:00, 14:00, 20:00 ICT
+  # and auto-pushes rss_bot.db + feeds/ backups. Use workflow_dispatch for manual backup runs.
   workflow_dispatch:
     inputs:
       stay_awake_minutes:
         description: "Fallback awake minutes if 24/7 Ngrok server is offline (default: 10)"
         required: false
         default: "10"
+      target_fanpage:
+        description: "Optional fanpage slug, ID, or URL to scrape (blank = all fanpages)"
+        required: false
+        default: ""
 
 concurrency:
   group: live-websocket-server
@@ -23,24 +23,29 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  TZ: Asia/Ho_Chi_Minh
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   scheduled-scrape-and-serve:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      TZ: Asia/Ho_Chi_Minh
       NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
       NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CALL_DELAY_SECONDS: "3.0"
+      GEMINI_MAX_RETRIES: "3"
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -138,7 +143,12 @@ jobs:
           PY
 
             # 2. Run Playwright crawler + extractor locally inside GitHub Actions (~2-5 mins)
-            python main.py fetch
+            TARGET_FP="${{ github.event.inputs.target_fanpage }}"
+            if [ -n "$TARGET_FP" ]; then
+              python main.py fetch "$TARGET_FP"
+            else
+              python main.py fetch
+            fi
             python main.py list
 
             # 3. Push freshly scraped posts & metadata to the 24/7 Ngrok server
@@ -179,6 +189,38 @@ jobs:
                   print(r.read().decode("utf-8"))
           except Exception as exc:
               print(json.dumps({"status": "push_failed", "detail": str(exc)}))
+
+          # Pull updated events.json & messages.json files back from the 24/7 Ngrok server into repo feeds/
+          from pathlib import Path
+          from config import FEEDS_DIR
+          try:
+              tree_req = urllib.request.Request(
+                  f"{target}/api/tree",
+                  headers={"ngrok-skip-browser-warning": "true"},
+              )
+              with urllib.request.urlopen(tree_req, timeout=30) as tr:
+                  tree_data = json.loads(tr.read().decode("utf-8"))
+              for folder in tree_data.get("folders", []):
+                  for f_info in folder.get("files", []):
+                      rel_path = f_info.get("relative_path")
+                      if not rel_path or not rel_path.endswith(".json"):
+                          continue
+                      file_req = urllib.request.Request(
+                          f"{target}/feeds/{rel_path}",
+                          headers={"ngrok-skip-browser-warning": "true"},
+                      )
+                      with urllib.request.urlopen(file_req, timeout=30) as fr:
+                          content_bytes = fr.read()
+                      dest = FEEDS_DIR / Path(rel_path)
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      dest.write_bytes(content_bytes)
+                      parts = Path(rel_path).parts
+                      if len(parts) == 3 and parts[0] == "fanpages" and parts[2] == "events.json":
+                          legacy_dest = FEEDS_DIR / parts[1] / "events.json"
+                          legacy_dest.parent.mkdir(parents=True, exist_ok=True)
+                          legacy_dest.write_bytes(content_bytes)
+          except Exception:
+              pass
           PY
             )
             echo "Push to 24/7 Ngrok server result: $SYNC_RESULT"
@@ -317,8 +359,8 @@ jobs:
             echo "No database or feed changes to commit."
           else
             git commit -m "chore(rss): scheduled crawl & feed sync at $(date '+%Y-%m-%d %H:%M') [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }} || true
-            git push origin ${{ github.ref_name }} || true
+            git pull --rebase --autostash origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
           fi
 
       - name: Prepare GitHub Pages Payload (Distributed Directory Tree)

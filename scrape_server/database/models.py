@@ -196,6 +196,10 @@ class EventRecord(Base):
             "time": self.event_time,
             "start_datetime": self.start_datetime,
             "end_datetime": self.end_datetime,
+            "event_start_datetime": extra.get("event_start_datetime") or self.start_datetime,
+            "event_end_datetime": extra.get("event_end_datetime") or self.end_datetime,
+            "reg_start_datetime": extra.get("reg_start_datetime"),
+            "reg_end_datetime": extra.get("reg_end_datetime"),
             "location": self.location,
             "source_type": self.source_type,
             "source_id": self.source_id,
@@ -214,10 +218,7 @@ class EmailMessage(Base):
     __tablename__ = "email_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # Provenance: the email's own Message-ID header (or a server-made fallback id).
     message_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    # Exact-copy fingerprint computed by the client (SHA-256 hex). Separate from message_id so each
-    # column has one meaning. NULL for rows created before this column existed or without a hash.
     content_hash: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True, index=True)
     client_id: Mapped[str] = mapped_column(String(128), default="anonymous", nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(512), default="", nullable=False)
@@ -242,12 +243,6 @@ class EmailMessage(Base):
             return []
 
     def to_dict(self, include_content: bool = False) -> Dict[str, Any]:
-        """Serialize for APIs, WebSocket broadcasts and `feeds/inbox/messages.json`.
-
-        The email body (`content`) is excluded by default: this dict ends up in public feeds,
-        broadcasts to every dashboard client, and git history. Pass `include_content=True` only
-        for trusted internal use.
-        """
         rec_dt = ensure_local_tz(self.received_at)
         ing_dt = ensure_local_tz(self.ingested_at)
         try:

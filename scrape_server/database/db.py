@@ -18,12 +18,6 @@ _MIGRATIONS_DONE = False
 
 
 def _apply_lightweight_migrations() -> None:
-    """Bring an existing SQLite file up to date.
-
-    `create_all` only creates *missing tables*; it never adds columns to tables that already
-    exist. A database created before `email_messages.content_hash` existed would therefore crash
-    on the first query. This adds the column and its unique index when they are missing.
-    """
     insp = inspect(engine)
     if "email_messages" not in insp.get_table_names():
         return
@@ -31,7 +25,6 @@ def _apply_lightweight_migrations() -> None:
     with engine.begin() as conn:
         if "content_hash" not in columns:
             conn.execute(text("ALTER TABLE email_messages ADD COLUMN content_hash VARCHAR(128)"))
-        # SQLite lets many rows hold NULL in a unique index, so old rows without a hash are fine.
         conn.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_email_messages_content_hash ON email_messages (content_hash)")
         )
@@ -398,7 +391,7 @@ def get_inbox_messages(client_id: Optional[str] = None, limit: int = 100) -> Lis
 
 
 def get_known_content_hashes(hashes: List[str]) -> set:
-    """Return the subset of `hashes` already stored in the inbox (exact-copy check, indexed lookup)."""
+    """Return the subset of hashes already stored in the inbox."""
     init_db()
     wanted = list({h.strip().lower() for h in hashes if h and h.strip()})
     if not wanted:

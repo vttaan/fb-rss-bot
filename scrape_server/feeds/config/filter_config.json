@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "updated_at": "2026-11-11T19:30:00+07:00",
+  "allowed_senders": [
+    "hcmus.edu.vn",
+    "fit.hcmus.edu.vn",
+    "clc.hcmus.edu.vn",
+    "student.hcmus.edu.vn",
+    "ctsv@hcmus.edu.vn",
+    "doanthanhnien@hcmus.edu.vn",
+    "hoisinhvien@hcmus.edu.vn"
+  ],
+  "keywords": [
+    "điểm rèn luyện",
+    "ĐRL",
+    "rèn luyện",
+    "cộng điểm",
+    "hội thảo",
+    "workshop",
+    "talkshow",
+    "seminar",
+    "tình nguyện",
+    "chiến dịch",
+    "điểm danh",
+    "cổ vũ",
+    "cuộc thi",
+    "học thuật",
+    "sinh hoạt"
+  ],
+  "excluded_keywords": [
+    "mật khẩu",
+    "password",
+    "otp",
+    "mã xác nhận",
+    "học phí",
+    "biên lai",
+    "bảng điểm cá nhân",
+    "kết quả học tập",
+    "cảnh báo học vụ",
+    "kỷ luật"
+  ],
+  "newer_than_days": 14,
+  "max_results": 20
+}
+

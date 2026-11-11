@@ -15,7 +15,7 @@ import json
 import argparse
 import requests
 
-from privacy_filter import load_filter_config
+from privacy_filter import load_filter_config, sync_filter_config_from_server
 from gmail.gmail import GmailProvider
 from outlook.outlook import OutlookProvider
 
@@ -110,8 +110,11 @@ def ship_to_server(emails, endpoint_url, client_id="anonymous", ingest_token="",
         return False, None
 
 
-def run_pipeline(sources=("gmail", "outlook"), send_to_server=False, server_url=None, verbose=True):
-    config = load_filter_config()
+def run_pipeline(sources=("gmail", "outlook"), send_to_server=False, server_url=None, verbose=True, sync_config=True):
+    if sync_config:
+        config = sync_filter_config_from_server()
+    else:
+        config = load_filter_config()
     target_endpoint = server_url or config.get("ingest_endpoint")
 
     collected_emails = []
@@ -183,7 +186,14 @@ if __name__ == "__main__":
                         help="HTTP POST JSON to the server's /api/events/ingest-email")
     parser.add_argument("--server", type=str, default=None,
                         help="Override target server endpoint URL (e.g. ngrok gateway URL)")
+    parser.add_argument("--no-config-sync", action="store_true",
+                        help="Disable pulling latest filter_config.json from server before running")
     args = parser.parse_args()
 
     selected_sources = ("gmail", "outlook") if args.source == "both" else (args.source,)
-    run_pipeline(sources=selected_sources, send_to_server=args.send, server_url=args.server)
+    run_pipeline(
+        sources=selected_sources,
+        send_to_server=args.send,
+        server_url=args.server,
+        sync_config=not args.no_config_sync
+    )

@@ -17,15 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Ho_Chi_Minh
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CALL_DELAY_SECONDS: "3.0"
+      GEMINI_MAX_RETRIES: "3"
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"

@@ -13,10 +13,12 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from config import FEEDS_DIR
+from config import FEEDS_DIR, SCROLL_COUNT
 from database import add_fanpage, ensure_local_tz, list_fanpages, remove_fanpage, save_posts, update_fanpage_metadata
 from events import analyze_fanpage_posts, purge_fanpage_events, sync_all_event_folders
 from rss import generate_all_rss, generate_fanpage_rss
+from scheduler import backup_state_to_git
+from scraper import is_facebook_post_url, scrape_fanpage
 
 router = APIRouter()
 
@@ -42,6 +44,14 @@ class CrawledFanpagePayload(BaseModel):
 
 class ImportCrawlRequest(BaseModel):
     fanpages: List[CrawledFanpagePayload] = Field(default_factory=list)
+    extract_limit: Optional[int] = None
+    force_recheck: bool = False
+
+
+class RefetchExtractRequest(BaseModel):
+    fanpage: str = Field("all", description="Fanpage ID, slug, URL, or 'all'")
+    limit: int = Field(5, ge=1, le=50, description="Number of latest posts per fanpage to refetch & extract")
+    force_recheck: bool = Field(True, description="Re-evaluate posts previously marked non-event within the limit")
 
 
 def require_admin(x_admin_token: str = Header(default="")) -> None:
@@ -69,12 +79,107 @@ def admin_verify_token():
 
 
 @router.post("/api/admin/scrape", dependencies=[Depends(require_admin)])
-async def admin_trigger_scrape():
-    """Trigger a full scrape + extractor cycle across all tracked Facebook fanpages."""
-    from server import trigger_background_scrape
+async def admin_trigger_scrape(target: Optional[str] = Query(None, description="Optional fanpage slug/ID/URL")):
+    """Unified scrape trigger: dispatches GitHub Actions crawler (or runs locally if fallback/no token)."""
+    from server import trigger_unified_scrape
 
-    asyncio.create_task(trigger_background_scrape())
-    return {"status": "started"}
+    return await trigger_unified_scrape(target_slug_or_id=target)
+
+
+@router.post("/api/admin/refetch-extract", dependencies=[Depends(require_admin)])
+async def admin_refetch_and_extract(body: RefetchExtractRequest):
+    """
+    Refetch the N latest posts from a selected fanpage (or all fanpages) on Facebook
+    and refeed them to the Event Extractor.
+    """
+    from server import manager
+
+    rows = list_fanpages(active_only=True)
+    target = (body.fanpage or "all").strip()
+    if target and target.lower() != "all":
+        rows = [
+            (fp, cnt)
+            for fp, cnt in rows
+            if str(fp.id) == target
+            or fp.slug.lower() == target.lower()
+            or target.lower() in fp.url.lower()
+        ]
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No active fanpage matching '{target}'.")
+
+    scroll_count = max(SCROLL_COUNT, min(12, (body.limit // 3) + 2))
+    total_fetched = 0
+    total_new = 0
+    total_events = 0
+    total_llm = 0
+    total_updated = 0
+    total_errors = 0
+
+    async with manager.scrape_lock:
+        await manager.broadcast_to_all(
+            {
+                "event": "status",
+                "message": f"Refetching up to {body.limit} latest post(s) for {len(rows)} fanpage(s)...",
+            }
+        )
+        for idx, (fp, _) in enumerate(rows):
+            try:
+                page_title, scraped_items = await scrape_fanpage(fp.url, scroll_count=scroll_count)
+                latest_items = scraped_items[: body.limit]
+                total_fetched += len(latest_items)
+
+                update_fanpage_metadata(fp.id, name=page_title)
+                if page_title:
+                    fp.name = page_title
+
+                new_posts = save_posts(fp.id, latest_items)
+                total_new += len(new_posts)
+                generate_fanpage_rss(fp)
+
+                ev_stats = await asyncio.to_thread(
+                    analyze_fanpage_posts,
+                    fp.id,
+                    limit=body.limit,
+                    force_recheck=body.force_recheck,
+                )
+                total_events += int(ev_stats.get("events", 0))
+                total_llm += int(ev_stats.get("llm_calls", 0))
+                total_updated += int(ev_stats.get("updated", 0))
+                total_errors += int(ev_stats.get("errors", 0))
+
+                if new_posts:
+                    await manager.on_new_posts_scraped(fp, new_posts)
+            except Exception as exc:
+                total_errors += 1
+                print(f"[admin] Error refetching {fp.url}: {exc}")
+
+            if idx < len(rows) - 1:
+                await asyncio.sleep(2.5)
+
+        generate_all_rss()
+        await asyncio.to_thread(sync_all_event_folders)
+
+    msg = (
+        f"Refetched {total_fetched} latest post(s) across {len(rows)} fanpage(s): "
+        f"+{total_new} new post(s), {total_llm} LLM call(s), {total_events} event(s) found"
+        + (f", {total_updated} updated" if total_updated else "")
+        + (f", {total_errors} error(s)" if total_errors else "")
+        + "."
+    )
+    await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
+    asyncio.create_task(asyncio.to_thread(backup_state_to_git, "admin refetch & extract"))
+
+    return {
+        "status": "ok",
+        "fanpages_processed": len(rows),
+        "posts_fetched": total_fetched,
+        "new_posts": total_new,
+        "llm_calls": total_llm,
+        "events_found": total_events,
+        "updated": total_updated,
+        "errors": total_errors,
+        "message": msg,
+    }
 
 
 @router.post("/api/admin/import-crawl", dependencies=[Depends(require_admin)])
@@ -122,7 +227,12 @@ async def admin_import_crawl(body: ImportCrawlRequest):
         total_new_posts += len(new_posts)
         generate_fanpage_rss(fp)
 
-        ev_stats = await asyncio.to_thread(analyze_fanpage_posts, fp.id)
+        ev_stats = await asyncio.to_thread(
+            analyze_fanpage_posts,
+            fp.id,
+            limit=body.extract_limit,
+            force_recheck=body.force_recheck,
+        )
         total_events += int(ev_stats.get("events", 0))
         fanpages_synced += 1
 
@@ -154,8 +264,8 @@ def admin_list_fanpages():
     ]
 
 
-def _trigger_github_actions_crawl() -> bool:
-    """Optionally trigger GitHub Actions live_server_demo.yml via workflow_dispatch when GITHUB_TOKEN is set."""
+def _trigger_github_actions_crawl(target_slug_or_id: Optional[str] = None) -> bool:
+    """Trigger GitHub Actions live_server_demo.yml via workflow_dispatch when GITHUB_TOKEN is set."""
     import json
     import urllib.request
 
@@ -163,10 +273,14 @@ def _trigger_github_actions_crawl() -> bool:
     if not gh_token:
         return False
     repo = os.environ.get("GITHUB_REPO", "vttaan/fb-rss-bot").strip()
+    ref = os.environ.get("GITHUB_REF", "main").strip() or "main"
     url = f"https://api.github.com/repos/{repo}/actions/workflows/live_server_demo.yml/dispatches"
+    payload: dict = {"ref": ref}
+    if target_slug_or_id:
+        payload["inputs"] = {"target_fanpage": str(target_slug_or_id)}
     req = urllib.request.Request(
         url,
-        data=json.dumps({"ref": "main"}).encode("utf-8"),
+        data=json.dumps(payload).encode("utf-8"),
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {gh_token}",
@@ -183,9 +297,25 @@ def _trigger_github_actions_crawl() -> bool:
         return False
 
 
+@router.post("/api/admin/extract-post", dependencies=[Depends(require_admin)])
+async def admin_extract_post(body: AddFanpageRequest):
+    """Fetch a single Facebook post URL, feed it to the extractor, and add its fanpage if it is an event."""
+    import server
+
+    return await server.process_single_post_url(body.url)
+
+
 @router.post("/api/admin/fanpages", dependencies=[Depends(require_admin)])
 async def admin_add_fanpage(body: AddFanpageRequest):
     import server
+
+    if is_facebook_post_url(body.url):
+        res = await server.process_single_post_url(body.url)
+        return {
+            "created": bool(res.get("fanpage_added")),
+            "scrape_mode": "single_post_extract",
+            **res,
+        }
 
     try:
         fp, created = add_fanpage(body.url, body.name)
@@ -195,18 +325,9 @@ async def admin_add_fanpage(body: AddFanpageRequest):
     scrape_mode = "already_tracked"
     message = "Fanpage already tracked."
     if created:
-        if server.SERVER_AUTO_SCRAPE:
-            asyncio.create_task(server.trigger_background_scrape(fp.slug))
-            scrape_mode = "local_background"
-            message = "Added. Fetching 5 most recent posts in background."
-        else:
-            dispatched = await asyncio.to_thread(_trigger_github_actions_crawl)
-            if dispatched:
-                scrape_mode = "github_actions_dispatched"
-                message = "Added. Triggered GitHub Actions crawler to fetch 5 most recent posts."
-            else:
-                scrape_mode = "queued_for_actions"
-                message = "Added. GitHub Actions will fetch 5 most recent posts on the next scheduled/manual crawl."
+        res = await server.trigger_unified_scrape(fp.slug)
+        scrape_mode = res.get("mode", "queued_for_actions")
+        message = f"Added. {res.get('message', '')}".strip()
         await server.manager.broadcast_to_all({"event": "status", "message": f"Added fanpage: {fp.name or fp.slug}", "refresh_tree": True})
 
     return {"created": created, "scrape_mode": scrape_mode, "message": message, "fanpage": fp.to_dict()}
@@ -239,8 +360,8 @@ ADMIN_HTML = """<!DOCTYPE html>
     .container { max-width:1200px; margin:0 auto; }
     .panel { background:var(--card); padding:24px 28px; border-radius:20px; margin-bottom:24px; box-shadow:0 6px 24px #b8a9e822; }
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    input { background:#faf9ff; border:2px solid var(--border); color:var(--text); padding:12px 16px; border-radius:12px; font-size:15px; outline:none; flex:1; min-width:220px; }
-    input:focus { border-color:var(--accent); }
+    input, select { background:#faf9ff; border:2px solid var(--border); color:var(--text); padding:12px 16px; border-radius:12px; font-size:15px; outline:none; flex:1; min-width:220px; }
+    input:focus, select:focus { border-color:var(--accent); }
     button { background:var(--accent); color:#fff; border:none; padding:12px 20px; border-radius:12px; cursor:pointer; font-weight:600; font-size:15px; }
     button.secondary { background:var(--sky); color:#3d6fb5; }
     button.danger { background:var(--rose); color:#c2476b; padding:8px 14px; border-radius:10px; }
@@ -276,13 +397,29 @@ ADMIN_HTML = """<!DOCTYPE html>
 
     <div id="adminContent" style="display:none;">
       <div class="panel">
-        <h3 style="margin-top:0;">Add Facebook Fanpage</h3>
+        <h3 style="margin-top:0;">Add Facebook Fanpage or Extract Event from Post URL</h3>
         <div class="row">
-          <input id="url" placeholder="https://www.facebook.com/nasa or page name" />
-          <input id="name" placeholder="Display name (optional)" style="max-width:260px;" />
-          <button onclick="addFanpage()">+ Add &amp; Scrape</button>
+          <input id="url" placeholder="Fanpage URL (e.g. fb.com/nasa) OR Post URL (e.g. fb.com/.../posts/...)" onkeydown="if(event.key==='Enter')addFanpage()" />
+          <input id="name" placeholder="Display name (optional, fanpage only)" style="max-width:260px;" />
+          <button id="addExtractBtn" onclick="addFanpage()">+ Add / Extract</button>
         </div>
         <div id="actionMsg" style="margin-top:10px; font-size:14px; color:var(--muted);"></div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-top:0;">Refetch Latest Posts &amp; Refeed Event Extractor</h3>
+        <div class="row">
+          <select id="refetchFanpage" style="min-width:260px;">
+            <option value="all">All Tracked Fanpages</option>
+          </select>
+          <input id="refetchLimit" type="number" min="1" max="50" value="5" placeholder="Latest posts" style="max-width:140px; min-width:110px; flex:0 0 auto;" title="Number of latest posts per fanpage" />
+          <label style="display:flex; align-items:center; gap:6px; font-size:14px; color:var(--text); cursor:pointer; user-select:none;">
+            <input id="refetchForceRecheck" type="checkbox" checked style="width:auto; min-width:auto; flex:none;" />
+            Re-check non-events
+          </label>
+          <button id="refetchBtn" class="secondary" onclick="refetchAndExtract()">↻ Refetch &amp; Extract</button>
+        </div>
+        <div id="refetchMsg" style="margin-top:10px; font-size:14px; color:var(--muted);"></div>
       </div>
 
       <div class="panel">
@@ -327,6 +464,14 @@ ADMIN_HTML = """<!DOCTYPE html>
         document.getElementById('scrapeAllBtn').style.display = 'inline-block';
         document.getElementById('logoutBtn').style.display = 'inline-block';
         document.getElementById('count').textContent = list.length;
+        const sel = document.getElementById('refetchFanpage');
+        if (sel) {
+          const prev = sel.value || 'all';
+          sel.innerHTML = '<option value="all">All Tracked Fanpages</option>' + list.map(f =>
+            `<option value="${f.id}">${esc(f.name)} (${esc(f.slug)})</option>`
+          ).join('');
+          if (Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+        }
         document.getElementById('rows').innerHTML = list.map(f => `
           <tr>
             <td><strong>${esc(f.name)}</strong><br><a href="/feeds/fanpages/${encodeURIComponent(f.slug)}/events.json" target="_blank" style="font-size:12px;">events.json ↗</a></td>
@@ -347,21 +492,69 @@ ADMIN_HTML = """<!DOCTYPE html>
 
     async function scrapeAll() {
       try {
-        await api('POST', '/api/admin/scrape');
-        msg('Background scrape & extraction started across all tracked fanpages.', false, 'actionMsg');
+        const r = await api('POST', '/api/admin/scrape');
+        msg(r.message || 'Scrape & extraction triggered across all tracked fanpages.', false, 'actionMsg');
       } catch (e) { msg(e.message, true, 'actionMsg'); }
+    }
+
+    async function refetchAndExtract() {
+      const fanpage = document.getElementById('refetchFanpage').value || 'all';
+      const limit = Math.max(1, Math.min(50, parseInt(document.getElementById('refetchLimit').value || '5', 10) || 5));
+      const force_recheck = document.getElementById('refetchForceRecheck').checked;
+      const btn = document.getElementById('refetchBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Refetching...';
+      }
+      msg(`Refetching ${limit} latest post(s) & feeding Event Extractor...`, false, 'refetchMsg');
+      try {
+        const r = await api('POST', '/api/admin/refetch-extract', { fanpage, limit, force_recheck });
+        msg(r.message || 'Refetch & extraction complete.', (r.errors || 0) > 0, 'refetchMsg');
+        load();
+      } catch (e) {
+        msg(e.message, true, 'refetchMsg');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '↻ Refetch & Extract';
+        }
+      }
     }
 
     async function addFanpage() {
       const url = document.getElementById('url').value.trim();
       const name = document.getElementById('name').value.trim() || null;
+      const btn = document.getElementById('addExtractBtn');
       if (!url) return;
+
+      const isPostUrl = /(\\/posts\\/|\\/permalink\\.php|\\/story\\.php|\\/reel\\/|\\/videos\\/|\\/photos\\/|\\/photo(?:\\.php|\\?)|\\/share\\/)/i.test(url);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = isPostUrl ? 'Extracting...' : 'Adding...';
+      }
+      if (isPostUrl) {
+        msg('Fetching Facebook post & running Event Extractor...', false, 'actionMsg');
+      }
+
       try {
-        const r = await api('POST', '/api/admin/fanpages', { url, name });
-        msg(r.message || (r.created ? 'Added.' : 'Fanpage already tracked.'), false, 'actionMsg');
-        document.getElementById('url').value = ''; document.getElementById('name').value = '';
+        const endpoint = isPostUrl ? '/api/admin/extract-post' : '/api/admin/fanpages';
+        const payload = isPostUrl ? { url } : { url, name };
+        const r = await api('POST', endpoint, payload);
+        const bad = isPostUrl && r.is_event === false;
+        msg(r.message || (r.created ? 'Added.' : 'Fanpage already tracked.'), bad, 'actionMsg');
+        if (!isPostUrl || r.is_event) {
+          document.getElementById('url').value = '';
+          document.getElementById('name').value = '';
+        }
         load();
-      } catch (e) { msg(e.message, true, 'actionMsg'); }
+      } catch (e) {
+        msg(e.message, true, 'actionMsg');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '+ Add / Extract';
+        }
+      }
     }
 
     async function removeFanpage(btn) {
@@ -382,3 +575,50 @@ ADMIN_HTML = """<!DOCTYPE html>
 @router.get("/admin", response_class=HTMLResponse)
 def serve_admin_page():
     return HTMLResponse(content=ADMIN_HTML)
+
+
+class UpdateFilterConfigRequest(BaseModel):
+    allowed_senders: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    excluded_keywords: Optional[List[str]] = None
+    newer_than_days: Optional[int] = None
+    max_results: Optional[int] = None
+
+
+@router.put("/api/admin/filter-config", dependencies=[Depends(require_admin)])
+def admin_update_filter_config(body: UpdateFilterConfigRequest):
+    """Update shared feeds/config/filter_config.json live, incrementing version."""
+    import json
+    from datetime import datetime
+    from config import FEEDS_DIR, LOCAL_TIMEZONE
+
+    cfg_dir = FEEDS_DIR / "config"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    cfg_path = cfg_dir / "filter_config.json"
+
+    data = {}
+    if cfg_path.exists():
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    current_ver = int(data.get("version", 0))
+    new_ver = current_ver + 1
+
+    if body.allowed_senders is not None:
+        data["allowed_senders"] = body.allowed_senders
+    if body.keywords is not None:
+        data["keywords"] = body.keywords
+    if body.excluded_keywords is not None:
+        data["excluded_keywords"] = body.excluded_keywords
+    if body.newer_than_days is not None:
+        data["newer_than_days"] = body.newer_than_days
+    if body.max_results is not None:
+        data["max_results"] = body.max_results
+
+    data["version"] = new_ver
+    data["updated_at"] = datetime.now(LOCAL_TIMEZONE).isoformat()
+
+    cfg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "success", "version": new_ver, "config": data}

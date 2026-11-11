@@ -1,4 +1,7 @@
 {
+  "version": 1,
+  "updated_at": "2026-11-11T19:30:00+07:00",
+  "auto_sync_config": true,
   "allowed_senders": [
     "hcmus.edu.vn",
     "fit.hcmus.edu.vn",
@@ -41,5 +44,8 @@
   "max_results": 20,
   "client_id": "anonymous",
   "ingest_api_key": "",
-  "ingest_endpoint": "https://stimulus-rectangle-ship.ngrok-free.dev/api/inbox/batch"
+  "ingest_endpoint": "https://stimulus-rectangle-ship.ngrok-free.dev/api/inbox/batch",
+  "user_added_senders": [],
+  "user_added_keywords": [],
+  "user_excluded_keywords": []
 }

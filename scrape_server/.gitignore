@@ -11,4 +11,3 @@ env/
 # Never commit raw SQLite database or client email inbox logs
 rss_bot.db
 feeds/inbox/
-

@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -17,13 +17,13 @@ from pydantic import BaseModel, Field
 
 from config import (
     DEFAULT_INTERVAL_SECONDS,
-    DEFAULT_SCRAPE_HOURS,
-    DEFAULT_SCRAPE_MINUTE,
-    FEEDS_DIR,
     INGEST_MAX_BATCH_SIZE,
     INGEST_MAX_CONTENT_CHARS,
     INGEST_MAX_HASHES_PER_CHECK,
     INGEST_RATE_LIMIT_PER_MINUTE,
+    DEFAULT_SCRAPE_HOURS,
+    DEFAULT_SCRAPE_MINUTE,
+    FEEDS_DIR,
     LOCAL_TIMEZONE,
     PUBLIC_NGROK_URL,
     SCRAPE_MISFIRE_GRACE_SECONDS,
@@ -31,11 +31,11 @@ from config import (
 )
 from database import (
     Fanpage,
+    get_known_content_hashes,
     Post,
     get_all_events,
     get_all_recent_posts,
     get_inbox_messages,
-    get_known_content_hashes,
     get_or_create_user,
     get_posts_for_user,
     get_subscribers_for_fanpage,
@@ -45,13 +45,17 @@ from database import (
     subscribe_user_to_fanpages,
     unsubscribe_user_from_fanpage,
 )
-from events import ingest_email_message, sync_all_event_folders
+from events import extract_single_post_url, ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
-from scheduler import build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
+from scheduler import backup_state_to_git, build_daily_cron_trigger, parse_scrape_hours, run_scrape_cycle
 
 
 class SubscribeRequest(BaseModel):
     urls: List[str]
+
+
+class ExtractPostRequest(BaseModel):
+    url: str = Field(..., description="Public Facebook post URL to scrape and analyze")
 
 
 class EmailIngestRequest(BaseModel):
@@ -60,7 +64,7 @@ class EmailIngestRequest(BaseModel):
     content_hash: Optional[str] = Field(None, description="SHA-256 fingerprint computed by the client")
     subject: str = Field("", description="Email subject line")
     sender: Optional[str] = Field(None, description="Sender email address or display name")
-    received_at: Optional[str] = Field(None, description="ISO 8601 or RFC 2822 timestamp when email was received")
+    received_at: Optional[str] = Field(None, description="ISO 8601 timestamp when email was received")
     content: str = Field(..., description="Plain-text email body content")
     media_urls: List[str] = Field(default_factory=list, description="Optional poster/attachment image URLs")
 
@@ -77,11 +81,6 @@ _ingest_rate_buckets: Dict[str, Deque[float]] = defaultdict(deque)
 
 
 def guard_ingest(request: Request, x_ingest_token: str = Header(default="")) -> None:
-    """Rate-limit and optionally authenticate public `/api/inbox*` and `/api/events/ingest-email` calls.
-
-    - If `INGEST_API_KEY` env var is set, callers must pass it via `X-Ingest-Token` header.
-    - Enforces a per-IP sliding-window limit of `INGEST_RATE_LIMIT_PER_MINUTE` requests/minute.
-    """
     expected_key = os.environ.get("INGEST_API_KEY", "").strip()
     if expected_key:
         if not x_ingest_token or not hmac.compare_digest(x_ingest_token.encode(), expected_key.encode()):
@@ -162,6 +161,7 @@ async def scheduled_scrape_task() -> None:
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Running scheduled fanpage scrape & extractor..."})
         new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        await asyncio.to_thread(backup_state_to_git, "scheduled VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -180,6 +180,7 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
             target_slug_or_id=target_slug_or_id,
             on_new_posts=manager.on_new_posts_scraped,
         )
+        await asyncio.to_thread(backup_state_to_git, "manual VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -187,6 +188,44 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
                 "refresh_tree": True,
             }
         )
+
+
+async def trigger_unified_scrape(target_slug_or_id: str | None = None, *, force_local: bool = False) -> Dict[str, Any]:
+    """
+    Unified scrape entrypoint for Ngrok web UI & APIs:
+    - By default (`SERVER_AUTO_SCRAPE=True`), runs Playwright + Event Extractor directly on the VM
+      and backs up `rss_bot.db` + `feeds/` to GitHub automatically.
+    - If `--no-scrape` (`SERVER_AUTO_SCRAPE=False`) or `USE_GITHUB_ACTIONS_CRAWLER=true` is set,
+      dispatches the GitHub Actions workflow (`live_server_demo.yml`) instead.
+    """
+    from admin import _trigger_github_actions_crawl
+
+    use_actions_env = os.environ.get("USE_GITHUB_ACTIONS_CRAWLER", "").strip().lower() in ("1", "true", "yes")
+    prefer_actions = (not force_local) and (not SERVER_AUTO_SCRAPE or use_actions_env)
+
+    if prefer_actions:
+        dispatched = await asyncio.to_thread(_trigger_github_actions_crawl, target_slug_or_id)
+        if dispatched:
+            scope = f" for '{target_slug_or_id}'" if target_slug_or_id else ""
+            msg = f"Dispatched GitHub Actions crawler{scope} (results will sync back automatically)."
+            await manager.broadcast_to_all({"event": "status", "message": msg})
+            return {"status": "dispatched", "mode": "github_actions_dispatched", "message": msg}
+
+        if not SERVER_AUTO_SCRAPE:
+            msg = (
+                "GitHub Actions dispatch unavailable (set GITHUB_TOKEN on the Ngrok host); "
+                "queued for the next scheduled GitHub Actions crawl."
+            )
+            await manager.broadcast_to_all({"event": "status", "message": msg})
+            return {"status": "queued_for_actions", "mode": "queued_for_actions", "message": msg}
+
+    if manager.scrape_lock.locked():
+        msg = "A local scrape cycle is already in progress..."
+        return {"status": "busy", "mode": "local_background", "message": msg}
+
+    asyncio.create_task(trigger_background_scrape(target_slug_or_id))
+    msg = f"Started VM scrape & extraction ({target_slug_or_id or 'all'})."
+    return {"status": "started", "mode": "local_background", "message": msg}
 
 
 @asynccontextmanager
@@ -374,6 +413,24 @@ def api_get_schedule():
     }
 
 
+@app.get("/api/inbox/filter-config", dependencies=[Depends(guard_ingest)])
+def api_get_filter_config(client_version: Optional[int] = Query(None)):
+    """Return shared filter_config.json for client-side privacy & keyword gate synchronization."""
+    cfg_path = FEEDS_DIR / "config" / "filter_config.json"
+    if not cfg_path.exists():
+        raise HTTPException(status_code=404, detail="filter_config.json not initialized on server.")
+    try:
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read filter_config.json: {exc}")
+
+    server_version = int(data.get("version", 1))
+    if client_version is not None and client_version == server_version:
+        return {"up_to_date": True, "version": server_version}
+
+    return {"up_to_date": False, **data}
+
+
 @app.post("/api/inbox/check", dependencies=[Depends(guard_ingest)])
 def api_check_inbox_hashes(body: HashCheckRequest):
     """Pre-flight hash check so clients only upload email bodies the server has not seen yet."""
@@ -531,11 +588,16 @@ def api_list_all_posts(limit: int = Query(50, ge=1, le=200)):
 
 
 @app.post("/api/scrape")
-async def api_run_scrape_now():
-    """Run a full scrape cycle inside the server and broadcast new posts to WebSocket subscribers."""
+async def api_run_scrape_now(target: Optional[str] = Query(None, description="Optional fanpage slug/ID/URL")):
+    """Unified scrape trigger: runs locally on the VM by default, or dispatches GitHub Actions if --no-scrape."""
+    use_actions_env = os.environ.get("USE_GITHUB_ACTIONS_CRAWLER", "").strip().lower() in ("1", "true", "yes")
+    if not SERVER_AUTO_SCRAPE or use_actions_env:
+        return await trigger_unified_scrape(target_slug_or_id=target)
+
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
-        new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(target_slug_or_id=target, on_new_posts=manager.on_new_posts_scraped)
+        await asyncio.to_thread(backup_state_to_git, "API VM crawl")
         await manager.broadcast_to_all(
             {
                 "event": "status",
@@ -543,7 +605,49 @@ async def api_run_scrape_now():
                 "refresh_tree": True,
             }
         )
-    return {"status": "ok", "new_posts_count": new_count}
+    return {"status": "ok", "mode": "local", "new_posts_count": new_count}
+
+
+async def process_single_post_url(url: str) -> Dict[str, Any]:
+    """
+    Shared handler for scraping a single Facebook post URL, feeding it to the Event Extractor,
+    auto-adding its fanpage if it is an event, refreshing feeds, and backing up to Git.
+    """
+    clean_url = (url or "").strip()
+    if not clean_url:
+        raise HTTPException(status_code=400, detail="Post URL is required.")
+
+    result = await extract_single_post_url(clean_url)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=422, detail=result.get("detail") or "Failed to extract post.")
+
+    if result.get("is_event"):
+        ev_title = (result.get("event") or {}).get("title") or "Event"
+        fp = result.get("fanpage")
+        if result.get("fanpage_added") and fp:
+            msg = f"Event found: '{ev_title}'. Added fanpage '{fp.get('name') or fp.get('slug')}' to tracked list."
+        elif fp:
+            msg = f"Event found: '{ev_title}' (fanpage '{fp.get('name') or fp.get('slug')}' already tracked)."
+        else:
+            msg = f"Event found: '{ev_title}' (fanpage link could not be resolved)."
+
+        await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
+        if result.get("post") and fp:
+            await manager.send_to_user(
+                "__public__",
+                {"event": "new_posts", "fanpage": fp, "posts": [result["post"]]},
+            )
+        asyncio.create_task(asyncio.to_thread(backup_state_to_git, "single post extract"))
+    else:
+        msg = result.get("detail") or "Post fetched and analyzed, but it is not an event (fanpage not added)."
+
+    return {**result, "message": msg}
+
+
+@app.post("/api/extract-post")
+async def api_extract_single_post(body: ExtractPostRequest):
+    """Fetch a single Facebook post URL, feed it to the extractor, and add its fanpage if it is an event."""
+    return await process_single_post_url(body.url)
 
 
 @app.get("/api/users/{client_id}/subscriptions")
@@ -577,9 +681,9 @@ async def api_subscribe_user(client_id: str, body: SubscribeRequest):
         },
     )
 
-    # If any subscribed fanpage has never been scraped, scrape it in background immediately
+    # If any subscribed fanpage has never been scraped, dispatch unified scrape (Actions or local)
     for fp in needs_scrape:
-        asyncio.create_task(trigger_background_scrape(fp.slug))
+        await trigger_unified_scrape(fp.slug)
 
     return {
         "client_id": client_id,
@@ -690,12 +794,9 @@ async def public_websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             if data.get("action") == "refresh":
-                if not manager.scrape_lock.locked():
-                    asyncio.create_task(trigger_background_scrape())
-                else:
-                    await websocket.send_json(
-                        {"event": "status", "message": "A scrape cycle is already in progress..."}
-                    )
+                res = await trigger_unified_scrape()
+                if res.get("status") == "busy":
+                    await websocket.send_json({"event": "status", "message": res["message"]})
     except WebSocketDisconnect:
         manager.disconnect("__public__", websocket)
     except Exception:
@@ -749,7 +850,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         },
                     )
                     for fp in needs_scrape:
-                        asyncio.create_task(trigger_background_scrape(fp.slug))
+                        await trigger_unified_scrape(fp.slug)
                 except ValueError as exc:
                     await websocket.send_json({"event": "error", "message": str(exc)})
 
@@ -769,12 +870,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 )
 
             elif action == "refresh":
-                if not manager.scrape_lock.locked():
-                    asyncio.create_task(trigger_background_scrape())
-                else:
-                    await websocket.send_json(
-                        {"event": "status", "message": "A scrape cycle is already in progress..."}
-                    )
+                res = await trigger_unified_scrape()
+                if res.get("status") == "busy":
+                    await websocket.send_json({"event": "status", "message": res["message"]})
 
     except WebSocketDisconnect:
         manager.disconnect(client_id, websocket)
@@ -1101,7 +1199,7 @@ Content-Type: application/json
         <div>
           <h3 style="margin:0;">📡 Tracked Facebook Fanpages (<span id="fanpageCount">0</span>)</h3>
           <div style="font-size:13px; color:var(--muted); margin-top:3px;">
-            Unified crawler targets across the server. Add or remove fanpages in the Admin subpage.
+            Unified crawler targets across the server. Paste a single post URL below to extract an event &amp; auto-add its fanpage.
           </div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1109,6 +1207,11 @@ Content-Type: application/json
           <button onclick="openAdminLogin()">⚙ Manage Fanpages (Admin)</button>
         </div>
       </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <input id="postUrlInput" placeholder="Paste a Facebook post URL (e.g. https://www.facebook.com/.../posts/...) to extract event &amp; auto-add fanpage" style="flex:1; min-width:260px;" onkeydown="if(event.key==='Enter') extractSinglePostUrl()" />
+        <button id="extractPostBtn" onclick="extractSinglePostUrl()">🔎 Extract Post URL</button>
+      </div>
+      <div id="postExtractMsg" style="font-size:13.5px; min-height:20px; margin-bottom:8px;"></div>
       <div id="fanpagesContainer" class="chips"></div>
     </div>
 
@@ -1444,6 +1547,44 @@ Content-Type: application/json
     function triggerRefresh() {
       if (!ws) return;
       ws.send(JSON.stringify({ action: 'refresh' }));
+    }
+
+    async function extractSinglePostUrl() {
+      const input = document.getElementById('postUrlInput');
+      const msgEl = document.getElementById('postExtractMsg');
+      const btn = document.getElementById('extractPostBtn');
+      const url = (input.value || '').trim();
+      if (!url) {
+        msgEl.style.color = 'var(--rose-text)';
+        msgEl.textContent = 'Please paste a Facebook post URL.';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      msgEl.style.color = 'var(--muted)';
+      msgEl.textContent = 'Fetching Facebook post & running Event Extractor...';
+      try {
+        const res = await fetch('/api/extract-post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        msgEl.style.color = data.is_event ? 'var(--mint-text)' : 'var(--muted)';
+        msgEl.textContent = data.message || (data.is_event ? 'Event extracted!' : 'Not an event.');
+        if (data.is_event) {
+          input.value = '';
+          loadDirectoryTree();
+          loadFanpages();
+        }
+      } catch (err) {
+        msgEl.style.color = 'var(--rose-text)';
+        msgEl.textContent = 'Error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔎 Extract Post URL';
+      }
     }
 
     function renderFanpages(list) {

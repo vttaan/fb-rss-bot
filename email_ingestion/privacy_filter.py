@@ -161,3 +161,108 @@ def format_for_server(source, msg_id, from_str, subject, date_str, body_text, ma
 
 # Backwards compatibility alias
 format_for_llm_server = format_for_server
+
+
+import requests
+
+BASELINE_EXCLUDED_KEYWORDS = [
+    "mật khẩu",
+    "password",
+    "otp",
+    "mã xác nhận",
+    "học phí",
+    "biên lai",
+    "bảng điểm cá nhân",
+    "kết quả học tập",
+    "cảnh báo học vụ",
+    "kỷ luật",
+]
+
+
+def sync_filter_config_from_server(config_path=CONFIG_PATH, timeout=5):
+    """
+    Pull latest filter_config.json from scrape_server before running email queries.
+    Enforces privacy guardrails:
+      - Preserves local credentials, client_id, ingest_api_key, and ingest_endpoint.
+      - Preserves user_added_senders, user_added_keywords, and user_excluded_keywords.
+      - Enforces a baseline floor for excluded_keywords.
+      - Drops wildcard or public webmail domains from allowed_senders.
+    """
+    local_cfg = load_filter_config(config_path)
+    if not local_cfg.get("auto_sync_config", True):
+        return local_cfg
+
+    endpoint = local_cfg.get("ingest_endpoint", "")
+    if not endpoint:
+        return local_cfg
+
+    # Derive GET /api/inbox/filter-config from endpoint
+    base_url = None
+    for suffix in ("/api/inbox/batch", "/api/inbox", "/api/events/ingest-email"):
+        if endpoint.endswith(suffix):
+            base_url = endpoint[:-len(suffix)]
+            break
+    if not base_url:
+        return local_cfg
+
+    config_url = f"{base_url}/api/inbox/filter-config"
+    current_ver = local_cfg.get("version", 0)
+    params = {"client_version": current_ver}
+    headers = {}
+    token = local_cfg.get("ingest_api_key", "")
+    if token:
+        headers["X-Ingest-Token"] = token
+
+    try:
+        res = requests.get(config_url, params=params, headers=headers, timeout=timeout)
+        if res.status_code == 304:
+            return local_cfg
+        if not res.ok:
+            return local_cfg
+
+        data = res.json()
+        if data.get("up_to_date"):
+            return local_cfg
+
+        # Privacy guardrails: merge server updates safely
+        remote_senders = data.get("allowed_senders", [])
+        valid_senders = []
+        for s in remote_senders:
+            clean = s.strip().lower()
+            if not clean or clean in ("*", ".", "gmail.com", "yahoo.com", "outlook.com", "hotmail.com"):
+                continue
+            valid_senders.append(clean)
+
+        # Merge with user-added custom senders
+        user_senders = [s.strip().lower() for s in local_cfg.get("user_added_senders", []) if s.strip()]
+        final_senders = sorted(set(valid_senders + user_senders))
+
+        # Merge keywords
+        remote_kws = data.get("keywords", [])
+        user_kws = local_cfg.get("user_added_keywords", [])
+        final_kws = sorted(set(remote_kws + user_kws))
+
+        # Enforce baseline floor for excluded_keywords
+        remote_excl = data.get("excluded_keywords", [])
+        user_excl = local_cfg.get("user_excluded_keywords", [])
+        final_excl = sorted(set(BASELINE_EXCLUDED_KEYWORDS + remote_excl + user_excl))
+
+        # Update local config structure
+        local_cfg["version"] = data.get("version", current_ver + 1)
+        local_cfg["updated_at"] = data.get("updated_at")
+        local_cfg["allowed_senders"] = final_senders
+        local_cfg["keywords"] = final_kws
+        local_cfg["excluded_keywords"] = final_excl
+        if "newer_than_days" in data:
+            local_cfg["newer_than_days"] = data["newer_than_days"]
+        if "max_results" in data:
+            local_cfg["max_results"] = data["max_results"]
+
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(local_cfg, f, ensure_ascii=False, indent=2)
+
+        print(f"[Config Sync] Updated filter_config.json to version {local_cfg['version']} from server.")
+        return local_cfg
+    except Exception as exc:
+        print(f"[Config Sync] Server config sync skipped ({exc}); using local filter_config.json.")
+        return local_cfg
