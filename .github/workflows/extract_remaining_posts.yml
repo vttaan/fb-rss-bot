@@ -123,6 +123,42 @@ jobs:
                   print("Live server sync response:", r.read().decode("utf-8"))
           except Exception as exc:
               print(f"Warning pushing to live server: {exc}")
+
+          # Pull updated events.json & messages.json files back from the 24/7 Ngrok server into repo feeds/
+          from pathlib import Path
+          from config import FEEDS_DIR
+          try:
+              tree_req = urllib.request.Request(
+                  f"{target}/api/tree",
+                  headers={"ngrok-skip-browser-warning": "true"},
+              )
+              with urllib.request.urlopen(tree_req, timeout=30) as tr:
+                  tree_data = json.loads(tr.read().decode("utf-8"))
+              pulled_files = 0
+              for folder in tree_data.get("folders", []):
+                  for f_info in folder.get("files", []):
+                      rel_path = f_info.get("relative_path")
+                      if not rel_path or not rel_path.endswith(".json"):
+                          continue
+                      file_req = urllib.request.Request(
+                          f"{target}/feeds/{rel_path}",
+                          headers={"ngrok-skip-browser-warning": "true"},
+                      )
+                      with urllib.request.urlopen(file_req, timeout=30) as fr:
+                          content_bytes = fr.read()
+                      dest = FEEDS_DIR / Path(rel_path)
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      dest.write_bytes(content_bytes)
+                      pulled_files += 1
+                      # Also mirror fanpages/<slug>/events.json to legacy feeds/<slug>/events.json
+                      parts = Path(rel_path).parts
+                      if len(parts) == 3 and parts[0] == "fanpages" and parts[2] == "events.json":
+                          legacy_dest = FEEDS_DIR / parts[1] / "events.json"
+                          legacy_dest.parent.mkdir(parents=True, exist_ok=True)
+                          legacy_dest.write_bytes(content_bytes)
+              print(f"Pulled {pulled_files} updated JSON file(s) from live Ngrok server into feeds/.")
+          except Exception as exc:
+              print(f"Warning pulling JSON feeds from live server: {exc}")
           PY
           else
             echo "🟡 24/7 Ngrok server is offline — skipping live API push."
