@@ -83,27 +83,33 @@ Post text:
 \"\"\"
 
 EXTRACTION RULES:
-- `description`: Don't take the raw text from the post, try to summarize what the event is about, in the same language as the post. If the post is in Vietnamese, summarize in Vietnamese; if in English, summarize in English. Do NOT invent details; only summarize what is explicitly stated.
-- `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Cuộc thi âm nhạc Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
-- `start_datetime` & `end_datetime`: ISO 8601 in Asia/Ho_Chi_Minh (+07:00), e.g. "2026-11-22T16:00:00+07:00" or "2026-11-22". Resolve relative dates and DD/MM dates using `published_at`. If a post lists multiple timeline milestones (e.g., registration period, preliminary round, final night), prefer the main upcoming event/round date-time (or registration start/end for recruitment/application posts).
-- `location`: Specific venue, lecture hall (giảng đường), auditorium (hội trường), room, campus (cơ sở), or online platform mentioned in the post. If no specific room or hall is mentioned, use the campus or city (the address). If no location is mentioned, use null.
+- `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Ignore any prefix or postfix inside square brackets `[...]` (e.g. `[THÔNG BÁO]`, `[HCMUS]`) and ignore administrative lead-in words such as `v/v`, `V/v`, `thông báo về`, `thong bao ve`, `mời đăng ký`, `moi dang ky`, `thư mời`. Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
+- `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
+- `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
+- `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
+- `reg_start_datetime`: Time that the event opens for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "mở đơn từ 19/10/2026", "mở cổng đăng ký lúc 18h ngày 01/11"); otherwise return null.
+- `reg_end_datetime`: Time that the event closes for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "đóng đơn 30/10/2026", "hạn chót đăng ký 23h59 ngày 15/11", "deadline 20/11"); otherwise return null.
+- `location`: Search carefully for location cues (especially lines starting with `Địa điểm`, `Dia diem`, `Địa chỉ`, `Dia chi`, `Nơi tổ chức`, `Location`, `Venue`, `Address`, `Phòng`, `Hội trường`, `Giảng đường`, `Cơ sở`, including with leading emojis like `📍`). Take the full venue/location line content. If no location is mentioned, use null.
+- `fee`: Search carefully for lines containing `Lệ phí`, `Le phi`, `Phí tham gia`, `Phí đăng ký`, `Giá vé`, `Chi phí`, `Fee`, `Ticket`, or `miễn phí`/`free` (including after emojis like `💸`). Extract the fee value from that line (e.g., "25.000 VNĐ/sinh viên", "100.000 VND", "miễn phí"); use null if not mentioned.
 - `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
 {{
   "is_event": boolean,
-  "title": string|null,
-  "description": string|null,        // 1-2 sentence summary in the same language as the post summarizing what the event is about
-  "start_datetime": string|null,     // ISO 8601, resolve relative dates using the publish date
-  "end_datetime": string|null,
-  "location": string|null,
+  "title": string|null,               // clean event title, ignoring [...] brackets and "v/v", "thông báo về", "mời đăng ký"
+  "description": string|null,         // summary of what the event is about and what benefits students will get (NOT raw intro text)
+  "event_start_datetime": string|null,// ISO 8601 (+07:00), time event starts (XXh from XXh-YYh, or 00:00:00+07:00 if no time mentioned)
+  "event_end_datetime": string|null,  // ISO 8601 (+07:00), time event ends (YYh from XXh-YYh, or 23:59:00+07:00 of end day if no time mentioned)
+  "reg_start_datetime": string|null,  // ISO 8601 (+07:00) ONLY if registration open time is explicitly mentioned, else null
+  "reg_end_datetime": string|null,    // ISO 8601 (+07:00) ONLY if registration close/deadline time is explicitly mentioned, else null
+  "location": string|null,            // If the post contains a line starting with "Địa điểm", "Dia diem", "Địa chỉ", "Location", "Venue", etc. (even after emojis like 📍), take the full location line content
   "organizer": string|null,
-  "registration_url": string|null,   // only a registration URL that literally appears in the post text; null otherwise
-  "fee": string|null,                // e.g., "miễn phí", "100.000 VND"
+  "registration_url": string|null,    // only a registration URL that literally appears in the post text; null otherwise
+  "fee": string|null,                 // search lines containing "Lệ phí", "le phi", "Phí tham gia", "Giá vé", "Fee", etc.; e.g., "miễn phí", "25.000 VNĐ/sinh viên", "100.000 VND"
   "is_online": boolean|null,
-  "target_audience": string[]|null,  // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies students in a major/year/school, list specifically (e.g., "sinh viên CNTT", "sinh viên K25, K26")
-  "category": string[],              // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện","quyên góp","khác"; [] if unknown
-  "format": string[]                 // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
+  "target_audience": string[]|null,   // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies students in a major/year/school, list specifically (e.g., "sinh viên CNTT", "sinh viên K25, K26")
+  "category": string[],               // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện","quyên góp","khác"; [] if unknown
+  "format": string[]                  // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
 }}"""
 
 
@@ -274,6 +280,408 @@ def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[st
     return call_gemini_text(post.content or "", pub, fanpage_name, api_key)
 
 
+_LOCATION_LABEL_RE = re.compile(
+    r"(?:^|\b)(?:dia\s*diem|dia\s*chi|noi\s*to\s*chuc|location|venue|address|room|hall|phong|hoi\s*truong|giang\s*duong|co\s*so)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _extract_location_from_text(text: str) -> Optional[str]:
+    """
+    Search text line-by-line (accent-insensitively) for location cues like
+    'Địa điểm', 'Dia diem', 'Địa chỉ', 'Hội trường', 'Giảng đường', 'Cơ sở', 'Location', 'Venue'.
+    Preserves full UTF-8 location string (including periods inside 'TP. HCM' or 'ĐH. KHTN').
+    """
+    if not text:
+        return None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        # Strip leading emojis, symbols, and list bullets before checking the label
+        cleaned = re.sub(r"^[^\w\s]+", "", line, flags=re.UNICODE).strip()
+        if not cleaned:
+            cleaned = line
+
+        m_sep = re.match(r"^([^:\-\n]{2,40})\s*[:\-]\s*(.+)$", cleaned)
+        if m_sep:
+            label_norm = _strip_accents(m_sep.group(1)).lower().strip()
+            value = m_sep.group(2).strip()
+            if value and _LOCATION_LABEL_RE.search(label_norm):
+                return value[:300]
+
+        line_norm = _strip_accents(cleaned).lower()
+        if re.match(r"^(?:dia\s*diem|dia\s*chi|noi\s*to\s*chuc|location|venue|address)\b", line_norm):
+            return cleaned[:300]
+
+    # Inline fallback ("tại Hội trường...", "at Hall...", "tại cơ sở...", "Zoom", etc.)
+    m_inline = re.search(
+        r"\b(?:tại|tai|at)\s+((?:Hội\s+trường|Hoi\s+truong|Giảng\s+đường|Giang\s+duong|Phòng|Phong|Cơ\s+sở|Co\s+so|Trường|Truong|Hall|Room)[^\n\r;]+|Zoom|Google\s+Meet|MS\s+Teams)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if m_inline:
+        return m_inline.group(1).strip().rstrip(".,;")[:300]
+    return None
+
+
+def _format_hhmm(hour_str: str, min_str: Optional[str], ampm: Optional[str]) -> Optional[str]:
+    hh = int(hour_str)
+    mm = int(min_str) if min_str else 0
+    ap = (ampm or "").lower()
+    if ap == "pm" and hh < 12:
+        hh += 12
+    elif ap == "am" and hh == 12:
+        hh = 0
+    if 0 <= hh <= 23 and 0 <= mm <= 59:
+        return f"{hh:02d}:{mm:02d}"
+    return None
+
+
+def _extract_datetime_range_from_text(
+    text: str,
+    published_at: Optional[datetime] = None,
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """
+    Extract (start_date, end_date, start_time, end_time) from Vietnamese/English event text.
+    Handles time ranges like '8h-11h', '08h30 - 11h30', '16h00 đến 20h30', '14:00 - 17:00',
+    single times like '14h', '14h30', '19:00', and date ranges like '05/11/2026 - 10/11/2026'.
+    """
+    if not text:
+        return None, None, None, None
+
+    ref_year = (published_at or datetime.now(LOCAL_TIMEZONE)).year
+    stripped = _strip_accents(text)
+
+    # 1. Extract dates (prefer date range if present, otherwise single date)
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+    m_drange = re.search(
+        r"\b(?:tu\s+(?:ngay\s+)?)?(0?[1-9]|[12]\d|3[01])[/-](0?[1-9]|1[0-2])(?:[/-](20\d{2}))?"
+        r"\s*(?:-|–|—|den|toi|to)\s*"
+        r"(?:het\s+)?(?:ngay\s+)?(0?[1-9]|[12]\d|3[01])[/-](0?[1-9]|1[0-2])(?:[/-](20\d{2}))?\b",
+        stripped,
+        flags=re.IGNORECASE,
+    )
+    if m_drange:
+        d1, m1, y1, d2, m2, y2 = m_drange.groups()
+        yr2 = int(y2) if y2 else (int(y1) if y1 else ref_year)
+        yr1 = int(y1) if y1 else yr2
+        start_date = f"{yr1:04d}-{int(m1):02d}-{int(d1):02d}"
+        end_date = f"{yr2:04d}-{int(m2):02d}-{int(d2):02d}"
+    else:
+        m_iso = re.search(r"\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b", stripped)
+        if m_iso:
+            start_date = m_iso.group(0)
+        else:
+            m_dmy = re.search(r"\b(0?[1-9]|[12]\d|3[01])[/-](0?[1-9]|1[0-2])(?:[/-](20\d{2}))?\b", stripped)
+            if m_dmy:
+                day, month, yr = int(m_dmy.group(1)), int(m_dmy.group(2)), int(m_dmy.group(3) or ref_year)
+                start_date = f"{yr:04d}-{month:02d}-{day:02d}"
+
+    # 2. Extract time range (e.g., XXh-YYh, XXhMM - YYhNN, XX:MM - YY:MM, tu XXh den YYh)
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+    m_trange = re.search(
+        r"\b(?:tu\s+)?([01]?\d|2[0-3])\s*(?:[:hg]\s*([0-5]\d)?)\s*(am|pm)?\s*"
+        r"(?:-|–|—|den|toi|to)\s*"
+        r"([01]?\d|2[0-3])\s*(?:[:hg]\s*([0-5]\d)?)\s*(am|pm)?\b",
+        stripped,
+        flags=re.IGNORECASE,
+    )
+    if m_trange:
+        h1, m1, ap1, h2, m2, ap2 = m_trange.groups()
+        start_time = _format_hhmm(h1, m1, ap1 or (ap2 if int(h1) <= 12 and int(h2) <= 12 and not ap1 else None))
+        end_time = _format_hhmm(h2, m2, ap2)
+    else:
+        # Single time with explicit minutes (14:30, 14h30, 8g30)
+        m_t1 = re.search(r"\b([01]?\d|2[0-3])\s*[:hg]\s*([0-5]\d)\s*(am|pm)?\b", stripped, flags=re.IGNORECASE)
+        if m_t1:
+            start_time = _format_hhmm(m_t1.group(1), m_t1.group(2), m_t1.group(3))
+        else:
+            # Bare hour with 'h' or 'g' (e.g., "14h", "luc 8h", "vao luc 19h")
+            m_t2 = re.search(r"\b([01]?\d|2[0-3])\s*[hg]\b\s*(am|pm)?", stripped, flags=re.IGNORECASE)
+            if m_t2:
+                start_time = _format_hhmm(m_t2.group(1), None, m_t2.group(2))
+
+    return start_date, end_date, start_time, end_time
+
+
+_FEE_LINE_RE = re.compile(
+    r"\b(?:le\s*phi|phi\s*tham\s*(?:gia|du)|phi\s*dang\s*ky|gia\s*ve|chi\s*phi|fee|ticket\s*price)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _extract_fee_from_text(text: str) -> Optional[str]:
+    """
+    Search text line-by-line (accent-insensitively) for lines containing 'Lệ phí', 'le phi',
+    'Phí tham gia', 'Giá vé', 'Fee', etc., or free-entry cues ('miễn phí', 'free').
+    """
+    if not text:
+        return None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        cleaned = re.sub(r"^[^\w\s]+", "", line, flags=re.UNICODE).strip() or line
+        line_norm = _strip_accents(cleaned).lower()
+        if _FEE_LINE_RE.search(line_norm):
+            m_sep = re.match(r"^[^:\-\n]{2,45}\s*[:\-]\s*(.+)$", cleaned)
+            value = (m_sep.group(1) if m_sep else cleaned).strip().rstrip(".")
+            if value:
+                if re.fullmatch(r"(?:mien\s*phi|free|0\s*(?:d|dong|vnd)?)", _strip_accents(value).lower()):
+                    return "miễn phí"
+                return value[:160]
+
+    stripped = _strip_accents(text).lower()
+    if re.search(r"\b(free|mien\s*phi)\b", stripped):
+        return "miễn phí"
+    return None
+
+
+_DESC_SKIP_LINE_RE = re.compile(
+    r"^(?:_+|-+|=+|\*+|#|moi thac mac|lien he|fanpage|email|tiktok|instagram|website|link dang ky|"
+    r"the le|thoi gian|dia diem|doi tuong|le phi|noi dung chuyen khoan)\b",
+    flags=re.IGNORECASE,
+)
+_DESC_LEARN_ACTIVITY_RE = re.compile(
+    r"\b(?:noi dung|chu de|topic|agenda|hoat dong|trai nghiem|kham pha|tim hieu|hoc duoc|hoc hoi|"
+    r"chia se|kien thuc|ky nang|co co hoi|den voi|ban se|workshop|talkshow|giao luu|thuc hanh|thi dau)\b",
+    flags=re.IGNORECASE,
+)
+_DESC_BENEFIT_RE = re.compile(
+    r"\b(?:quyen loi|loi ich|gia tri|giai thuong|co cau giai thuong|quan quan|a quan|"
+    r"diem ren luyen|drl|giay chung nhan|certificate|qua tang|hoc bong|benefit|prize|reward|gain|learn)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _summarize_event_description(content: str) -> Optional[str]:
+    """
+    Build a fallback event summary focusing on core activities, what participants will learn/experience,
+    and what benefits/prizes they get, rather than blindly slicing the first 2 sentences.
+    """
+    if not content or not content.strip():
+        return None
+
+    lines = [ln.strip() for ln in content.splitlines() if ln.strip()]
+    if not lines:
+        return None
+
+    # Skip the first line if it looks like an all-caps/emoji title banner
+    candidates = lines[1:] if len(lines) > 1 else lines
+
+    picked_activities: List[str] = []
+    picked_benefits: List[str] = []
+    fallback_lines: List[str] = []
+
+    for raw in candidates:
+        cleaned = re.sub(r"^[^\w\s]+", "", raw, flags=re.UNICODE).strip()
+        if len(cleaned) < 12 or cleaned.startswith("#"):
+            continue
+        norm = _strip_accents(cleaned).lower()
+        if _DESC_SKIP_LINE_RE.search(norm):
+            continue
+        # Strip inline URLs when summarizing
+        text_only = re.sub(r"https?://\S+", "", cleaned).strip(" :-")
+        if len(text_only) < 12:
+            continue
+
+        if _DESC_BENEFIT_RE.search(norm) and text_only not in picked_benefits:
+            picked_benefits.append(text_only)
+        elif _DESC_LEARN_ACTIVITY_RE.search(norm) and text_only not in picked_activities:
+            picked_activities.append(text_only)
+        elif text_only not in fallback_lines:
+            fallback_lines.append(text_only)
+
+    selected = (picked_activities[:2] + picked_benefits[:2])
+    if not selected:
+        selected = fallback_lines[:3]
+    elif len(selected) == 1 and fallback_lines:
+        selected.append(fallback_lines[0])
+
+    if not selected:
+        clean_body = re.sub(r"\s+", " ", content.strip())
+        return clean_body[:360] + ("..." if len(clean_body) > 360 else "")
+
+    summary = " ".join(s.rstrip(".") + "." for s in selected)
+    return summary[:450] + ("..." if len(summary) > 450 else "")
+
+
+_TITLE_NOISE_PREFIX_RE = re.compile(
+    r"^\s*(?:v\s*/\s*v|v\s*\.\s*v|th[oô]ng\s*b[aá]o\s*v[eề]|thong\s*bao\s*ve|th[oô]ng\s*b[aá]o|thong\s*bao|"
+    r"m[oờ]i\s*[dđ][aă]ng\s*k[yý]|moi\s*dang\s*ky|th[uư]\s*m[oờ]i\s*tham\s*d[uự]|th[uư]\s*m[oờ]i|m[oờ]i\s*tham\s*gia)"
+    r"\s*[:\-–—.]?\s*",
+    flags=re.IGNORECASE,
+)
+
+
+def _clean_event_title(raw_title: Optional[str]) -> str:
+    """Remove bracketed tags '[...]' (prefix or postfix) and lead-in words like 'v/v', 'thông báo về', 'mời đăng ký'."""
+    t = (raw_title or "").strip()
+    if not t:
+        return "Untitled Event"
+    # Strip any [...] bracket blocks (prefix, inline, or postfix)
+    t = re.sub(r"\[[^\]]*\]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip(" :-–—|•*")
+    # Repeatedly strip administrative lead-in words (e.g. "Thông báo về việc mời đăng ký ...")
+    for _ in range(3):
+        updated = _TITLE_NOISE_PREFIX_RE.sub("", t).strip(" :-–—|•*")
+        if updated == t:
+            break
+        t = updated
+    return t or "Untitled Event"
+
+
+def _normalize_iso_datetime(val: Optional[str], default_time: str = "00:00") -> Optional[str]:
+    """Normalize date/datetime string into ISO 8601 (+07:00), applying `default_time` if only a date is given."""
+    if not val or not isinstance(val, str):
+        return None
+    s = val.strip()
+    if not s:
+        return None
+    m_date_only = re.match(r"^(\d{4}-\d{2}-\d{2})$", s)
+    if m_date_only:
+        return f"{m_date_only.group(1)}T{default_time}:00+07:00"
+    m_dt = re.match(r"^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})(?::(\d{2}))?([+-]\d{2}:\d{2}|Z)?$", s)
+    if m_dt:
+        tz = "+07:00" if (not m_dt.group(4) or m_dt.group(4) == "Z") else m_dt.group(4)
+        return f"{m_dt.group(1)}T{m_dt.group(2)}:{m_dt.group(3) or '00'}{tz}"
+    return s
+
+
+def _extract_registration_dates_from_text(
+    text: str,
+    published_at: Optional[datetime] = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract explicit registration open (`reg_start_datetime`) and close (`reg_end_datetime`)
+    from Vietnamese/English registration timeline cues. Returns (None, None) when not explicitly stated.
+    """
+    if not text:
+        return None, None
+
+    reg_start: Optional[str] = None
+    reg_end: Optional[str] = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        norm = _strip_accents(line).lower()
+        has_open = bool(re.search(r"\b(mo don|bat dau dang ky|mo cong dang ky|thoi gian mo don|open(?:s|ing)?)\b", norm))
+        has_close = bool(re.search(r"\b(dong don|han chot|ket thuc dang ky|han dang ky|deadline|close[ds]?|het han)\b", norm))
+        has_reg_range = bool(re.search(r"\b(thoi gian dang ky|dang ky)\b", norm)) and bool(
+            re.search(r"(?:-|–|—|den|toi|to)", norm)
+        )
+
+        if not (has_open or has_close or has_reg_range):
+            continue
+
+        s_date, e_date, s_time, e_time = _extract_datetime_range_from_text(line, published_at=published_at)
+        if has_open and has_close and s_date and e_date:
+            reg_start = reg_start or f"{s_date}T{s_time or '00:00'}:00+07:00"
+            reg_end = reg_end or f"{e_date}T{e_time or '23:59'}:00+07:00"
+        elif has_reg_range and s_date and e_date:
+            reg_start = reg_start or f"{s_date}T{s_time or '00:00'}:00+07:00"
+            reg_end = reg_end or f"{e_date}T{e_time or '23:59'}:00+07:00"
+        elif has_open and s_date:
+            reg_start = reg_start or f"{s_date}T{s_time or '00:00'}:00+07:00"
+        elif has_close and (e_date or s_date):
+            c_date = e_date or s_date
+            c_time = e_time or s_time or "23:59"
+            reg_end = reg_end or f"{c_date}T{c_time}:00+07:00"
+
+    return reg_start, reg_end
+
+
+def _enrich_extracted_event_fields(
+    raw_data: Dict[str, Any],
+    content: str,
+    published_at: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """
+    Post-process LLM / heuristic output to enforce field regulations:
+      - clean `title` (strip [...] and 'v/v', 'thông báo về', 'mời đăng ký')
+      - fill `description`, `location`, `fee`
+      - normalize `event_start_datetime` (00:00 default) & `event_end_datetime` (23:59 default)
+      - preserve explicit `reg_start_datetime` / `reg_end_datetime` flags
+    """
+    if not raw_data or not raw_data.get("is_event"):
+        return raw_data
+
+    # 0. Clean title & fill missing description
+    if raw_data.get("title"):
+        raw_data["title"] = _clean_event_title(str(raw_data["title"]))
+
+    if not (raw_data.get("description") or "").strip():
+        inferred_desc = _summarize_event_description(content)
+        if inferred_desc:
+            raw_data["description"] = inferred_desc
+
+    # 1. Fill missing location from explicit 'Địa điểm' / 'Dia diem' / venue cues
+    if not (raw_data.get("location") or "").strip():
+        inferred_loc = _extract_location_from_text(content)
+        if inferred_loc:
+            raw_data["location"] = inferred_loc
+
+    # 2. Fill missing fee from lines containing 'Lệ phí' / 'le phi' / fee cues
+    if not (raw_data.get("fee") or "").strip():
+        inferred_fee = _extract_fee_from_text(content)
+        if inferred_fee:
+            raw_data["fee"] = inferred_fee
+
+    # 3. Normalize event_start_datetime (default 00:00) & event_end_datetime (default 23:59)
+    s_date, e_date, s_time, e_time = _extract_datetime_range_from_text(content, published_at=published_at)
+
+    cur_start = str(raw_data.get("event_start_datetime") or raw_data.get("start_datetime") or "").strip()
+    cur_end = str(raw_data.get("event_end_datetime") or raw_data.get("end_datetime") or "").strip()
+
+    cur_s_date, cur_s_time = _parse_date_and_time(cur_start)
+    effective_s_date = cur_s_date or s_date
+
+    final_start: Optional[str] = _normalize_iso_datetime(cur_start, default_time="00:00") if cur_start else None
+    if effective_s_date:
+        if not final_start:
+            final_start = f"{effective_s_date}T{s_time or '00:00'}:00+07:00"
+        elif not cur_s_time and s_time:
+            final_start = f"{effective_s_date}T{s_time}:00+07:00"
+
+    cur_e_date, cur_e_time = _parse_date_and_time(cur_end)
+    effective_e_date = cur_e_date or e_date or effective_s_date
+    final_end: Optional[str] = _normalize_iso_datetime(cur_end, default_time="23:59") if cur_end else None
+    if effective_e_date:
+        if not final_end:
+            final_end = f"{effective_e_date}T{e_time or '23:59'}:00+07:00"
+        elif not cur_e_time and e_time:
+            final_end = f"{effective_e_date}T{e_time}:00+07:00"
+
+    raw_data["event_start_datetime"] = final_start
+    raw_data["event_end_datetime"] = final_end
+    raw_data["start_datetime"] = final_start
+    raw_data["end_datetime"] = final_end
+
+    # 4. Registration open/close dates (track explicit mention vs default)
+    llm_reg_start = _normalize_iso_datetime(raw_data.get("reg_start_datetime"), default_time="00:00")
+    llm_reg_end = _normalize_iso_datetime(raw_data.get("reg_end_datetime"), default_time="23:59")
+    regex_reg_start, regex_reg_end = _extract_registration_dates_from_text(content, published_at=published_at)
+
+    explicit_reg_start = llm_reg_start or regex_reg_start
+    explicit_reg_end = llm_reg_end or regex_reg_end
+
+    raw_data["reg_start_datetime"] = explicit_reg_start
+    raw_data["reg_end_datetime"] = explicit_reg_end
+    raw_data["_reg_start_explicit"] = bool(explicit_reg_start)
+    raw_data["_reg_end_explicit"] = bool(explicit_reg_end)
+
+    return raw_data
+
+
 def heuristic_extract_event(
     content: str,
     subject: str = "",
@@ -295,7 +703,7 @@ def heuristic_extract_event(
     if not is_event:
         return {"is_event": False}
 
-    # Title: prefer subject, else first non-empty line
+    # Title: prefer subject, else first non-empty line, cleaned of [...] and lead-in noise
     title = subject.strip()
     if not title:
         for line in content.splitlines():
@@ -303,56 +711,18 @@ def heuristic_extract_event(
             if len(clean_line) >= 5:
                 title = clean_line[:180]
                 break
-    title = title or "Untitled Event"
+    title = _clean_event_title(title)
 
-    # Extract date (YYYY-MM-DD or DD/MM/YYYY or DD-MM-YYYY)
-    ref_year = (published_at or datetime.now(LOCAL_TIMEZONE)).year
-    date_str: Optional[str] = None
-    m_iso = re.search(r"\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b", combined)
-    if m_iso:
-        date_str = m_iso.group(0)
-    else:
-        m_dmy = re.search(r"\b(0?[1-9]|[12]\d|3[01])[/-](0?[1-9]|1[0-2])(?:[/-](20\d{2}))?\b", combined)
-        if m_dmy:
-            day = int(m_dmy.group(1))
-            month = int(m_dmy.group(2))
-            year = int(m_dmy.group(3)) if m_dmy.group(3) else ref_year
-            date_str = f"{year:04d}-{month:02d}-{day:02d}"
+    # Extract event start/end date & time (00:00 start default, 23:59 end default)
+    s_date, e_date, s_time, e_time = _extract_datetime_range_from_text(combined, published_at=published_at)
+    event_start_datetime = f"{s_date}T{s_time or '00:00'}:00+07:00" if s_date else None
+    target_end_date = e_date or s_date
+    event_end_datetime = f"{target_end_date}T{e_time or '23:59'}:00+07:00" if target_end_date else None
 
-    # Extract time (HH:MM or HhMM or H:MM AM/PM)
-    time_str: Optional[str] = None
-    m_time = re.search(r"\b([01]?\d|2[0-3])[:h]([0-5]\d)\s*(am|pm)?\b", combined, flags=re.IGNORECASE)
-    if m_time:
-        hh = int(m_time.group(1))
-        mm = int(m_time.group(2))
-        ampm = (m_time.group(3) or "").lower()
-        if ampm == "pm" and hh < 12:
-            hh += 12
-        elif ampm == "am" and hh == 12:
-            hh = 0
-        time_str = f"{hh:02d}:{mm:02d}"
+    reg_start_datetime, reg_end_datetime = _extract_registration_dates_from_text(combined, published_at=published_at)
 
-    start_datetime = None
-    if date_str:
-        start_datetime = f"{date_str}T{time_str or '00:00'}:00+07:00"
-
-    # Location extraction
-    location: Optional[str] = None
-    m_loc = re.search(
-        r"(?:location|venue|address|room|hall|dia diem|phong|hoi truong)\s*[:\-]\s*([^\n\r.;]+)",
-        combined,
-        flags=re.IGNORECASE,
-    )
-    if m_loc:
-        location = m_loc.group(1).strip()[:200]
-    else:
-        m_loc2 = re.search(
-            r"\b(?:at|tai)\s+(Hall\s+[A-Z0-9]+|Room\s+[A-Z0-9.\-]+|Hoi truong\s+[^\n,.]+|Phong\s+[A-Z0-9.\-]+|Zoom|Google Meet|MS Teams)",
-            combined,
-            flags=re.IGNORECASE,
-        )
-        if m_loc2:
-            location = m_loc2.group(1).strip()
+    # Location extraction (accent-insensitive across 'Địa điểm', 'Dia diem', 'Hội trường', etc.)
+    location = _extract_location_from_text(combined)
 
     # Format / Online vs Offline
     is_online: Optional[bool] = None
@@ -392,20 +762,25 @@ def heuristic_extract_event(
         if kw in stripped and cat not in categories:
             categories.append(cat)
 
-    # Description summary (first 2 sentences of content)
-    clean_body = re.sub(r"\s+", " ", content.strip())
-    description = clean_body[:240] + ("..." if len(clean_body) > 240 else "")
+    # Description summary (activities, what participants learn/experience, and benefits/prizes)
+    description = _summarize_event_description(content)
 
     return {
         "is_event": True,
         "title": title,
         "description": description or None,
-        "start_datetime": start_datetime,
-        "end_datetime": None,
+        "event_start_datetime": event_start_datetime,
+        "event_end_datetime": event_end_datetime,
+        "start_datetime": event_start_datetime,
+        "end_datetime": event_end_datetime,
+        "reg_start_datetime": reg_start_datetime,
+        "reg_end_datetime": reg_end_datetime,
+        "_reg_start_explicit": bool(reg_start_datetime),
+        "_reg_end_explicit": bool(reg_end_datetime),
         "location": location,
         "organizer": sender,
         "registration_url": reg_url,
-        "fee": "miễn phí" if re.search(r"\b(free|mien phi)\b", stripped) else None,
+        "fee": _extract_fee_from_text(combined),
         "is_online": is_online,
         "target_audience": ["sinh viên"] if re.search(r"\b(student|sinh vien)\b", stripped) else None,
         "category": categories or ["khác"],
@@ -415,9 +790,8 @@ def heuristic_extract_event(
 
 def _normalize_title_key(title: str) -> str:
     """Normalize event title for anchor-field matching across fanpages and emails."""
-    s = _strip_accents(title or "").lower()
-    # Strip leading bracket tags like [workshop], [seminar], [thong bao]
-    s = re.sub(r"^\s*(\[[^\]]+\]|\([^\)]+\))\s*", "", s)
+    cleaned = _clean_event_title(title)
+    s = _strip_accents(cleaned).lower()
     s = re.sub(r"[^a-z0-9\s]", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
@@ -426,22 +800,34 @@ def _normalize_location_key(location: Optional[str]) -> str:
     if not location:
         return ""
     s = _strip_accents(location).lower()
+    # Strip common Vietnamese/English location prefixes so "Địa điểm: Hội trường A" matches "Hội trường A"
+    s = re.sub(r"^\s*(?:dia\s*diem|dia\s*chi|noi\s*to\s*chuc|location|venue|address)\s*[:\-]?\s*", "", s)
     s = re.sub(r"[^a-z0-9\s]", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
 
-def _parse_date_and_time(start_datetime: Optional[str], raw_date: Optional[str] = None, raw_time: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+def _parse_date_and_time(
+    start_datetime: Optional[str],
+    raw_date: Optional[str] = None,
+    raw_time: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str]]:
     """Extract canonical YYYY-MM-DD and HH:MM strings from start_datetime or explicit date/time fields."""
     ev_date = (raw_date or "").strip() or None
     ev_time = (raw_time or "").strip() or None
+    if ev_time:
+        m_rt = re.match(r"^(\d{1,2})(?:[:hg](\d{2}))?", ev_time, flags=re.IGNORECASE)
+        if m_rt:
+            ev_time = f"{int(m_rt.group(1)):02d}:{int(m_rt.group(2) or 0):02d}"
     if start_datetime and isinstance(start_datetime, str):
         s = start_datetime.strip()
-        m_dt = re.match(r"^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}))?", s)
+        m_dt = re.match(r"^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{1,2})[:hg](\d{2})?)?", s, flags=re.IGNORECASE)
         if m_dt:
             if not ev_date:
                 ev_date = m_dt.group(1)
-            if not ev_time and m_dt.group(2) and m_dt.group(2) != "00:00":
-                ev_time = m_dt.group(2)
+            if not ev_time and m_dt.group(2):
+                hh_mm = f"{int(m_dt.group(2)):02d}:{int(m_dt.group(3) or 0):02d}"
+                if hh_mm != "00:00":
+                    ev_time = hh_mm
     return ev_date, ev_time
 
 
@@ -473,8 +859,10 @@ def extract_anchor_fields(data: Dict[str, Any]) -> Dict[str, Any]:
     fmt_list = data.get("format") if isinstance(data.get("format"), list) else []
     online_mode = _derive_online_mode(is_online, fmt_list)
 
+    raw_start = data.get("event_start_datetime") or data.get("start_datetime")
+    raw_end = data.get("event_end_datetime") or data.get("end_datetime")
     ev_date, ev_time = _parse_date_and_time(
-        data.get("start_datetime"),
+        raw_start,
         raw_date=data.get("date"),
         raw_time=data.get("time"),
     )
@@ -488,8 +876,8 @@ def extract_anchor_fields(data: Dict[str, Any]) -> Dict[str, Any]:
         "is_online": is_online,
         "date": ev_date,
         "time": ev_time,
-        "start_datetime": data.get("start_datetime"),
-        "end_datetime": data.get("end_datetime"),
+        "start_datetime": raw_start,
+        "end_datetime": raw_end,
         "location": location,
         "normalized_location": norm_location,
     }
@@ -617,8 +1005,14 @@ def gather_additional_event_info(
     """
     enriched = dict(raw_data)
     fill_registration_from_media(media_urls, enriched, source_id=source_id)
+    ev_start = enriched.get("event_start_datetime") or enriched.get("start_datetime")
+    ev_end = enriched.get("event_end_datetime") or enriched.get("end_datetime")
     return {
         "description": enriched.get("description"),
+        "event_start_datetime": ev_start,
+        "event_end_datetime": ev_end,
+        "reg_start_datetime": enriched.get("reg_start_datetime"),
+        "reg_end_datetime": enriched.get("reg_end_datetime"),
         "organizer": enriched.get("organizer"),
         "registration_url": enriched.get("registration_url"),
         "registration_status": enriched.get("registration_status"),
@@ -627,6 +1021,47 @@ def gather_additional_event_info(
         "category": enriched.get("category") if isinstance(enriched.get("category"), list) else [],
         "format": enriched.get("format") if isinstance(enriched.get("format"), list) else [],
     }
+
+
+def _merge_registration_and_null_fields(
+    stored_info: Dict[str, Any],
+    extra_info: Dict[str, Any],
+    reg_start_explicit: bool,
+    reg_end_explicit: bool,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Apply registration open/close update rules and backfill any previously null fields:
+      - If a later post explicitly mentions `reg_start_datetime` or `reg_end_datetime`, update it.
+      - If NOT explicitly mentioned, skip updating that registration field.
+      - Backfill any non-empty fields where `stored_info` previously held None/empty/'free'.
+    Returns dict of field-level changes applied.
+    """
+    extra_changes: Dict[str, Dict[str, Any]] = {}
+
+    if reg_start_explicit and extra_info.get("reg_start_datetime"):
+        new_rs = extra_info["reg_start_datetime"]
+        if new_rs != stored_info.get("reg_start_datetime"):
+            extra_changes["reg_start_datetime"] = {"old": stored_info.get("reg_start_datetime"), "new": new_rs}
+            stored_info["reg_start_datetime"] = new_rs
+
+    if reg_end_explicit and extra_info.get("reg_end_datetime"):
+        new_re = extra_info["reg_end_datetime"]
+        if new_re != stored_info.get("reg_end_datetime"):
+            extra_changes["reg_end_datetime"] = {"old": stored_info.get("reg_end_datetime"), "new": new_re}
+            stored_info["reg_end_datetime"] = new_re
+
+    for k, v in extra_info.items():
+        if k in ("reg_start_datetime", "reg_end_datetime"):
+            continue
+        if v in (None, [], ""):
+            continue
+        existing_val = stored_info.get(k)
+        is_missing = existing_val in (None, [], "") or (k == "registration_url" and existing_val == "free" and v != "free")
+        if is_missing:
+            extra_changes[k] = {"old": existing_val, "new": v}
+            stored_info[k] = v
+
+    return extra_changes
 
 
 def upsert_unified_event(
@@ -644,11 +1079,15 @@ def upsert_unified_event(
     Execute the complete unified extraction & deduplication/update workflow:
       1. Extract anchor fields (title, format online/offline, date, time, location).
       2. Compare against existing EventRecord rows -> 'new', 'duplicate', or 'updated'.
-      3. If 'new' or 'updated', gather additional event info (QR code, description, audience, etc.).
+      3. Enforce registration open/close defaults on new events & explicit-only updates on later posts,
+         plus backfill any previously null fields.
       4. Persist or update EventRecord in SQLite.
     Returns (status, event_record, changes_dict).
     """
     media = media_urls or []
+    reg_start_explicit = bool(raw_data.pop("_reg_start_explicit", False) or raw_data.get("reg_start_datetime"))
+    reg_end_explicit = bool(raw_data.pop("_reg_end_explicit", False) or raw_data.get("reg_end_datetime"))
+
     anchor = extract_anchor_fields(raw_data)
     status, existing, changes = compare_anchor_fields(session, anchor)
     now_dt = datetime.now(LOCAL_TIMEZONE)
@@ -664,21 +1103,57 @@ def upsert_unified_event(
     }
 
     if status == "duplicate" and existing is not None:
-        # Link source if not already listed, skip heavy QR / re-extraction
         try:
             stored_info = json.loads(existing.event_json or "{}")
         except Exception:
             stored_info = {}
+
+        # Check explicit registration updates or newly filled non-anchor fields (e.g. fee, end_datetime)
+        candidate_extra = {
+            "description": raw_data.get("description"),
+            "event_start_datetime": raw_data.get("event_start_datetime") or raw_data.get("start_datetime"),
+            "event_end_datetime": raw_data.get("event_end_datetime") or raw_data.get("end_datetime"),
+            "reg_start_datetime": raw_data.get("reg_start_datetime"),
+            "reg_end_datetime": raw_data.get("reg_end_datetime"),
+            "organizer": raw_data.get("organizer"),
+            "registration_url": raw_data.get("registration_url"),
+            "fee": raw_data.get("fee"),
+            "target_audience": raw_data.get("target_audience"),
+            "category": raw_data.get("category") if isinstance(raw_data.get("category"), list) else [],
+            "format": raw_data.get("format") if isinstance(raw_data.get("format"), list) else [],
+        }
+        extra_changes = _merge_registration_and_null_fields(
+            stored_info, candidate_extra, reg_start_explicit, reg_end_explicit
+        )
+        if candidate_extra.get("event_end_datetime") and not existing.end_datetime:
+            existing.end_datetime = candidate_extra["event_end_datetime"]
+
         sources = stored_info.get("sources") or []
         if not any(s.get("source_id") == source_id for s in sources):
             sources.append(source_entry)
             stored_info["sources"] = sources
+
+        if extra_changes:
+            history = stored_info.get("update_history") or []
+            history.append({
+                "updated_at": now_dt.isoformat(),
+                "source_type": source_type,
+                "source_id": source_id,
+                "client_id": client_id,
+                "changes": extra_changes,
+            })
+            stored_info["update_history"] = history
+            existing.version = (existing.version or 1) + 1
+            existing.updated_at = now_dt
             existing.event_json = json.dumps(stored_info, ensure_ascii=False)
+            session.flush()
+            return "updated", existing, extra_changes
+
+        existing.event_json = json.dumps(stored_info, ensure_ascii=False)
         return "duplicate", existing, {}
 
     # Gather additional information (runs QR scanner and metadata normalization)
     extra_info = gather_additional_event_info(raw_data, media, source_id=source_id)
-    # Sync raw_data registration fields back so caller has them too
     raw_data["registration_url"] = extra_info.get("registration_url")
     raw_data["registration_status"] = extra_info.get("registration_status")
 
@@ -688,7 +1163,6 @@ def upsert_unified_event(
         except Exception:
             stored_info = {}
 
-        # Update anchor fields that changed
         if anchor["online_mode"]:
             existing.online_mode = anchor["online_mode"]
         if anchor["is_online"] is not None:
@@ -705,11 +1179,17 @@ def upsert_unified_event(
             existing.location = anchor["location"]
             existing.normalized_location = anchor["normalized_location"]
 
-        # Merge newly gathered non-empty additional fields
+        # Update explicit registration dates only if mentioned; skip otherwise; merge non-empty fields
+        extra_changes = _merge_registration_and_null_fields(
+            stored_info, extra_info, reg_start_explicit, reg_end_explicit
+        )
         for k, v in extra_info.items():
+            if k in ("reg_start_datetime", "reg_end_datetime"):
+                continue
             if v not in (None, [], "") and (k != "registration_url" or v != "free" or not stored_info.get(k)):
                 stored_info[k] = v
 
+        all_changes = {**changes, **extra_changes}
         sources = stored_info.get("sources") or []
         if not any(s.get("source_id") == source_id for s in sources):
             sources.append(source_entry)
@@ -721,7 +1201,7 @@ def upsert_unified_event(
             "source_type": source_type,
             "source_id": source_id,
             "client_id": client_id,
-            "changes": changes,
+            "changes": all_changes,
         })
         stored_info["update_history"] = history
 
@@ -729,9 +1209,20 @@ def upsert_unified_event(
         existing.updated_at = now_dt
         existing.event_json = json.dumps(stored_info, ensure_ascii=False)
         session.flush()
-        return "updated", existing, changes
+        return "updated", existing, all_changes
 
-    # Brand new event
+    # Brand new event: apply registration defaults when not explicitly mentioned
+    if not extra_info.get("reg_start_datetime"):
+        extra_info["reg_start_datetime"] = posted_at or now_dt.isoformat()
+    if not extra_info.get("reg_end_datetime"):
+        if anchor["date"]:
+            extra_info["reg_end_datetime"] = f"{anchor['date']}T00:00:00+07:00"
+        elif anchor["start_datetime"]:
+            extra_info["reg_end_datetime"] = anchor["start_datetime"]
+
+    raw_data["reg_start_datetime"] = extra_info.get("reg_start_datetime")
+    raw_data["reg_end_datetime"] = extra_info.get("reg_end_datetime")
+
     full_info = {
         **extra_info,
         "post_url": post_url,
@@ -792,7 +1283,7 @@ def _write_events_json(fanpage: Fanpage, session) -> None:
             "posted_at": post.published_at.isoformat() if post and post.published_at else None,
             **info,
         })
-    events.sort(key=lambda e: e.get("start_datetime") or e.get("posted_at") or "", reverse=True)
+    events.sort(key=lambda e: e.get("event_start_datetime") or e.get("start_datetime") or e.get("posted_at") or "", reverse=True)
     doc = {
         "fanpage": {"name": fanpage.name or fanpage.slug, "url": fanpage.url, "slug": fanpage.slug},
         "updated_at": datetime.now(LOCAL_TIMEZONE).isoformat(),
@@ -837,7 +1328,7 @@ def sync_all_event_folders(session=None) -> Dict[str, int]:
         ).all()
         all_events_list = [r.to_dict() for r in all_records]
         all_events_list.sort(
-            key=lambda e: e.get("start_datetime") or e.get("date") or e.get("updated_at") or "",
+            key=lambda e: e.get("event_start_datetime") or e.get("start_datetime") or e.get("date") or e.get("updated_at") or "",
             reverse=True,
         )
         all_path = FEEDS_DIR / "all" / "events.json"
@@ -1034,6 +1525,8 @@ def ingest_email_message(
                 sender=sender,
                 published_at=rec_dt,
             )
+        else:
+            raw_data = _enrich_extracted_event_fields(raw_data, full_email_text, published_at=rec_dt)
 
         is_event = bool(raw_data.pop("is_event", False))
         if not is_event:
@@ -1181,6 +1674,7 @@ def analyze_fanpage_posts(
             if not data:
                 stats["errors"] += 1
                 continue
+            data = _enrich_extracted_event_fields(data, post.content or "", published_at=post.published_at)
             is_event = bool(data.pop("is_event", False))
             if is_event:
                 # Run through unified anchor-field deduplication/update & additional info gatherer
@@ -1281,6 +1775,12 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
         raw_data = heuristic_extract_event(
             content=content,
             sender=fanpage_name,
+            published_at=published_at if isinstance(published_at, datetime) else None,
+        )
+    else:
+        raw_data = _enrich_extracted_event_fields(
+            raw_data,
+            content,
             published_at=published_at if isinstance(published_at, datetime) else None,
         )
 
