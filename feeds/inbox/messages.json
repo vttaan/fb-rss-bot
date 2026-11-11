@@ -1,7 +1,129 @@
 {
   "folder": "inbox",
   "description": "Client email inbox entries and extraction outcomes",
-  "updated_at": "2026-11-11T13:26:41.733474+07:00",
-  "count": 0,
-  "messages": []
+  "updated_at": "2026-11-11T14:00:09.837115+07:00",
+  "count": 2,
+  "messages": [
+    {
+      "id": 2,
+      "message_id": "email_dcc51d42aa11b354b3cd",
+      "client_id": "anonymous",
+      "subject": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
+      "sender": null,
+      "content": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳\n🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa những giá trị văn hóa truyền thống Việt Nam đến với thế hệ trẻ.\n✨ Văn hóa dân tộc không chỉ được lưu giữ qua những trang sử hay câu chuyện của cha ông, mà còn hiện diện trong những điều bình dị của đời sống. Từ những chiếc quạt mang đậm dấu ấn quê hương đến những hình tò he rực rỡ sắc màu, mỗi trải nghiệm đều là một cách để chúng ta hiểu hơn, yêu hơn và tiếp nối những giá trị truyền thống.\n🎨 Đến với NÉT SON, bạn sẽ có cơ hội:\n      🪭 Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt.\n      🎭 Workshop nặn tò he: Khám phá nghệ thuật tạo hình dân gian và trải nghiệm nặn nên những hình tượng ngộ nghĩnh dưới sự hướng dẫn của nghệ nhân.\n      💬 Talkshow Nét Son: Cùng tìm hiểu những đặc trưng văn hóa Việt Nam, giao lưu và chia sẻ về câu chuyện gìn giữ bản sắc dân tộc trong thời đại hội nhập.\n__________________________\n    ⏰ THỜI GIAN: 14h00, ngày 20/11/2026.\n    📍 ĐỊA ĐIỂM: Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).\n    👥 ĐỐI TƯỢNG: Học sinh, sinh viên trên toàn địa bàn TP. Hồ Chí Minh.\n   💸  LỆ PHÍ: 25.000 VNĐ/sinh viên.\n   ✏️  NỘI DUNG CHUYỂN KHOẢN: Họ và tên - MSSV - NETSON.\n    📌 LINK ĐĂNG KÝ: https://forms.gle/yuczTRTEM4S4FxH2A\n__________________________ \n❤️ Mỗi nét vẽ, mỗi hình tò he không chỉ là một sản phẩm sáng tạo, mà còn là một cách để những giá trị văn hóa được tiếp nối và lan tỏa.\nCòn chần chờ gì nữa? Hãy cùng NÉT SON lưu giữ những sắc màu truyền thống và viết tiếp câu chuyện văn hóa Việt bằng chính đôi tay của mình nhé!\n#NetSon #NgayVanHoaVietNam #VanHoaVietNam #HCMUS #SDGs",
+      "media_urls": [],
+      "received_at": "2026-11-11T13:34:52.858441+07:00",
+      "ingested_at": "2026-11-11T13:34:53.184476+07:00",
+      "status": "created",
+      "is_event": true,
+      "event_id": 2,
+      "changes": {},
+      "event": {
+        "event_id": 2,
+        "title": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
+        "online_mode": null,
+        "is_online": null,
+        "date": "2026-11-20",
+        "time": "14:00",
+        "start_datetime": "2026-11-20T14:00:00+07:00",
+        "end_datetime": null,
+        "location": null,
+        "source_type": "email",
+        "source_id": "email_dcc51d42aa11b354b3cd",
+        "fanpage_id": null,
+        "client_id": "anonymous",
+        "version": 1,
+        "created_at": "2026-11-11T13:34:53.183204+07:00",
+        "updated_at": "2026-11-11T13:34:53.183204+07:00",
+        "description": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳 🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật ...",
+        "organizer": null,
+        "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
+        "registration_status": "link",
+        "fee": null,
+        "target_audience": [
+          "sinh viên"
+        ],
+        "category": [
+          "workshop",
+          "tọa đàm"
+        ],
+        "format": [],
+        "post_url": null,
+        "posted_at": "2026-11-11T13:34:52.858441+07:00",
+        "sources": [
+          {
+            "source_type": "email",
+            "source_id": "email_dcc51d42aa11b354b3cd",
+            "fanpage_id": null,
+            "client_id": "anonymous",
+            "post_url": null,
+            "posted_at": "2026-11-11T13:34:52.858441+07:00",
+            "seen_at": "2026-11-11T13:34:53.183204+07:00"
+          }
+        ],
+        "update_history": []
+      }
+    },
+    {
+      "id": 1,
+      "message_id": "email_2679fc9d470058c84a17",
+      "client_id": "client_team_1",
+      "subject": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
+      "sender": null,
+      "content": "Bạn đã nắm rõ các quy định pháp luật khi thuê trọ hay chưa? Bạn có thực sự hiểu đúng về thủ tục đăng ký thường trú, tạm trú?\nNhằm hưởng ứng Ngày Pháp luật Việt Nam (09/11), Chi Hội 26TTH_DKD1 tổ chức cuộc thi “Hiểu đúng - Nắm chuẩn Luật cư trú”, mang đến cơ hội để các bạn sinh viên tìm hiểu, trang bị những kiến thức pháp luật thiết thực, đặc biệt là các quy định liên quan trực tiếp đến đời sống và sinh hoạt hằng ngày.\n🎯 ĐỐI TƯỢNG THAM GIA: Sinh viên Trường Đại học Khoa học tự nhiên, ĐHQG-HCM.\n🗓️ THỜI GIAN DIỄN RA: Từ ngày 05/11/2026 đến hết ngày 10/11/2026.\n📝 HÌNH THỨC CUỘC THI:\nCuộc thi được tổ chức trực tuyến trên nền tảng MyAloha.\nBài thi gồm 30 câu hỏi trắc nghiệm với các phương án A, B, C, D.\nMỗi thí sinh chỉ được phép tham gia làm bài 01 lần.\nThời gian làm bài: 20 phút.\n📚 NỘI DUNG CUỘC THI: Các câu hỏi xoay quanh những kiến thức luật về cư trú và các vấn đề gần gũi với đời sống sinh viên.\n🌟 QUYỀN LỢI KHI THAM GIA: Sinh viên tham gia cuộc thi và trả lời đúng từ 20/30 câu hỏi trở lên sẽ được ghi nhận hoạt động.\n🔗 CÁCH THỨC THAM GIA: \nBước 1 : Follow fanpage Chi Đoàn - Chi Hội 26TTH DKD1 HCMUS, like và share bài viết ở chế độ công khai kèm hashtag #NgayPhapLuatVietNam #LuatCuTru # LuatNhaO\nBước 2: Tag 3 người bạn của mình vào phần bình luận bài viết để cùng tham gia.\nBước 2 : Sinh viên thực hiện bài trắc nghiệm trực tuyến trên nền tảng MyAloha ở link sau: https://tinyurl.vn/LXBZ",
+      "media_urls": [],
+      "received_at": "2026-11-10T18:00:42.422854+07:00",
+      "ingested_at": "2026-11-10T18:00:42.871945+07:00",
+      "status": "created",
+      "is_event": true,
+      "event_id": 1,
+      "changes": {},
+      "event": {
+        "event_id": 1,
+        "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
+        "online_mode": "offline",
+        "is_online": false,
+        "date": "2026-11-09",
+        "time": null,
+        "start_datetime": "2026-11-09T00:00:00+07:00",
+        "end_datetime": null,
+        "location": null,
+        "source_type": "email",
+        "source_id": "email_2679fc9d470058c84a17",
+        "fanpage_id": null,
+        "client_id": "client_team_1",
+        "version": 1,
+        "created_at": "2026-11-10T18:00:42.870083+07:00",
+        "updated_at": "2026-11-10T18:00:42.870083+07:00",
+        "description": "Bạn đã nắm rõ các quy định pháp luật khi thuê trọ hay chưa? Bạn có thực sự hiểu đúng về thủ tục đăng ký thường trú, tạm trú? Nhằm hưởng ứng Ngày Pháp luật Việt Nam (09/11), Chi Hội 26TTH_DKD1 tổ chức cuộc thi “Hiểu đúng - Nắm chuẩn Luật cư ...",
+        "organizer": null,
+        "registration_url": "https://tinyurl.vn/LXBZ",
+        "registration_status": "link",
+        "fee": null,
+        "target_audience": [
+          "sinh viên"
+        ],
+        "category": [
+          "cuộc thi"
+        ],
+        "format": [
+          "offline"
+        ],
+        "post_url": null,
+        "posted_at": "2026-11-10T18:00:42.422854+07:00",
+        "sources": [
+          {
+            "source_type": "email",
+            "source_id": "email_2679fc9d470058c84a17",
+            "fanpage_id": null,
+            "client_id": "client_team_1",
+            "post_url": null,
+            "posted_at": "2026-11-10T18:00:42.422854+07:00",
+            "seen_at": "2026-11-10T18:00:42.870083+07:00"
+          }
+        ],
+        "update_history": []
+      }
+    }
+  ]
 }
