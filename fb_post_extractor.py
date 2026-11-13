@@ -13,8 +13,14 @@ Optional (for QR-code registration link extraction from post images):
     pip install opencv-python-headless numpy
 
 Examples:
-    # Interactive mode (prompts for output JSON path and URLs)
+    # Interactive mode (prompts for posts folder / text files / URLs)
     python fb_post_extractor.py
+
+    # Extract events from sample*.txt files inside ../posts
+    python fb_post_extractor.py -d ../posts -o extracted_events.json
+
+    # Pass a folder or .txt files directly
+    python fb_post_extractor.py ../posts --overwrite --include-non-events
 
     # Pass URLs and destination JSON via CLI
     python fb_post_extractor.py -o events.json https://www.facebook.com/.../posts/...
@@ -43,11 +49,108 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import parse_qs, urljoin, urlparse
 from zoneinfo import ZoneInfo
 
-from playwright.async_api import Page, Response, async_playwright
+#from playwright.async_api import Page, Response, async_playwright
+
+def _load_env_file() -> None:
+    """Lightweight zero-dependency .env loader that checks cwd and parent dirs."""
+    search_dirs = [Path.cwd(), Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+    for d in search_dirs:
+        env_path = d / ".env"
+        if env_path.is_file():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+            except Exception:
+                pass
+            break
+
+
+_load_env_file()
 
 # ---------------------------------------------------------------------------
 # Standalone Configuration
 # ---------------------------------------------------------------------------
+# Set your Gemini API key(s) directly here:
+# Can be a single string "AIza..." or comma-separated "key1,key2" or list ["key1", "key2"]
+DEFAULT_GEMINI_API_KEY = ""
+DEFAULT_GEMINI_API_KEYS: List[str] = []
+
+# Set default Gemini model directly here (e.g. "gemini-2.0-flash-lite", "gemini-2.0-flash"):
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-lite"
+
+# Groq API Fallback Configuration (Free tier: https://console.groq.com)
+DEFAULT_GROQ_API_KEY = ""
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "llama-3.2-3b-preview",
+    "llama-3.2-1b-preview",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+    "qwen-2.5-32b",
+]
+GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
+
+
+class GeminiKeyPool:
+    """Manages a pool of Gemini API keys with automatic rotation on 429 (rate limits) and 403."""
+
+    def __init__(self, initial_keys: Optional[List[str]] = None):
+        self.keys: List[str] = []
+        self._index = 0
+        self._cooldowns: Dict[str, float] = {}
+        if initial_keys:
+            self.add_keys(initial_keys)
+
+    def add_keys(self, raw: Any) -> None:
+        if isinstance(raw, list):
+            for x in raw:
+                self.add_keys(x)
+        elif isinstance(raw, str) and raw.strip():
+            for part in re.split(r"[,\s;]+", raw.strip()):
+                clean = part.strip().strip("'\"")
+                if clean and clean not in self.keys:
+                    self.keys.append(clean)
+
+    def has_keys(self) -> bool:
+        return bool(self.keys)
+
+    def get_active_key(self) -> Optional[str]:
+        if not self.keys:
+            return None
+        now = time.time()
+        for i in range(len(self.keys)):
+            idx = (self._index + i) % len(self.keys)
+            k = self.keys[idx]
+            if self._cooldowns.get(k, 0) <= now:
+                self._index = idx
+                return k
+        return min(self.keys, key=lambda k: self._cooldowns.get(k, 0))
+
+    def mark_rate_limited(self, key: str, wait_seconds: float = 60.0) -> Optional[str]:
+        self._cooldowns[key] = time.time() + max(10.0, wait_seconds)
+        self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+    def mark_invalid(self, key: str) -> Optional[str]:
+        self._cooldowns[key] = time.time() + 86400.0  # 24h
+        self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+
+_GLOBAL_KEY_POOL = GeminiKeyPool()
 try:
     SCRAPE_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
 except Exception:
@@ -63,10 +166,12 @@ USER_AGENT = (
 )
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_LIST_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_CACHED_CONTENTS_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
 GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES") or 3)
 GEMINI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_SECONDS") or 90)
 GEMINI_CACHE_TTL_SECONDS = int(os.environ.get("GEMINI_CACHE_TTL_SECONDS") or 3600)
+GEMINI_BATCH_SIZE = max(1, int(os.environ.get("GEMINI_BATCH_SIZE") or 5))
 GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "true").strip().lower() not in (
     "0",
     "false",
@@ -75,10 +180,10 @@ GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "tru
 )
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)
 FALLBACK_GEMINI_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
 _CACHED_SYSTEM_HANDLES: Dict[str, Tuple[str, float]] = {}
@@ -1142,7 +1247,7 @@ WHAT DOES NOT COUNT (`is_event: false`) — Empirical Disqualification Rules:
 
 EXTRACTION RULES:
 - `reason`: 1 concise sentence explaining the content reasoning decision (why `is_event` is true or which disqualification rule made it false).
-- `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển Cộng tác viên Tình nguyện - Bước Chân Yêu Thương", "Seminar on Legal AI Beyond the Demo"). Do NOT use countdown hooks like "3 DAYS LEFT" or tags like "[HỖ TRỢ TRUYỀN THÔNG]" alone as the title.
+- `title`: Extract the canonical name of the event/competition/program. KEEP any meaningful bracketed text intact (e.g., "[BUILD ON STELLAR] — FROM ZERO TO YOUR FIRST WEB3 APP", "[THI THỬ TOEIC – VƯƠN TẦM HỘI NHẬP]", "[TRAO YÊU THƯƠNG - ĐỔI HẠNH PHÚC]"). Read past any initial salutations (like "Thân chào các bạn") or meta tags (like "[HỖ TRỢ TRUYỀN THÔNG]", "[HTTT]", "[THÔNG BÁO]") to find the real event title in the content body. Do NOT use countdown hooks like "3 DAYS LEFT" or generic meta tags alone as the title.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
 - `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
 - `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
@@ -1178,6 +1283,35 @@ Post text:
 \"\"\"
 {content}
 \"\"\""""
+
+USER_BATCH_POSTS_TEMPLATE = """Analyze each of the {count} posts below independently using the JSON schema in your system instructions.
+Return ONLY a JSON array with one object per post in the same order, adding `"post_id": "<post_id>"` to each object.
+
+{posts_block}"""
+
+GROQ_SYSTEM_PROMPT = """You extract university event details from posts into JSON.
+Determine whether each post announces or promotes an UPCOMING or ONGOING EVENT or organized student activity (`is_event: true`).
+DO NOT count finished event recaps (`[RECAP]`, `tổng kết`), honor rolls/awards, internal committee congresses, administrative notices, or job ads (`is_event: false`).
+
+Extraction schema (return ONLY valid JSON):
+{
+  "is_event": boolean,
+  "reason": "1 concise sentence explaining the decision",
+  "title": "Canonical event name, keeping bracketed text (e.g. [BUILD ON STELLAR]) and stripping salutations/meta tags",
+  "description": "2-3 sentence summary of main activities, dates, and student benefits/prizes",
+  "event_start_datetime": "ISO 8601 (+07:00) or null",
+  "event_end_datetime": "ISO 8601 (+07:00) or null",
+  "reg_start_datetime": "ISO 8601 (+07:00) or null",
+  "reg_end_datetime": "ISO 8601 (+07:00) or null",
+  "location": "Venue/address or null",
+  "organizer": "Organizing unit or null",
+  "registration_url": "Literal registration form link or null",
+  "fee": "Fee/ticket cost or null",
+  "is_online": boolean or null,
+  "target_audience": ["array of strings"] or null,
+  "category": ["array of strings"],
+  "format": ["array of strings"]
+}"""
 
 PROMPT = SYSTEM_REGULATIONS + "\n\n" + USER_POST_TEMPLATE
 
@@ -1347,22 +1481,88 @@ def looks_event_related(content: str) -> bool:
     return is_candidate
 
 
-def _candidate_gemini_models() -> List[str]:
-    global _WORKING_GEMINI_MODEL
-    if _WORKING_GEMINI_MODEL:
-        return [_WORKING_GEMINI_MODEL] + [m for m in FALLBACK_GEMINI_MODELS if m != _WORKING_GEMINI_MODEL]
+_CACHED_GEMINI_V2_MODELS: Dict[str, List[str]] = {}
 
-    raw = (os.environ.get("GEMINI_MODEL") or "").strip().strip("'\"")
+
+def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
+    """Dynamically query Google Gemini API to fetch available models and select those starting with 2.
+
+    Prevents HTTP 404 (model not found) by ensuring we only request active models enabled for this key.
+    """
+    global _CACHED_GEMINI_V2_MODELS
+    if not api_key:
+        return [m for m in FALLBACK_GEMINI_MODELS if "2" in m]
+
+    key_hash = api_key[-8:] if len(api_key) > 8 else api_key
+    if key_hash in _CACHED_GEMINI_V2_MODELS:
+        return _CACHED_GEMINI_V2_MODELS[key_hash]
+
+    discovered_v2: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GEMINI_LIST_MODELS_URL,
+            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for item in data.get("models", []):
+            name = item.get("name") or ""
+            model_id = name.replace("models/", "").strip()
+            methods = item.get("supportedGenerationMethods") or []
+            if "generateContent" not in methods:
+                continue
+
+            version = str(item.get("version") or "")
+            # Match models starting with 2 (e.g. gemini-2.*, version 2.*)
+            if model_id.startswith("gemini-2") or version.startswith("2") or model_id.startswith("2"):
+                discovered_v2.append(model_id)
+    except Exception:
+        pass
+
+    # Sort to prioritize flash-lite (lightweight/fast/reliable free tier), then flash, then others
+    def _rank_v2(m_name: str) -> int:
+        n = m_name.lower()
+        if "flash-lite" in n:
+            return 0
+        if "flash" in n:
+            return 1
+        return 2
+
+    discovered_v2.sort(key=_rank_v2)
+
+    # Fallback to curated 2.x list if network discovery failed
+    if not discovered_v2:
+        discovered_v2 = [m for m in FALLBACK_GEMINI_MODELS if "2" in m] or FALLBACK_GEMINI_MODELS
+
+    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered_v2
+    return discovered_v2
+
+
+def _candidate_gemini_models(api_key: str = "") -> List[str]:
+    global _WORKING_GEMINI_MODEL
+    v2_models = _fetch_gemini_models_v2(api_key)
+
+    if _WORKING_GEMINI_MODEL:
+        return [_WORKING_GEMINI_MODEL] + [m for m in v2_models if m != _WORKING_GEMINI_MODEL]
+
+    raw = (os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL or "").strip().strip("'\"")
     if raw.startswith("models/"):
         raw = raw[len("models/"):].strip()
 
-    retired_prefixes = ("gemini-1.5", "gemini-1.0", "gemini-pro")
+    retired_prefixes = ("gemini-1.0", "gemini-pro-vision")
     candidates: List[str] = []
     if raw and not raw.lower().startswith(retired_prefixes):
         candidates.append(raw)
+
+    for m in v2_models:
+        if m not in candidates:
+            candidates.append(m)
+
     for fallback in FALLBACK_GEMINI_MODELS:
         if fallback not in candidates:
             candidates.append(fallback)
+
     return candidates
 
 
@@ -1449,67 +1649,377 @@ def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float
     return min(4.0 * (2 ** attempt), 32.0)
 
 
+def _unpack_batch_json(data: Any, expected_ids: List[str]) -> Optional[Dict[str, Dict[str, Any]]]:
+    """Unpack a JSON array or dict with 'posts'/'results'/'events' returned from batch LLM calls."""
+    if isinstance(data, dict):
+        for key in ("results", "posts", "events", "items"):
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+        else:
+            if "post_id" in data:
+                data = [data]
+
+    if not isinstance(data, list):
+        return None
+
+    mapped: Dict[str, Dict[str, Any]] = {}
+    known_ids = set(expected_ids)
+    for idx, obj in enumerate(data):
+        if not isinstance(obj, dict):
+            continue
+        pid = str(obj.get("post_id") or "").strip()
+        if pid in known_ids:
+            mapped[pid] = obj
+        elif len(data) == len(expected_ids):
+            mapped[expected_ids[idx]] = obj
+    return mapped or None
+
+
+_CACHED_GROQ_MODELS: List[str] = []
+_CACHED_GROQ_MODELS_TIME: float = 0.0
+
+
+def _get_available_groq_models(groq_key: str = "") -> List[str]:
+    """Dynamically query Groq /openai/v1/models to fetch all active chat models for this API key.
+
+    Falls back to curated list if query fails or key has no /models access.
+    """
+    global _CACHED_GROQ_MODELS, _CACHED_GROQ_MODELS_TIME
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return FALLBACK_GROQ_MODELS
+
+    now = time.time()
+    if _CACHED_GROQ_MODELS and (now - _CACHED_GROQ_MODELS_TIME) < 600:
+        return _CACHED_GROQ_MODELS
+
+    discovered: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GROQ_MODELS_URL,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "User-Agent": "EventExtractor/2.0",
+            },
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        items = data.get("data") or []
+        for m in items:
+            m_id = m.get("id") or ""
+            is_active = m.get("active", True)
+            if not is_active or not m_id:
+                continue
+            # Filter out non-chat models (audio transcription, guardrails, embeddings, tts)
+            low = m_id.lower()
+            if any(skip in low for skip in ("whisper", "prompt-guard", "guard", "embed", "tts", "moderation")):
+                continue
+            discovered.append(m_id)
+    except Exception:
+        pass
+
+    priority_order = [
+        DEFAULT_GROQ_MODEL,
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama-3.2-3b-preview",
+        "llama-3.2-1b-preview",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+        "qwen-2.5-32b",
+    ]
+
+    sorted_models: List[str] = []
+    for p in priority_order:
+        if p and p in discovered and p not in sorted_models:
+            sorted_models.append(p)
+    for d in discovered:
+        if d not in sorted_models:
+            sorted_models.append(d)
+    if not sorted_models:
+        for m in priority_order:
+            if m and m not in sorted_models:
+                sorted_models.append(m)
+
+    _CACHED_GROQ_MODELS = sorted_models
+    _CACHED_GROQ_MODELS_TIME = now
+    return sorted_models
+
+
+def _call_groq_json(user_text: str, groq_key: str = "", max_output_tokens: int = 1500) -> Any:
+    """Send prompt to Groq API (OpenAI-compatible) when Gemini fails or runs out of quota."""
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return None
+
+    models = _get_available_groq_models(key)
+    last_exc = None
+
+    # Limit input length to prevent triggering Groq free-tier token ceilings
+    clean_user_text = user_text
+    if len(clean_user_text) > 4500 and "--- POST " not in clean_user_text:
+        clean_user_text = clean_user_text[:4500] + '\n"""\n[Content truncated for token ceiling]'
+
+    for model in models:
+        for use_json_mode in (True, False):
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": GROQ_SYSTEM_PROMPT
+                        + "\n\nCRITICAL: Respond ONLY with a valid JSON object or array according to schema.",
+                    },
+                    {"role": "user", "content": clean_user_text},
+                ],
+                "temperature": 0.0,
+                "max_tokens": max_output_tokens,
+            }
+            if use_json_mode:
+                payload["response_format"] = {"type": "json_object"}
+
+            req = urllib.request.Request(
+                GROQ_CHAT_COMPLETIONS_URL,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {key}",
+                    "User-Agent": "EventExtractor/2.0",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+                content_str = resp_data["choices"][0]["message"]["content"]
+
+                # Parse JSON safely, handling markdown code fences if model wrapped them
+                parsed = None
+                try:
+                    parsed = json.loads(content_str)
+                except Exception:
+                    m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content_str)
+                    if m:
+                        parsed = json.loads(m.group(1).strip())
+                    else:
+                        first_brace = content_str.find("{")
+                        first_bracket = content_str.find("[")
+                        start_idx = -1
+                        if first_brace != -1 and first_bracket != -1:
+                            start_idx = min(first_brace, first_bracket)
+                        elif first_brace != -1:
+                            start_idx = first_brace
+                        elif first_bracket != -1:
+                            start_idx = first_bracket
+
+                        last_brace = content_str.rfind("}")
+                        last_bracket = content_str.rfind("]")
+                        end_idx = max(last_brace, last_bracket)
+                        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                            parsed = json.loads(content_str[start_idx : end_idx + 1])
+
+                if parsed is not None:
+                    print(f" -> Successfully extracted via Groq fallback ({model})")
+                    return parsed
+            except urllib.error.HTTPError as exc:
+                last_exc = exc
+                err_msg = ""
+                try:
+                    err_body = exc.read().decode("utf-8", errors="replace")
+                    err_json = json.loads(err_body)
+                    err_msg = err_json.get("error", {}).get("message", err_body)
+                except Exception:
+                    err_msg = exc.reason
+
+                # If json_object response_format not supported by this model, retry without it
+                if use_json_mode and exc.code == 400 and "response_format" in err_msg.lower():
+                    continue
+
+                # If request was too long, trim input further and try next model
+                if exc.code in (400, 413) and any(w in err_msg.lower() for w in ("too long", "context_length", "tokens", "rate_limit_exceeded")):
+                    print(f" -> Groq model '{model}' token limit error: {err_msg}")
+                    if len(clean_user_text) > 2500:
+                        clean_user_text = clean_user_text[:2500] + '\n"""\n[Truncated]'
+                    break
+
+                print(f" -> Groq model '{model}' HTTP {exc.code}: {err_msg}")
+                # Don't retry second pass on 404 (model not found), 401/403 (auth), or 429 (rate limit)
+                break
+            except Exception as exc:
+                last_exc = exc
+                print(f" -> Groq error for model '{model}': {exc}")
+                break
+
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def _call_gemini_json(user_text: str, api_key: str = "") -> Any:
+    """Send a prompt to Gemini REST API with key rotation across pooled keys, model fallback, and retry."""
+    global _WORKING_GEMINI_MODEL, _GLOBAL_KEY_POOL
+    pool = _GLOBAL_KEY_POOL
+    if api_key:
+        pool.add_keys(api_key)
+    if not pool.has_keys():
+        pool.add_keys(os.environ.get("GEMINI_API_KEYS"))
+        pool.add_keys(os.environ.get("GEMINI_API_KEY"))
+        pool.add_keys(DEFAULT_GEMINI_API_KEYS)
+        pool.add_keys(DEFAULT_GEMINI_API_KEY)
+
+    if not pool.has_keys():
+        raise ValueError("No Gemini API key configured.")
+
+    last_exc: Optional[Exception] = None
+    max_key_attempts = max(1, len(pool.keys))
+    for key_attempt in range(max_key_attempts):
+        active_key = pool.get_active_key()
+        if not active_key:
+            break
+
+        for model in _candidate_gemini_models(active_key):
+            for attempt in range(GEMINI_MAX_RETRIES + 1):
+                body_bytes = _build_gemini_request_body(user_text, model, active_key)
+                req = urllib.request.Request(
+                    GEMINI_URL.format(model=model),
+                    data=body_bytes,
+                    headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
+                        payload = json.loads(resp.read().decode("utf-8"))
+                    _WORKING_GEMINI_MODEL = model
+                    text = payload["candidates"][0]["content"]["parts"][0]["text"]
+                    return json.loads(text)
+                except urllib.error.HTTPError as exc:
+                    last_exc = exc
+                    if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
+                        _CACHED_SYSTEM_HANDLES.pop(model, None)
+                        _CACHE_UNSUPPORTED_MODELS.add(model)
+                        continue
+                    if exc.code in (400, 404):
+                        print(f" -> Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
+                        break
+                    if exc.code == 403:
+                        print(f" -> Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) returned HTTP 403 Forbidden ({exc.reason}).")
+                        if len(pool.keys) > 1:
+                            pool.mark_invalid(active_key)
+                            break
+                        raise
+                    if exc.code in (429, 500, 502, 503, 504):
+                        if exc.code == 429 and len(pool.keys) > 1:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f" -> Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) hit HTTP 429 Rate Limit. Rotating to next key in pool...")
+                            pool.mark_rate_limited(active_key, wait_s)
+                            break
+                        if attempt < GEMINI_MAX_RETRIES:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f" -> Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
+                            time.sleep(wait_s)
+                            continue
+                        break
+                    raise
+                except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
+                    last_exc = exc
+                    if attempt < GEMINI_MAX_RETRIES:
+                        wait_s = _retry_delay_seconds(attempt, exc)
+                        print(f" -> Gemini {model} network error ({exc}); retrying in {wait_s:.1f}s...")
+                        time.sleep(wait_s)
+                        continue
+                    break
+
+    if last_exc is not None:
+        raise last_exc
+    return None
+
+
 def call_gemini_text(
     content: str,
     published_at_str: str,
     source_name: str,
-    api_key: str,
-) -> Optional[Dict[str, Any]]:
-    """Send ONLY the raw post text to Gemini REST API (regulations cached / in system_instruction)."""
-    global _WORKING_GEMINI_MODEL
+    api_key: str = "",
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Send text to Gemini (with key rotation and dynamic Gemini-2 model discovery). Returns (data, method)."""
     user_text = USER_POST_TEMPLATE.format(
         published_at=published_at_str,
         fanpage=source_name,
         content=(content or "")[:6000],
     )
+    try:
+        data = _call_gemini_json(user_text, api_key)
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        if isinstance(data, dict):
+            return data, "gemini"
+    except Exception as exc:
+        print(f" -> Gemini error ({exc}); falling back to heuristic...")
 
-    last_exc: Optional[Exception] = None
-    for model in _candidate_gemini_models():
-        for attempt in range(GEMINI_MAX_RETRIES + 1):
-            body_bytes = _build_gemini_request_body(user_text, model, api_key)
-            req = urllib.request.Request(
-                GEMINI_URL.format(model=model),
-                data=body_bytes,
-                headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-                method="POST",
+    return None, "heuristic"
+
+
+def call_gemini_batch_texts(
+    items: List[Dict[str, Any]],
+    api_key: str = "",
+) -> Tuple[Optional[Dict[str, Dict[str, Any]]], str]:
+    """Send a small batch of raw post texts to Gemini (with key rotation). Returns (results_map, method)."""
+    if not items:
+        return {}, "empty"
+    if len(items) == 1:
+        item = items[0]
+        single, method = call_gemini_text(
+            item["content"],
+            item["published_at_str"],
+            item["source_label"],
+            api_key,
+        )
+        return ({item["post_id"]: single} if isinstance(single, dict) else None), method
+
+    blocks: List[str] = []
+    for idx, item in enumerate(items, start=1):
+        blocks.append(
+            f'--- POST {idx} (post_id: "{item["post_id"]}") ---\n'
+            + USER_POST_TEMPLATE.format(
+                published_at=item["published_at_str"],
+                fanpage=item["source_label"],
+                content=(item["content"] or "")[:4500],
             )
-            try:
-                with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
-                    payload = json.loads(resp.read().decode("utf-8"))
-                _WORKING_GEMINI_MODEL = model
-                text = payload["candidates"][0]["content"]["parts"][0]["text"]
-                data = json.loads(text)
-                if isinstance(data, list):
-                    data = data[0] if data else {}
-                return data if isinstance(data, dict) else None
-            except urllib.error.HTTPError as exc:
-                last_exc = exc
-                if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
-                    _CACHED_SYSTEM_HANDLES.pop(model, None)
-                    _CACHE_UNSUPPORTED_MODELS.add(model)
-                    continue
-                if exc.code in (400, 404):
-                    break
-                if exc.code in (429, 500, 502, 503, 504):
-                    if attempt < GEMINI_MAX_RETRIES:
-                        wait_s = _retry_delay_seconds(attempt, exc)
-                        print(f" -> Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
-                        time.sleep(wait_s)
-                        continue
-                    break
-                raise
-            except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
-                last_exc = exc
-                if attempt < GEMINI_MAX_RETRIES:
-                    wait_s = _retry_delay_seconds(attempt, exc)
-                    print(f" -> Gemini {model} network/timeout error ({exc}); retrying in {wait_s:.1f}s...")
-                    time.sleep(wait_s)
-                    continue
-                break
+        )
+    user_text = USER_BATCH_POSTS_TEMPLATE.format(
+        count=len(items),
+        posts_block="\n\n".join(blocks),
+    )
+    expected_ids = [it["post_id"] for it in items]
 
-    if last_exc is not None:
-        raise last_exc
-    return None
+    # 1. Try Gemini batch
+    try:
+        data = _call_gemini_json(user_text, api_key)
+        mapped = _unpack_batch_json(data, expected_ids)
+        if mapped:
+            return mapped, "gemini_batch"
+    except Exception as exc:
+        print(f" -> Gemini batch error ({exc}); retrying batch posts individually via Gemini...")
+        single_mapped: Dict[str, Dict[str, Any]] = {}
+        for it in items:
+            try:
+                single, _ = call_gemini_text(
+                    it["content"],
+                    it["published_at_str"],
+                    it["source_label"],
+                    api_key,
+                )
+                if isinstance(single, dict) and single:
+                    single_mapped[it["post_id"]] = single
+            except Exception as single_exc:
+                print(f" -> Individual fallback failed for post '{it['post_id']}': {single_exc}")
+        if single_mapped:
+            return single_mapped, "gemini_split"
+
+    return None, "heuristic"
 
 
 def _extract_location_from_text(text: str) -> Optional[str]:
@@ -1679,10 +2189,100 @@ def _summarize_event_description(content: str) -> Optional[str]:
     return summary[:450] + ("..." if len(summary) > 450 else "")
 
 
+GENERIC_CHANNEL_TAGS_PATTERN = re.compile(
+    r"^[\[\(【\s]*(?:hỗ trợ truyền thông|ho tro truyen thong|httt|chia sẻ thông tin|chia se thong tin|thông báo|thong bao|tin tức|tin tuc|recap|góc chia sẻ|goc chia se|góc tuyển dụng|goc tuyen dung)[\]\)】\s]*",
+    re.IGNORECASE,
+)
+
+DISQUALIFIED_TITLE_PREFIXES = (
+    "link đăng ký", "link dang ky", "form đăng ký", "form dang ky",
+    "thời gian", "thoi gian", "địa điểm", "dia diem", "đối tượng", "doi tuong",
+    "lệ phí", "le phi", "hạn đăng ký", "han dang ky", "thời hạn", "thoi han",
+    "lưu ý", "luu y", "quyền lợi", "quyen loi", "thông tin chi tiết", "thong tin chi tiet",
+    "thông tin kỳ thi", "thong tin ky thi", "hotline", "fanpage", "liên hệ", "lien he",
+)
+
+INVITATION_PREFIX_PATTERN = re.compile(
+    r"^(?:fit\.hcmus\s+|clb\s+[^\n\r,–—]+\s+)?(?:thân mời|than moi|kính mời|kinh moi|mời|moi)\s+(?:các bạn|các em|quý thầy cô|sinh viên|mọi người)?\s*(?:cùng\s+)?(?:dành thời gian\s+)?(?:tham gia|tham dự)\s+(?:buổi\s+|chương trình\s+)?",
+    re.IGNORECASE,
+)
+
+
+def _is_greeting_line(line: str) -> bool:
+    norm = line.strip().lower()
+    return bool(re.match(r"^(?:thân chào|than chao|chào các|chao cac|chào bạn|chao ban|kính chào|kinh chao|kính gửi|kinh gui|dear|hi all|hello)\b", norm))
+
+
+def _is_separator_line(line: str) -> bool:
+    return bool(re.match(r"^[\s\-_=*~•#]+$", line))
+
+
+def _is_metadata_field_line(line: str) -> bool:
+    norm = re.sub(r"^[^\w\s]+", "", line).strip().lower()
+    for p in DISQUALIFIED_TITLE_PREFIXES:
+        if norm.startswith(p):
+            return True
+    if re.match(r"^https?://", norm):
+        return True
+    return False
+
+
 def _clean_event_title(raw_title: Optional[str]) -> str:
-    """Normalize whitespace in an extracted event title without stripping prefixes, postfixes, or brackets."""
+    """Normalize whitespace in an extracted event title, stripping pure generic channel tags like [HỖ TRỢ TRUYỀN THÔNG] while preserving brackets for actual event names."""
     t = re.sub(r"\s+", " ", (raw_title or "").strip())
+    t = GENERIC_CHANNEL_TAGS_PATTERN.sub("", t).strip()
     return t or "Untitled Event"
+
+
+def _extract_title_from_content(content: str) -> str:
+    """Scan content lines to discover the canonical event title, skipping greetings, tags, and metadata lines while preserving brackets."""
+    lines = [l.strip() for l in (content or "").splitlines() if l.strip()]
+    if not lines:
+        return "Untitled Event"
+
+    candidates = []
+    for idx, raw_line in enumerate(lines[:15]):
+        if _is_separator_line(raw_line):
+            continue
+        stripped = GENERIC_CHANNEL_TAGS_PATTERN.sub("", raw_line).strip()
+        if not stripped:
+            continue
+        if _is_greeting_line(stripped):
+            continue
+        if _is_metadata_field_line(stripped):
+            continue
+
+        clean_inv = INVITATION_PREFIX_PATTERN.sub("", stripped).strip()
+        if clean_inv and len(clean_inv) >= 5:
+            stripped = clean_inv
+
+        has_brackets = bool(re.search(r"\[.*?\]|【.*?】", stripped))
+        norm = stripped.lower()
+        has_keywords = bool(re.search(r"\b(workshop|seminar|hội nghị|hoi nghi|hội thảo|hoi thao|cuộc thi|cuoc thi|hội thi|hoi thi|tọa đàm|toa dam|giải đấu|giai dau|trường hè|truong he|gala|khóa học|khoa hoc|mini-course|talkshow|ngày hội|ngay hoi|đăng ký|dang ky|tuyển cộng tác viên|tuyen cong tac vien|bước chân yêu thương|nét son|green day|itogether|bản lĩnh it|stellar|thi thử|program)\b", norm))
+
+        score = 0
+        if has_brackets:
+            score += 25
+        if has_keywords:
+            score += 10
+        if stripped.isupper():
+            score += 5
+        if idx == 0:
+            score += 8
+        elif idx == 1:
+            score += 6
+        elif idx == 2:
+            score += 4
+        if len(stripped) >= 10:
+            score += 2
+
+        candidates.append((score, idx, stripped))
+
+    if candidates:
+        candidates.sort(key=lambda c: (-c[0], c[1]))
+        return candidates[0][2][:180]
+
+    return lines[0][:180]
 
 
 def _normalize_iso_datetime(val: Optional[str], default_time: str = "00:00") -> Optional[str]:
@@ -1796,8 +2396,21 @@ def _enrich_extracted_event_fields(
         raw_data["reason"] = f"guardrail_override ({reasoning_note})"
         return raw_data
 
-    if raw_data.get("title"):
-        raw_data["title"] = _clean_event_title(str(raw_data["title"]))
+    cur_title = (raw_data.get("title") or "").strip()
+    cleaned_title = _clean_event_title(cur_title)
+    if (
+        not cur_title
+        or cleaned_title == "Untitled Event"
+        or _is_greeting_line(cur_title)
+        or not GENERIC_CHANNEL_TAGS_PATTERN.sub("", cur_title).strip()
+    ):
+        inferred_title = _extract_title_from_content(content)
+        if inferred_title and inferred_title != "Untitled Event":
+            raw_data["title"] = inferred_title
+        else:
+            raw_data["title"] = cleaned_title
+    else:
+        raw_data["title"] = cleaned_title
 
     if not (raw_data.get("description") or "").strip():
         inferred_desc = _summarize_event_description(content)
@@ -1862,12 +2475,7 @@ def heuristic_extract_event(
     if not is_candidate:
         return {"is_event": False, "reason": reasoning_note}
 
-    title = ""
-    for line in combined.splitlines():
-        clean_line = line.strip().strip("#*-• ")
-        if len(clean_line) >= 5:
-            title = clean_line[:180]
-            break
+    title = _extract_title_from_content(combined)
     title = _clean_event_title(title)
 
     s_date, e_date, s_time, e_time = _extract_datetime_range_from_text(combined, published_at=published_at)
@@ -1988,61 +2596,182 @@ def fill_registration_from_media(media_urls: List[str], data: Dict[str, Any]) ->
 # ---------------------------------------------------------------------------
 # End-to-End Pipeline & CLI
 # ---------------------------------------------------------------------------
-async def process_post_url(
-    url: str,
-    api_key: str,
-    headless: bool = True,
-    include_non_events: bool = False,
-) -> Optional[Dict[str, Any]]:
-    """Scrape a single Facebook post URL and extract structured event JSON."""
-    if not is_facebook_post_url(url):
-        print(f" -> Warning: '{url}' does not look like a standard Facebook post URL; attempting anyway...")
+def _natural_sort_key(path: Path) -> List[Any]:
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", path.name)]
 
-    print(f"\nScraping URL: {url}")
-    post_data = await scrape_single_post(url, headless=headless)
-    content = (post_data.get("content") or "").strip()
-    media_urls: List[str] = post_data.get("media_urls") or []
-    pub_at = post_data.get("published_at")
-    pub_iso = pub_at.isoformat() if isinstance(pub_at, datetime) else datetime.now(LOCAL_TIMEZONE).isoformat()
-    fanpage_name = post_data.get("fanpage_name")
-    fanpage_url = post_data.get("fanpage_url")
-    source_label = fanpage_name or fanpage_url or "Facebook Post"
 
-    if not content and not media_urls:
-        err_msg = post_data.get("error") or "Could not extract any text or media from this post (may require login or invalid URL)."
-        print(f" -> Error: {err_msg}")
+def _find_default_posts_dir() -> Optional[Path]:
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        Path.cwd() / "posts",
+        script_dir / "posts",
+        script_dir.parent / "posts",
+        Path.cwd().parent / "posts",
+    ]
+    for cand in candidates:
+        if cand.is_dir():
+            return cand.resolve()
+    return None
+
+
+def _discover_sample_txt_files(posts_dir: Path, prefix: str = "sample") -> List[Path]:
+    """Return all `.txt` files inside `posts_dir` whose filename starts with `prefix` (case-insensitive)."""
+    pref = (prefix or "").lower()
+    matched = [
+        p
+        for p in posts_dir.iterdir()
+        if p.is_file()
+        and p.suffix.lower() == ".txt"
+        and (not pref or p.name.lower().startswith(pref))
+    ]
+    return sorted(matched, key=_natural_sort_key)
+
+
+_HEADER_LINE_RE = re.compile(
+    r"^(url|post[\s_]url|fanpage|fanpage[\s_]name|organizer|author|published[\s_]at|posted[\s_]at)\s*:\s*(.+)$",
+    flags=re.IGNORECASE,
+)
+_BODY_FANPAGE_RE = re.compile(
+    r"^[^\w\n]{0,6}\s*Fanpage(?:\s+cuộc\s+thi)?\s*:\s*(.+)$",
+    flags=re.IGNORECASE,
+)
+
+
+def _parse_iso_or_local_dt(raw: str) -> Optional[datetime]:
+    s = (raw or "").strip()
+    if not s:
         return None
-
-    raw_data: Optional[Dict[str, Any]] = None
-    extraction_method = "heuristic"
-
-    if api_key and content:
-        print(" -> Content scraped. Calling Gemini for event extraction...")
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=LOCAL_TIMEZONE)
+        return dt.astimezone(LOCAL_TIMEZONE)
+    except ValueError:
+        pass
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$", s)
+    if m:
+        d, mo, y, hh, mm = m.groups()
         try:
-            raw_data = call_gemini_text(content, pub_iso, source_label, api_key)
-            if raw_data:
-                extraction_method = "gemini"
-        except Exception as exc:
-            print(f" -> Gemini error ({exc}); falling back to heuristic extractor...")
+            return datetime(int(y), int(mo), int(d), int(hh or 0), int(mm or 0), tzinfo=LOCAL_TIMEZONE)
+        except ValueError:
+            return None
+    return None
+
+
+def _extract_fanpage_from_body(content: str) -> Optional[str]:
+    for raw_line in reversed(content.splitlines()):
+        m = _BODY_FANPAGE_RE.match(raw_line.strip())
+        if not m:
+            continue
+        candidate = m.group(1).strip()
+        if not candidate or re.search(r"https?://|fb\.com/|facebook\.com/|www\.", candidate, flags=re.IGNORECASE):
+            continue
+        cleaned = _clean_fanpage_name(candidate)
+        if cleaned:
+            return cleaned
+    return None
+
+
+def _parse_post_text_file(file_path: Path) -> Dict[str, Any]:
+    """Read a raw post `.txt` file and extract optional metadata headers or footer fanpage hints."""
+    try:
+        raw_text = file_path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        raw_text = file_path.read_text(encoding="utf-8", errors="replace")
+
+    lines = raw_text.splitlines()
+    first_line = lines[0].strip() if lines else ""
+
+    # Check if the first line is a source link or 'email'
+    detected_source_link: Optional[str] = None
+    detected_source_type: str = "text_file"
+    body_start_idx = 0
+
+    if first_line.lower() == "email":
+        detected_source_link = "email"
+        detected_source_type = "email"
+        body_start_idx = 1
+    elif first_line.lower().startswith(("http://", "https://")):
+        detected_source_link = first_line
+        detected_source_type = "facebook" if ("facebook.com" in first_line.lower() or "fb.com" in first_line.lower()) else "web"
+        body_start_idx = 1
+
+    headers: Dict[str, str] = {}
+    for idx in range(body_start_idx, len(lines)):
+        line = lines[idx]
+        stripped = line.strip()
+        if not stripped:
+            if headers:
+                body_start_idx = idx + 1
+            break
+        m = _HEADER_LINE_RE.match(stripped)
+        if not m:
+            break
+        headers[re.sub(r"[\s_]+", "_", m.group(1).lower())] = m.group(2).strip()
+        body_start_idx = idx + 1
+
+    content = "\n".join(lines[body_start_idx:]).strip() if (headers or body_start_idx > 0) else raw_text.strip()
+    header_url = headers.get("url") or headers.get("post_url") or (detected_source_link if detected_source_link and detected_source_link.startswith("http") else None)
+    header_dt = _parse_iso_or_local_dt(headers.get("published_at") or headers.get("posted_at") or "")
+    if header_dt is None:
+        mtime = file_path.stat().st_mtime
+        header_dt = datetime.fromtimestamp(mtime, tz=LOCAL_TIMEZONE)
+
+    fanpage_raw = headers.get("fanpage_name") or headers.get("fanpage") or headers.get("organizer") or headers.get("author")
+    fanpage_name = _clean_fanpage_name(fanpage_raw) or _extract_fanpage_from_body(content)
+    fanpage_url = _derive_fanpage_url_from_url(header_url)
+    source_label = fanpage_name or fanpage_url or ("Email" if detected_source_type == "email" else file_path.name)
+
+    return {
+        "post_id": file_path.stem,
+        "post_url": header_url,
+        "source_link": detected_source_link,
+        "input_url": header_url if (header_url and header_url.startswith("http")) else None,
+        "source_type": detected_source_type,
+        "source_file": str(file_path.resolve()),
+        "content": content,
+        "media_urls": [],
+        "published_at": header_dt,
+        "published_at_str": header_dt.isoformat(),
+        "fanpage_name": fanpage_name,
+        "fanpage_url": fanpage_url,
+        "source_label": source_label,
+    }
+
+
+def _finalize_event_record(
+    item: Dict[str, Any],
+    raw_data: Optional[Dict[str, Any]],
+    extraction_method: str,
+    include_non_events: bool,
+) -> Optional[Dict[str, Any]]:
+    """Enrich/filter raw extraction output and assemble the final JSON record."""
+    content = (item.get("content") or "").strip()
+    media_urls: List[str] = item.get("media_urls") or []
+    pub_at = item.get("published_at")
+    pub_dt = pub_at if isinstance(pub_at, datetime) else None
+    pub_iso = item.get("published_at_str") or (
+        pub_dt.isoformat() if pub_dt else datetime.now(LOCAL_TIMEZONE).isoformat()
+    )
+    fanpage_name = item.get("fanpage_name")
+    fanpage_url = item.get("fanpage_url")
 
     if raw_data is None:
-        if not api_key:
-            print(" -> GEMINI_API_KEY not set; using local heuristic extractor...")
+        extraction_method = "heuristic"
         raw_data = heuristic_extract_event(
             content=content,
             sender=fanpage_name,
-            published_at=pub_at if isinstance(pub_at, datetime) else None,
+            published_at=pub_dt,
         )
-    else:
+    elif extraction_method != "heuristic":
         raw_data = _enrich_extracted_event_fields(
             raw_data,
             content,
-            published_at=pub_at if isinstance(pub_at, datetime) else None,
+            published_at=pub_dt,
         )
 
     is_event = bool(raw_data.get("is_event"))
     if not is_event and not include_non_events:
-        print(" -> Analyzed: Post does not appear to be an upcoming/ongoing event (skipped).")
         return None
 
     if is_event:
@@ -2074,9 +2803,12 @@ async def process_post_url(
         "target_audience": raw_data.get("target_audience"),
         "category": cat_list,
         "format": fmt_list,
-        "post_id": post_data.get("post_id"),
-        "post_url": post_data.get("post_url") or url,
-        "input_url": url,
+        "post_id": item.get("post_id"),
+        "post_url": item.get("post_url"),
+        "source_link": item.get("source_link") or item.get("post_url") or item.get("input_url"),
+        "input_url": item.get("input_url"),
+        "source_type": item.get("source_type") or "facebook_url",
+        "source_file": item.get("source_file"),
         "posted_at": pub_iso,
         "fanpage_name": fanpage_name,
         "fanpage_url": fanpage_url,
@@ -2085,6 +2817,154 @@ async def process_post_url(
         "scraped_at": datetime.now(LOCAL_TIMEZONE).isoformat(),
     }
     return record
+
+
+def _extract_single_with_gemini_or_heuristic(
+    item: Dict[str, Any],
+    api_key: str = "",
+) -> Tuple[Dict[str, Any], str]:
+    content = (item.get("content") or "").strip()
+    has_ai = bool(_GLOBAL_KEY_POOL.has_keys() or api_key)
+    if has_ai and content:
+        try:
+            raw_data, method = call_gemini_text(
+                content,
+                item["published_at_str"],
+                item["source_label"],
+                api_key,
+            )
+            if isinstance(raw_data, dict):
+                return raw_data, method
+        except Exception as exc:
+            print(f" -> AI extraction error for {item.get('post_id')} ({exc}); falling back to heuristic extractor...")
+    return (
+        heuristic_extract_event(
+            content=content,
+            sender=item.get("fanpage_name"),
+            published_at=item.get("published_at") if isinstance(item.get("published_at"), datetime) else None,
+        ),
+        "heuristic",
+    )
+
+
+async def process_post_url(
+    url: str,
+    api_key: str,
+    headless: bool = True,
+    include_non_events: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """Scrape a single Facebook post URL and extract structured event JSON."""
+    if not is_facebook_post_url(url):
+        print(f" -> Warning: '{url}' does not look like a standard Facebook post URL; attempting anyway...")
+
+    print(f"\nScraping URL: {url}")
+    post_data = await scrape_single_post(url, headless=headless)
+    content = (post_data.get("content") or "").strip()
+    media_urls: List[str] = post_data.get("media_urls") or []
+    pub_at = post_data.get("published_at")
+    pub_iso = pub_at.isoformat() if isinstance(pub_at, datetime) else datetime.now(LOCAL_TIMEZONE).isoformat()
+    fanpage_name = post_data.get("fanpage_name")
+    fanpage_url = post_data.get("fanpage_url")
+    source_label = fanpage_name or fanpage_url or "Facebook Post"
+
+    if not content and not media_urls:
+        err_msg = post_data.get("error") or "Could not extract any text or media from this post (may require login or invalid URL)."
+        print(f" -> Error: {err_msg}")
+        return None
+
+    item = {
+        "post_id": post_data.get("post_id"),
+        "post_url": post_data.get("post_url") or url,
+        "source_link": post_data.get("post_url") or url,
+        "input_url": url,
+        "source_type": "facebook_url",
+        "source_file": None,
+        "content": content,
+        "media_urls": media_urls,
+        "published_at": pub_at if isinstance(pub_at, datetime) else None,
+        "published_at_str": pub_iso,
+        "fanpage_name": fanpage_name,
+        "fanpage_url": fanpage_url,
+        "source_label": source_label,
+    }
+    if api_key and content:
+        print(" -> Content scraped. Calling Gemini for event extraction...")
+    elif not api_key:
+        print(" -> GEMINI_API_KEY not set; using local heuristic extractor...")
+
+    raw_data, extraction_method = _extract_single_with_gemini_or_heuristic(item, api_key)
+    record = _finalize_event_record(item, raw_data, extraction_method, include_non_events=include_non_events)
+    if record is None:
+        print(" -> Analyzed: Post does not appear to be an upcoming/ongoing event (skipped).")
+    return record
+
+
+def process_text_files(
+    text_files: List[Path],
+    api_key: str,
+    include_non_events: bool = False,
+    batch_size: int = GEMINI_BATCH_SIZE,
+    delay_seconds: float = 0.5,
+) -> List[Dict[str, Any]]:
+    """Extract events from raw post `.txt` files (using batched Gemini calls with fallback)."""
+    parsed_items: List[Dict[str, Any]] = []
+    for path in text_files:
+        try:
+            item = _parse_post_text_file(path)
+        except Exception as exc:
+            print(f" -> Failed to read {path}: {exc}")
+            continue
+        if not item["content"]:
+            print(f" -> Skipping empty file: {path.name}")
+            continue
+        parsed_items.append(item)
+
+    if not parsed_items:
+        return []
+
+    results_map: Dict[str, Tuple[Dict[str, Any], str]] = {}
+    has_ai = bool(_GLOBAL_KEY_POOL.has_keys() or api_key)
+    if has_ai:
+        effective_batch = max(1, batch_size)
+        for start in range(0, len(parsed_items), effective_batch):
+            if start > 0 and delay_seconds > 0:
+                time.sleep(delay_seconds)
+            chunk = parsed_items[start : start + effective_batch]
+            chunk_names = ", ".join(it["post_id"] for it in chunk)
+            batch_out: Optional[Dict[str, Dict[str, Any]]] = None
+            batch_method = "gemini_batch"
+            if len(chunk) > 1:
+                print(f"\nCalling AI batch ({len(chunk)} posts): {chunk_names}")
+                try:
+                    batch_out, batch_method = call_gemini_batch_texts(chunk, api_key)
+                except Exception as exc:
+                    print(f" -> AI batch error ({exc}); falling back to per-post extraction...")
+                    batch_out = None
+
+            for item in chunk:
+                pid = item["post_id"]
+                if batch_out and isinstance(batch_out.get(pid), dict):
+                    results_map[pid] = (batch_out[pid], batch_method)
+                else:
+                    if len(chunk) > 1 and batch_out is not None:
+                        print(f" -> '{pid}' missing from batch response; retrying single-post call...")
+                    if delay_seconds > 0 and len(chunk) > 1:
+                        time.sleep(delay_seconds)
+                    results_map[pid] = _extract_single_with_gemini_or_heuristic(item, api_key)
+    else:
+        for item in parsed_items:
+            results_map[item["post_id"]] = _extract_single_with_gemini_or_heuristic(item, "")
+
+    output_records: List[Dict[str, Any]] = []
+    for item in parsed_items:
+        pid = item["post_id"]
+        raw_data, method = results_map[pid]
+        rec = _finalize_event_record(item, raw_data, method, include_non_events=include_non_events)
+        if rec is None:
+            print(f" -> SKIPPED non-event: {pid} [{method}]")
+            continue
+        output_records.append(rec)
+    return output_records
 
 
 def _load_existing_json(output_path: Path, overwrite: bool) -> Tuple[Any, List[Dict[str, Any]]]:
@@ -2104,16 +2984,26 @@ def _load_existing_json(output_path: Path, overwrite: bool) -> Tuple[Any, List[D
 
 
 def _upsert_record(records: List[Dict[str, Any]], new_rec: Dict[str, Any]) -> str:
-    """Insert or update an event record in-place by post_id or post_url."""
+    """Insert or update an event record in-place by source_file, post_id, post_url, input_url, or source_link."""
     new_pid = str(new_rec.get("post_id") or "").strip()
     new_url = str(new_rec.get("post_url") or "").strip()
     new_input = str(new_rec.get("input_url") or "").strip()
+    new_file = str(new_rec.get("source_file") or "").strip()
+    new_link = str(new_rec.get("source_link") or "").strip()
 
     for idx, existing in enumerate(records):
         ex_pid = str(existing.get("post_id") or "").strip()
         ex_url = str(existing.get("post_url") or "").strip()
         ex_input = str(existing.get("input_url") or "").strip()
-        if (new_pid and ex_pid == new_pid) or (new_url and ex_url == new_url) or (new_input and ex_input == new_input):
+        ex_file = str(existing.get("source_file") or "").strip()
+        ex_link = str(existing.get("source_link") or "").strip()
+        if (
+            (new_file and ex_file == new_file)
+            or (new_pid and ex_pid == new_pid)
+            or (new_url and ex_url == new_url)
+            or (new_input and ex_input == new_input)
+            or (new_link and new_link != "email" and ex_link == new_link)
+        ):
             records[idx] = new_rec
             return "updated"
 
@@ -2135,8 +3025,56 @@ def _save_json(output_path: Path, wrapper: Optional[Dict[str, Any]], records: Li
         json.dump(data_to_write, f, ensure_ascii=False, indent=2)
 
 
-def _collect_urls_from_args_and_prompt(args: argparse.Namespace) -> Tuple[List[str], Path]:
+def _add_dir_files(dir_path: Path, prefix: str, text_files: List[Path], seen_files: Set[Path]) -> None:
+    if not dir_path.is_dir():
+        print(f"Error: Posts folder not found: {dir_path}")
+        sys.exit(1)
+    found = _discover_sample_txt_files(dir_path, prefix=prefix)
+    if not found:
+        print(f"Warning: No '{prefix}*.txt' files found in {dir_path}")
+    for p in found:
+        rp = p.resolve()
+        if rp not in seen_files:
+            seen_files.add(rp)
+            text_files.append(rp)
+
+
+def _classify_input_token(
+    token: str,
+    prefix: str,
+    urls: List[str],
+    seen_urls: Set[str],
+    text_files: List[Path],
+    seen_files: Set[Path],
+) -> None:
+    clean = token.strip()
+    if not clean:
+        return
+    if clean.lower().startswith(("http://", "https://")):
+        if clean not in seen_urls:
+            seen_urls.add(clean)
+            urls.append(clean)
+        return
+    cand = Path(clean).expanduser()
+    if cand.is_dir():
+        _add_dir_files(cand, prefix, text_files, seen_files)
+        return
+    if cand.is_file() and cand.suffix.lower() == ".txt":
+        rp = cand.resolve()
+        if rp not in seen_files:
+            seen_files.add(rp)
+            text_files.append(rp)
+        return
+    if clean not in seen_urls:
+        seen_urls.add(clean)
+        urls.append(clean)
+
+
+def _collect_inputs_from_args_and_prompt(args: argparse.Namespace) -> Tuple[List[str], List[Path], Path]:
     urls: List[str] = []
+    seen_urls: Set[str] = set()
+    text_files: List[Path] = []
+    seen_files: Set[Path] = set()
 
     if args.file:
         file_path = Path(args.file).expanduser()
@@ -2145,21 +3083,39 @@ def _collect_urls_from_args_and_prompt(args: argparse.Namespace) -> Tuple[List[s
             sys.exit(1)
         for line in file_path.read_text(encoding="utf-8").splitlines():
             clean = line.strip()
-            if clean and not clean.startswith("#"):
+            if clean and not clean.startswith("#") and clean not in seen_urls:
+                seen_urls.add(clean)
                 urls.append(clean)
+
+    if args.posts_dir is not None:
+        if args.posts_dir == "auto":
+            detected = _find_default_posts_dir()
+            if detected is None:
+                print("Error: Could not locate a 'posts' folder automatically. Pass `-d <path/to/posts>`.")
+                sys.exit(1)
+            target_dir = detected
+        else:
+            target_dir = Path(args.posts_dir).expanduser()
+        _add_dir_files(target_dir, args.prefix, text_files, seen_files)
 
     for raw in args.urls:
         for part in raw.split(","):
-            clean = part.strip()
-            if clean:
-                urls.append(clean)
+            _classify_input_token(part, args.prefix, urls, seen_urls, text_files, seen_files)
 
     output_arg = args.output
-    if not urls:
+    if not urls and not text_files:
         if not output_arg:
             entered_out = input(f"Destination JSON file [{DEFAULT_OUTPUT_JSON}]: ").strip()
             output_arg = entered_out or DEFAULT_OUTPUT_JSON
-        print("Enter Facebook post URLs (one per line). Submit a blank line to start:")
+        default_dir = _find_default_posts_dir()
+        if default_dir:
+            print(f"Detected posts folder: {default_dir}")
+            print(
+                f"Enter a folder path, .txt file paths, or Facebook post URLs (one per line). "
+                f"Type 'posts' to load '{args.prefix}*.txt' from detected folder, then blank line to start:"
+            )
+        else:
+            print("Enter a folder path, .txt file paths, or Facebook post URLs (one per line). Submit a blank line to start:")
         while True:
             try:
                 line = input("> ").strip()
@@ -2167,29 +3123,44 @@ def _collect_urls_from_args_and_prompt(args: argparse.Namespace) -> Tuple[List[s
                 break
             if not line:
                 break
+            if line.lower() == "posts" and default_dir:
+                _add_dir_files(default_dir, args.prefix, text_files, seen_files)
+                continue
             for part in line.split(","):
-                clean = part.strip()
-                if clean:
-                    urls.append(clean)
+                _classify_input_token(part, args.prefix, urls, seen_urls, text_files, seen_files)
     elif not output_arg:
         output_arg = DEFAULT_OUTPUT_JSON
 
-    # Deduplicate input URLs while preserving order
-    seen: Set[str] = set()
-    unique_urls: List[str] = []
-    for u in urls:
-        if u not in seen:
-            seen.add(u)
-            unique_urls.append(u)
+    if args.limit is not None and args.limit > 0:
+        urls = urls[: args.limit]
+        remaining = max(0, args.limit - len(urls))
+        text_files = text_files[:remaining]
 
-    return unique_urls, Path(output_arg).expanduser().resolve()
+    return urls, text_files, Path(output_arg).expanduser().resolve()
 
 
 async def async_main() -> int:
     parser = argparse.ArgumentParser(
-        description="Standalone local Facebook post scraper & event extractor to JSON."
+        description="Standalone local Facebook post scraper & raw-text event extractor to JSON."
     )
-    parser.add_argument("urls", nargs="*", help="Facebook post URLs to scrape and extract.")
+    parser.add_argument(
+        "urls",
+        nargs="*",
+        help="Facebook post URLs, a posts folder path, or raw post .txt file paths.",
+    )
+    parser.add_argument(
+        "-d", "--dir", "--posts-dir",
+        dest="posts_dir",
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Folder containing post .txt files (auto-detects ./posts or ../posts if omitted).",
+    )
+    parser.add_argument(
+        "--prefix",
+        default="sample",
+        help="Filename prefix filter when scanning --posts-dir (default: 'sample'; pass '' for all .txt).",
+    )
     parser.add_argument(
         "-o", "--output",
         help=f"Destination JSON file path (default: {DEFAULT_OUTPUT_JSON}).",
@@ -2200,8 +3171,31 @@ async def async_main() -> int:
     )
     parser.add_argument(
         "--api-key",
-        default=os.environ.get("GEMINI_API_KEY", "").strip(),
-        help="Google Gemini API key (defaults to GEMINI_API_KEY env var). Uses heuristic fallback if omitted.",
+        default="",
+        help="Google Gemini API key(s) (comma-separated for key rotation). Defaults to GEMINI_API_KEYS / GEMINI_API_KEY env vars or DEFAULT_GEMINI_API_KEY.",
+    )
+    parser.add_argument(
+        "--groq-key",
+        default="",
+        help="Groq API key for ultra-fast secondary fallback. Defaults to GROQ_API_KEY env var or DEFAULT_GROQ_API_KEY.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=GEMINI_BATCH_SIZE,
+        help=f"Number of text files per Gemini batch call (default: {GEMINI_BATCH_SIZE}).",
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.5,
+        help="Delay in seconds between Gemini requests when processing text files (default: 0.5).",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optional max number of inputs to process.",
     )
     parser.add_argument(
         "--overwrite",
@@ -2220,17 +3214,49 @@ async def async_main() -> int:
     )
     args = parser.parse_args()
 
-    urls, output_path = _collect_urls_from_args_and_prompt(args)
-    if not urls:
-        print("No URLs provided. Exiting.")
+    urls, text_files, output_path = _collect_inputs_from_args_and_prompt(args)
+    if not urls and not text_files:
+        print("No URLs or text files provided. Exiting.")
         return 1
 
-    api_key = (args.api_key or "").strip()
-    if not api_key:
-        print("Note: GEMINI_API_KEY is not set; local heuristic extraction will be used.")
+    if args.api_key:
+        _GLOBAL_KEY_POOL.add_keys(args.api_key)
+    if args.groq_key:
+        os.environ["GROQ_API_KEY"] = args.groq_key.strip()
+
+    # Load defaults & env into pool
+    _GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEYS"))
+    _GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEY"))
+    _GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEYS)
+    _GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEY)
+
+    has_gemini = _GLOBAL_KEY_POOL.has_keys()
+    if has_gemini:
+        print(f"Gemini API configured with {len(_GLOBAL_KEY_POOL.keys)} key(s) in rotation pool (auto-discovering 2.x models).")
+    else:
+        print("Note: Gemini API key not set; local heuristic extraction will be used.")
+
+    api_key = _GLOBAL_KEY_POOL.get_active_key() or ""
 
     wrapper, records = _load_existing_json(output_path, overwrite=args.overwrite)
     added_or_updated = 0
+
+    if text_files:
+        print(f"Found {len(text_files)} post text file(s) to process.")
+        extracted_text_records = process_text_files(
+            text_files=text_files,
+            api_key=api_key,
+            include_non_events=args.include_non_events,
+            batch_size=args.batch_size,
+            delay_seconds=args.delay,
+        )
+        for rec in extracted_text_records:
+            action = _upsert_record(records, rec)
+            added_or_updated += 1
+            print(
+                f" -> {action.upper()} [{rec.get('post_id')}]: '{rec.get('title') or 'Non-event'}' "
+                f"[is_event={rec.get('is_event')}, {rec.get('extraction_method')}]"
+            )
 
     for url in urls:
         try:
@@ -2250,7 +3276,7 @@ async def async_main() -> int:
         except Exception as exc:
             print(f" -> Failed to process {url}: {exc}")
 
-    if added_or_updated > 0 or (args.overwrite and not output_path.exists()):
+    if added_or_updated > 0 or args.overwrite:
         _save_json(output_path, wrapper, records)
         print(f"\nDone! Saved {added_or_updated} post(s) (total {len(records)} in file) -> {output_path}")
     else:

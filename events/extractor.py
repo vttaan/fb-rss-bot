@@ -38,7 +38,109 @@ from database import (
     init_db,
 )
 
+def _load_env_file() -> None:
+    """Lightweight zero-dependency .env loader that checks cwd and parent dirs."""
+    search_dirs = [Path.cwd(), Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+    for d in search_dirs:
+        env_path = d / ".env"
+        if env_path.is_file():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+            except Exception:
+                pass
+            break
+
+
+_load_env_file()
+
+# Set your Gemini API key directly here (or leave empty to use GEMINI_API_KEY env var):
+DEFAULT_GEMINI_API_KEY = ""
+DEFAULT_GEMINI_API_KEYS: List[str] = []
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-lite"
+
+# Groq API Fallback Configuration (Free tier: https://console.groq.com)
+DEFAULT_GROQ_API_KEY = ""
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "llama-3.2-3b-preview",
+    "llama-3.2-1b-preview",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+    "qwen-2.5-32b",
+]
+GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
+
+
+class GeminiKeyPool:
+    """Manages a pool of Gemini API keys with automatic rotation on 429 (rate limits) and 403."""
+
+    def __init__(self, initial_keys: Optional[List[str]] = None):
+        self.keys: List[str] = []
+        self._index = 0
+        self._cooldowns: Dict[str, float] = {}
+        if initial_keys:
+            self.add_keys(initial_keys)
+
+    def add_keys(self, raw: Any) -> None:
+        if isinstance(raw, list):
+            for x in raw:
+                self.add_keys(x)
+        elif isinstance(raw, str) and raw.strip():
+            for part in re.split(r"[,\s;]+", raw.strip()):
+                clean = part.strip().strip("'\"")
+                if clean and clean not in self.keys:
+                    self.keys.append(clean)
+
+    def has_keys(self) -> bool:
+        return bool(self.keys)
+
+    def get_active_key(self) -> Optional[str]:
+        if not self.keys:
+            return None
+        now = time.time()
+        for i in range(len(self.keys)):
+            idx = (self._index + i) % len(self.keys)
+            k = self.keys[idx]
+            if self._cooldowns.get(k, 0) <= now:
+                self._index = idx
+                return k
+        return min(self.keys, key=lambda k: self._cooldowns.get(k, 0))
+
+    def mark_rate_limited(self, key: str, wait_seconds: float = 60.0) -> Optional[str]:
+        self._cooldowns[key] = time.time() + max(10.0, wait_seconds)
+        self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+    def mark_invalid(self, key: str) -> Optional[str]:
+        self._cooldowns[key] = time.time() + 86400.0  # 24h
+        self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+
+_GLOBAL_KEY_POOL = GeminiKeyPool()
+_GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEYS"))
+_GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEY"))
+_GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEYS)
+_GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEY)
+if _GLOBAL_KEY_POOL.has_keys() and not os.environ.get("GEMINI_API_KEY"):
+    os.environ["GEMINI_API_KEY"] = _GLOBAL_KEY_POOL.get_active_key() or ""
+
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_LIST_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_CACHED_CONTENTS_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
@@ -118,7 +220,7 @@ WHAT DOES NOT COUNT (`is_event: false`) — Empirical Disqualification Rules:
 
 EXTRACTION RULES:
 - `reason`: 1 concise sentence explaining the content reasoning decision (why `is_event` is true or which disqualification rule made it false).
-- `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển Cộng tác viên Tình nguyện - Bước Chân Yêu Thương", "Seminar on Legal AI Beyond the Demo"). Do NOT use countdown hooks like "3 DAYS LEFT" or tags like "[HỖ TRỢ TRUYỀN THÔNG]" alone as the title.
+- `title`: Extract the canonical name of the event/competition/program. KEEP any meaningful bracketed text intact (e.g., "[BUILD ON STELLAR] — FROM ZERO TO YOUR FIRST WEB3 APP", "[THI THỬ TOEIC – VƯƠN TẦM HỘI NHẬP]", "[TRAO YÊU THƯƠNG - ĐỔI HẠNH PHÚC]"). Read past any initial salutations (like "Thân chào các bạn") or meta tags (like "[HỖ TRỢ TRUYỀN THÔNG]", "[HTTT]", "[THÔNG BÁO]") to find the real event title in the content body. Do NOT use countdown hooks like "3 DAYS LEFT" or generic meta tags alone as the title.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
 - `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
 - `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
@@ -156,6 +258,35 @@ Post text:
 \"\"\"
 {content}
 \"\"\""""
+
+USER_BATCH_POSTS_TEMPLATE = """Analyze each of the {count} posts below independently using the JSON schema in your system instructions.
+Return ONLY a JSON array with one object per post in the same order, adding `"post_id": "<post_id>"` to each object.
+
+{posts_block}"""
+
+GROQ_SYSTEM_PROMPT = """You extract university event details from posts into JSON.
+Determine whether each post announces or promotes an UPCOMING or ONGOING EVENT or organized student activity (`is_event: true`).
+DO NOT count finished event recaps (`[RECAP]`, `tổng kết`), honor rolls/awards, internal committee congresses, administrative notices, or job ads (`is_event: false`).
+
+Extraction schema (return ONLY valid JSON):
+{
+  "is_event": boolean,
+  "reason": "1 concise sentence explaining the decision",
+  "title": "Canonical event name, keeping bracketed text (e.g. [BUILD ON STELLAR]) and stripping salutations/meta tags",
+  "description": "2-3 sentence summary of main activities, dates, and student benefits/prizes",
+  "event_start_datetime": "ISO 8601 (+07:00) or null",
+  "event_end_datetime": "ISO 8601 (+07:00) or null",
+  "reg_start_datetime": "ISO 8601 (+07:00) or null",
+  "reg_end_datetime": "ISO 8601 (+07:00) or null",
+  "location": "Venue/address or null",
+  "organizer": "Organizing unit or null",
+  "registration_url": "Literal registration form link or null",
+  "fee": "Fee/ticket cost or null",
+  "is_online": boolean or null,
+  "target_audience": ["array of strings"] or null,
+  "category": ["array of strings"],
+  "format": ["array of strings"]
+}"""
 
 # Legacy combined prompt alias for backward compatibility
 PROMPT = SYSTEM_REGULATIONS + "\n\n" + USER_POST_TEMPLATE
@@ -331,10 +462,10 @@ def looks_event_related(content: str) -> bool:
 
 
 FALLBACK_GEMINI_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
 # In-memory registry of active Gemini cachedContents handles per model:
@@ -343,24 +474,88 @@ _CACHED_SYSTEM_HANDLES: Dict[str, Tuple[str, float]] = {}
 _CACHE_UNSUPPORTED_MODELS: set[str] = set()
 
 
-def _candidate_gemini_models() -> List[str]:
-    """Return ordered list of Gemini model IDs to try, normalizing any `models/` prefix or retired 1.5 aliases."""
-    global _WORKING_GEMINI_MODEL
-    if _WORKING_GEMINI_MODEL:
-        return [_WORKING_GEMINI_MODEL] + [m for m in FALLBACK_GEMINI_MODELS if m != _WORKING_GEMINI_MODEL]
+_CACHED_GEMINI_V2_MODELS: Dict[str, List[str]] = {}
 
-    raw = (os.environ.get("GEMINI_MODEL") or "").strip().strip("'\"")
+
+def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
+    """Dynamically query Google Gemini API to fetch available models and select those starting with 2.
+
+    Prevents HTTP 404 (model not found) by ensuring we only request active models enabled for this key.
+    """
+    global _CACHED_GEMINI_V2_MODELS
+    if not api_key:
+        return [m for m in FALLBACK_GEMINI_MODELS if "2" in m]
+
+    key_hash = api_key[-8:] if len(api_key) > 8 else api_key
+    if key_hash in _CACHED_GEMINI_V2_MODELS:
+        return _CACHED_GEMINI_V2_MODELS[key_hash]
+
+    discovered_v2: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GEMINI_LIST_MODELS_URL,
+            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for item in data.get("models", []):
+            name = item.get("name") or ""
+            model_id = name.replace("models/", "").strip()
+            methods = item.get("supportedGenerationMethods") or []
+            if "generateContent" not in methods:
+                continue
+
+            version = str(item.get("version") or "")
+            # Filter for models starting with 2 (e.g. gemini-2.*, version 2.*)
+            if model_id.startswith("gemini-2") or version.startswith("2") or model_id.startswith("2"):
+                discovered_v2.append(model_id)
+    except Exception:
+        pass
+
+    # Sort to prioritize flash-lite (lightweight/fast/reliable free tier), then flash, then others
+    def _rank_v2(m_name: str) -> int:
+        n = m_name.lower()
+        if "flash-lite" in n:
+            return 0
+        if "flash" in n:
+            return 1
+        return 2
+
+    discovered_v2.sort(key=_rank_v2)
+
+    # Fallback to curated 2.x list if network discovery failed
+    if not discovered_v2:
+        discovered_v2 = [m for m in FALLBACK_GEMINI_MODELS if "2" in m] or FALLBACK_GEMINI_MODELS
+
+    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered_v2
+    return discovered_v2
+
+
+def _candidate_gemini_models(api_key: str = "") -> List[str]:
+    global _WORKING_GEMINI_MODEL
+    v2_models = _fetch_gemini_models_v2(api_key)
+
+    if _WORKING_GEMINI_MODEL:
+        return [_WORKING_GEMINI_MODEL] + [m for m in v2_models if m != _WORKING_GEMINI_MODEL]
+
+    raw = (os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL or "").strip().strip("'\"")
     if raw.startswith("models/"):
         raw = raw[len("models/"):].strip()
 
-    # Map retired Gemini 1.0/1.5 model names that now return HTTP 404 on v1beta
-    retired_prefixes = ("gemini-1.5", "gemini-1.0", "gemini-pro")
+    retired_prefixes = ("gemini-1.0", "gemini-pro-vision")
     candidates: List[str] = []
     if raw and not raw.lower().startswith(retired_prefixes):
         candidates.append(raw)
+
+    for m in v2_models:
+        if m not in candidates:
+            candidates.append(m)
+
     for fallback in FALLBACK_GEMINI_MODELS:
         if fallback not in candidates:
             candidates.append(fallback)
+
     return candidates
 
 
@@ -462,52 +657,262 @@ def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float
     return min(4.0 * (2 ** attempt), 32.0)
 
 
-def _execute_gemini_generate(user_text: str, api_key: str) -> Any:
-    """Execute a Gemini `generateContent` request with model fallback, context caching, and 429 backoff."""
-    global _WORKING_GEMINI_MODEL
-    last_exc: Optional[Exception] = None
+_CACHED_GROQ_MODELS: List[str] = []
+_CACHED_GROQ_MODELS_TIME: float = 0.0
 
-    for model in _candidate_gemini_models():
-        for attempt in range(GEMINI_MAX_RETRIES + 1):
-            body_bytes = _build_gemini_request_body(user_text, model, api_key)
+
+def _get_available_groq_models(groq_key: str = "") -> List[str]:
+    """Dynamically query Groq /openai/v1/models to fetch all active chat models for this API key.
+
+    Falls back to curated list if query fails or key has no /models access.
+    """
+    global _CACHED_GROQ_MODELS, _CACHED_GROQ_MODELS_TIME
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return FALLBACK_GROQ_MODELS
+
+    now = time.time()
+    if _CACHED_GROQ_MODELS and (now - _CACHED_GROQ_MODELS_TIME) < 600:
+        return _CACHED_GROQ_MODELS
+
+    discovered: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GROQ_MODELS_URL,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "User-Agent": "EventExtractor/2.0",
+            },
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        items = data.get("data") or []
+        for m in items:
+            m_id = m.get("id") or ""
+            is_active = m.get("active", True)
+            if not is_active or not m_id:
+                continue
+            # Filter out non-chat models (audio transcription, guardrails, embeddings, tts)
+            low = m_id.lower()
+            if any(skip in low for skip in ("whisper", "prompt-guard", "guard", "embed", "tts", "moderation")):
+                continue
+            discovered.append(m_id)
+    except Exception:
+        pass
+
+    priority_order = [
+        DEFAULT_GROQ_MODEL,
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama-3.2-3b-preview",
+        "llama-3.2-1b-preview",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+        "qwen-2.5-32b",
+    ]
+
+    sorted_models: List[str] = []
+    for p in priority_order:
+        if p and p in discovered and p not in sorted_models:
+            sorted_models.append(p)
+    for d in discovered:
+        if d not in sorted_models:
+            sorted_models.append(d)
+    if not sorted_models:
+        for m in priority_order:
+            if m and m not in sorted_models:
+                sorted_models.append(m)
+
+    _CACHED_GROQ_MODELS = sorted_models
+    _CACHED_GROQ_MODELS_TIME = now
+    return sorted_models
+
+
+def _call_groq_json(user_text: str, groq_key: str = "", max_output_tokens: int = 1500) -> Any:
+    """Send prompt to Groq API (OpenAI-compatible) when Gemini fails or runs out of quota."""
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return None
+
+    models = _get_available_groq_models(key)
+    last_exc = None
+
+    # Limit input length to prevent triggering Groq free-tier token ceilings
+    clean_user_text = user_text
+    if len(clean_user_text) > 4500 and "--- POST " not in clean_user_text:
+        clean_user_text = clean_user_text[:4500] + '\n"""\n[Content truncated for token ceiling]'
+
+    for model in models:
+        for use_json_mode in (True, False):
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": GROQ_SYSTEM_PROMPT
+                        + "\n\nCRITICAL: Respond ONLY with a valid JSON object or array according to schema.",
+                    },
+                    {"role": "user", "content": clean_user_text},
+                ],
+                "temperature": 0.0,
+                "max_tokens": max_output_tokens,
+            }
+            if use_json_mode:
+                payload["response_format"] = {"type": "json_object"}
+
             req = urllib.request.Request(
-                GEMINI_URL.format(model=model),
-                data=body_bytes,
-                headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+                GROQ_CHAT_COMPLETIONS_URL,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {key}",
+                    "User-Agent": "EventExtractor/2.0",
+                },
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
-                    payload = json.loads(resp.read().decode("utf-8"))
-                _WORKING_GEMINI_MODEL = model
-                text = payload["candidates"][0]["content"]["parts"][0]["text"]
-                return json.loads(text)
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+                content_str = resp_data["choices"][0]["message"]["content"]
+
+                # Parse JSON safely, handling markdown code fences if model wrapped them
+                parsed = None
+                try:
+                    parsed = json.loads(content_str)
+                except Exception:
+                    m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content_str)
+                    if m:
+                        parsed = json.loads(m.group(1).strip())
+                    else:
+                        first_brace = content_str.find("{")
+                        first_bracket = content_str.find("[")
+                        start_idx = -1
+                        if first_brace != -1 and first_bracket != -1:
+                            start_idx = min(first_brace, first_bracket)
+                        elif first_brace != -1:
+                            start_idx = first_brace
+                        elif first_bracket != -1:
+                            start_idx = first_bracket
+
+                        last_brace = content_str.rfind("}")
+                        last_bracket = content_str.rfind("]")
+                        end_idx = max(last_brace, last_bracket)
+                        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                            parsed = json.loads(content_str[start_idx : end_idx + 1])
+
+                if parsed is not None:
+                    print(f"[events] Successfully extracted via Groq fallback ({model})")
+                    return parsed
             except urllib.error.HTTPError as exc:
                 last_exc = exc
-                # If a cachedContent handle expired or was invalidated, evict it and retry immediately with system_instruction
-                if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
-                    _CACHED_SYSTEM_HANDLES.pop(model, None)
-                    _CACHE_UNSUPPORTED_MODELS.add(model)
+                err_msg = ""
+                try:
+                    err_body = exc.read().decode("utf-8", errors="replace")
+                    err_json = json.loads(err_body)
+                    err_msg = err_json.get("error", {}).get("message", err_body)
+                except Exception:
+                    err_msg = exc.reason
+
+                # If json_object response_format not supported by this model, retry without it
+                if use_json_mode and exc.code == 400 and "response_format" in err_msg.lower():
                     continue
-                if exc.code in (400, 404):
-                    break  # try next model
-                if exc.code in (429, 500, 502, 503, 504):
+
+                # If request was too long, trim input further and try next model
+                if exc.code in (400, 413) and any(w in err_msg.lower() for w in ("too long", "context_length", "tokens", "rate_limit_exceeded")):
+                    print(f"[events] Groq model '{model}' token limit error: {err_msg}")
+                    if len(clean_user_text) > 2500:
+                        clean_user_text = clean_user_text[:2500] + '\n"""\n[Truncated]'
+                    break
+
+                print(f"[events] Groq model '{model}' HTTP {exc.code}: {err_msg}")
+                # Don't retry second pass on 404 (model not found), 401/403 (auth), or 429 (rate limit)
+                break
+            except Exception as exc:
+                last_exc = exc
+                print(f"[events] Groq error for model '{model}': {exc}")
+                break
+
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
+    """Execute a Gemini `generateContent` request with key rotation across pooled keys, model fallback, and retry."""
+    global _WORKING_GEMINI_MODEL, _GLOBAL_KEY_POOL
+    pool = _GLOBAL_KEY_POOL
+    if api_key:
+        pool.add_keys(api_key)
+    if not pool.has_keys():
+        pool.add_keys(os.environ.get("GEMINI_API_KEYS"))
+        pool.add_keys(os.environ.get("GEMINI_API_KEY"))
+        pool.add_keys(DEFAULT_GEMINI_API_KEYS)
+        pool.add_keys(DEFAULT_GEMINI_API_KEY)
+
+    if not pool.has_keys():
+        raise ValueError("No Gemini API key configured.")
+
+    last_exc: Optional[Exception] = None
+    max_key_attempts = max(1, len(pool.keys))
+    for key_attempt in range(max_key_attempts):
+        active_key = pool.get_active_key()
+        if not active_key:
+            break
+
+        for model in _candidate_gemini_models(active_key):
+            for attempt in range(GEMINI_MAX_RETRIES + 1):
+                body_bytes = _build_gemini_request_body(user_text, model, active_key)
+                req = urllib.request.Request(
+                    GEMINI_URL.format(model=model),
+                    data=body_bytes,
+                    headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
+                        payload = json.loads(resp.read().decode("utf-8"))
+                    _WORKING_GEMINI_MODEL = model
+                    text = payload["candidates"][0]["content"]["parts"][0]["text"]
+                    return json.loads(text)
+                except urllib.error.HTTPError as exc:
+                    last_exc = exc
+                    if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
+                        _CACHED_SYSTEM_HANDLES.pop(model, None)
+                        _CACHE_UNSUPPORTED_MODELS.add(model)
+                        continue
+                    if exc.code in (400, 404):
+                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
+                        break
+                    if exc.code == 403:
+                        print(f"[events] Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) returned HTTP 403 Forbidden ({exc.reason}).")
+                        if len(pool.keys) > 1:
+                            pool.mark_invalid(active_key)
+                            break
+                        raise
+                    if exc.code in (429, 500, 502, 503, 504):
+                        if exc.code == 429 and len(pool.keys) > 1:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f"[events] Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) hit HTTP 429 Rate Limit. Rotating to next key in pool...")
+                            pool.mark_rate_limited(active_key, wait_s)
+                            break
+                        if attempt < GEMINI_MAX_RETRIES:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
+                            time.sleep(wait_s)
+                            continue
+                        break
+                    raise
+                except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
+                    last_exc = exc
                     if attempt < GEMINI_MAX_RETRIES:
                         wait_s = _retry_delay_seconds(attempt, exc)
-                        print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
+                        print(f"[events] Gemini {model} network error ({exc}); retrying in {wait_s:.1f}s...")
                         time.sleep(wait_s)
                         continue
-                    # Exhausted retries on this model (e.g. per-model RPM/RPD quota) -> try next fallback model
                     break
-                raise
-            except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
-                last_exc = exc
-                if attempt < GEMINI_MAX_RETRIES:
-                    wait_s = _retry_delay_seconds(attempt, exc)
-                    print(f"[events] Gemini {model} network/timeout error ({exc}); retrying in {wait_s:.1f}s...")
-                    time.sleep(wait_s)
-                    continue
-                break
 
     if last_exc is not None:
         raise last_exc
@@ -518,28 +923,33 @@ def call_gemini_text(
     content: str,
     published_at_str: str,
     source_name: str,
-    api_key: str,
+    api_key: str = "",
 ) -> Optional[Dict[str, Any]]:
-    """Send ONLY the raw post/email text to Gemini (regulations are cached / passed in system_instruction)."""
+    """Send text to Gemini (with key rotation and dynamic Gemini-2 model discovery)."""
     user_text = USER_POST_TEMPLATE.format(
         published_at=published_at_str,
         fanpage=source_name,
         content=(content or "")[:6000],
     )
-    data = _execute_gemini_generate(user_text, api_key)
-    if isinstance(data, list):
-        data = data[0] if data else {}
-    return data if isinstance(data, dict) else None
+    try:
+        data = _execute_gemini_generate(user_text, api_key)
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        if isinstance(data, dict):
+            return data
+    except Exception as exc:
+        print(f"[events] Gemini error ({exc}); falling back to heuristic...")
+
+    return None
 
 
 def call_gemini_batch(
     posts: List[Post],
     fanpage_name: str,
-    api_key: str,
+    api_key: str = "",
 ) -> Optional[Dict[str, Dict[str, Any]]]:
     """
-    Send a batch of raw posts in a SINGLE Gemini API call while keeping `SYSTEM_REGULATIONS`
-    cached/in `system_instruction`. Dramatically reduces Requests-Per-Minute (RPM) and 429 errors.
+    Send a batch of raw posts in a SINGLE Gemini API call (with key rotation).
     Returns a dict mapping `post_id -> extracted_dict`.
     """
     if not posts:
@@ -548,41 +958,65 @@ def call_gemini_batch(
         single = call_gemini(posts[0], fanpage_name, api_key)
         return {posts[0].post_id: single} if isinstance(single, dict) else None
 
-    items_payload = [
-        {
-            "post_id": p.post_id,
-            "published_at": p.published_at.isoformat() if p.published_at else "unknown",
-            "fanpage": fanpage_name,
-            "content": (p.content or "")[:4500],
-        }
-        for p in posts
-    ]
-    user_text = (
-        f"Extract event information for each of the following {len(items_payload)} posts. "
-        f"Return a JSON array of {len(items_payload)} objects in the exact same order, "
-        f"each including its matching `post_id`:\n"
-        + json.dumps({"posts": items_payload}, ensure_ascii=False)
+    blocks: List[str] = []
+    for idx, p in enumerate(posts, start=1):
+        pub_str = p.published_at.isoformat() if p.published_at else "unknown"
+        blocks.append(
+            f'--- POST {idx} (post_id: "{p.post_id}") ---\n'
+            + USER_POST_TEMPLATE.format(
+                published_at=pub_str,
+                fanpage=fanpage_name,
+                content=(p.content or "")[:4500],
+            )
+        )
+    user_text = USER_BATCH_POSTS_TEMPLATE.format(
+        count=len(posts),
+        posts_block="\n\n".join(blocks),
     )
-    data = _execute_gemini_generate(user_text, api_key)
-    if isinstance(data, dict) and isinstance(data.get("posts"), list):
-        data = data["posts"]
-    elif isinstance(data, dict) and isinstance(data.get("events"), list):
-        data = data["events"]
 
-    if not isinstance(data, list):
-        return None
+    def _unpack_batch(data: Any) -> Optional[Dict[str, Dict[str, Any]]]:
+        if isinstance(data, dict):
+            for key in ("results", "posts", "events", "items"):
+                if isinstance(data.get(key), list):
+                    data = data[key]
+                    break
+            else:
+                if "post_id" in data:
+                    data = [data]
+        if not isinstance(data, list):
+            return None
+        result_map: Dict[str, Dict[str, Any]] = {}
+        known_ids = {p.post_id for p in posts}
+        for idx, item in enumerate(data):
+            if not isinstance(item, dict):
+                continue
+            pid = str(item.get("post_id") or "").strip()
+            if pid in known_ids:
+                result_map[pid] = item
+            elif len(data) == len(posts):
+                result_map[posts[idx].post_id] = item
+        return result_map or None
 
-    result_map: Dict[str, Dict[str, Any]] = {}
-    for idx, item in enumerate(data):
-        if not isinstance(item, dict):
-            continue
-        pid = str(item.get("post_id") or "").strip()
-        if not pid and idx < len(posts):
-            pid = posts[idx].post_id
-        if pid:
-            result_map[pid] = item
+    # 1. Try Gemini
+    try:
+        data = _execute_gemini_generate(user_text, api_key)
+        mapped = _unpack_batch(data)
+        if mapped:
+            return mapped
+    except Exception as exc:
+        print(f"[events] Gemini batch error ({exc}); retrying batch posts individually via Gemini...")
+        single_mapped: Dict[str, Dict[str, Any]] = {}
+        for p in posts:
+            try:
+                single = call_gemini(p, fanpage_name, api_key)
+                if isinstance(single, dict) and single:
+                    single_mapped[p.post_id] = single
+            except Exception as single_exc:
+                print(f"[events] Individual fallback failed for post '{p.post_id}': {single_exc}")
+        if single_mapped:
+            return single_mapped
 
-    return result_map if result_map else None
+    return None
 
 
 def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
@@ -823,10 +1257,100 @@ def _summarize_event_description(content: str) -> Optional[str]:
     return summary[:450] + ("..." if len(summary) > 450 else "")
 
 
+GENERIC_CHANNEL_TAGS_PATTERN = re.compile(
+    r"^[\[\(【\s]*(?:hỗ trợ truyền thông|ho tro truyen thong|httt|chia sẻ thông tin|chia se thong tin|thông báo|thong bao|tin tức|tin tuc|recap|góc chia sẻ|goc chia se|góc tuyển dụng|goc tuyen dung)[\]\)】\s]*",
+    re.IGNORECASE,
+)
+
+DISQUALIFIED_TITLE_PREFIXES = (
+    "link đăng ký", "link dang ky", "form đăng ký", "form dang ky",
+    "thời gian", "thoi gian", "địa điểm", "dia diem", "đối tượng", "doi tuong",
+    "lệ phí", "le phi", "hạn đăng ký", "han dang ky", "thời hạn", "thoi han",
+    "lưu ý", "luu y", "quyền lợi", "quyen loi", "thông tin chi tiết", "thong tin chi tiet",
+    "thông tin kỳ thi", "thong tin ky thi", "hotline", "fanpage", "liên hệ", "lien he",
+)
+
+INVITATION_PREFIX_PATTERN = re.compile(
+    r"^(?:fit\.hcmus\s+|clb\s+[^\n\r,–—]+\s+)?(?:thân mời|than moi|kính mời|kinh moi|mời|moi)\s+(?:các bạn|các em|quý thầy cô|sinh viên|mọi người)?\s*(?:cùng\s+)?(?:dành thời gian\s+)?(?:tham gia|tham dự)\s+(?:buổi\s+|chương trình\s+)?",
+    re.IGNORECASE,
+)
+
+
+def _is_greeting_line(line: str) -> bool:
+    norm = line.strip().lower()
+    return bool(re.match(r"^(?:thân chào|than chao|chào các|chao cac|chào bạn|chao ban|kính chào|kinh chao|kính gửi|kinh gui|dear|hi all|hello)\b", norm))
+
+
+def _is_separator_line(line: str) -> bool:
+    return bool(re.match(r"^[\s\-_=*~•#]+$", line))
+
+
+def _is_metadata_field_line(line: str) -> bool:
+    norm = re.sub(r"^[^\w\s]+", "", line).strip().lower()
+    for p in DISQUALIFIED_TITLE_PREFIXES:
+        if norm.startswith(p):
+            return True
+    if re.match(r"^https?://", norm):
+        return True
+    return False
+
+
 def _clean_event_title(raw_title: Optional[str]) -> str:
-    """Normalize whitespace in an extracted event title without stripping prefixes, postfixes, or brackets."""
+    """Normalize whitespace in an extracted event title, stripping pure generic channel tags like [HỖ TRỢ TRUYỀN THÔNG] while preserving brackets for actual event names."""
     t = re.sub(r"\s+", " ", (raw_title or "").strip())
+    t = GENERIC_CHANNEL_TAGS_PATTERN.sub("", t).strip()
     return t or "Untitled Event"
+
+
+def _extract_title_from_content(content: str) -> str:
+    """Scan content lines to discover the canonical event title, skipping greetings, tags, and metadata lines while preserving brackets."""
+    lines = [l.strip() for l in (content or "").splitlines() if l.strip()]
+    if not lines:
+        return "Untitled Event"
+
+    candidates = []
+    for idx, raw_line in enumerate(lines[:15]):
+        if _is_separator_line(raw_line):
+            continue
+        stripped = GENERIC_CHANNEL_TAGS_PATTERN.sub("", raw_line).strip()
+        if not stripped:
+            continue
+        if _is_greeting_line(stripped):
+            continue
+        if _is_metadata_field_line(stripped):
+            continue
+
+        clean_inv = INVITATION_PREFIX_PATTERN.sub("", stripped).strip()
+        if clean_inv and len(clean_inv) >= 5:
+            stripped = clean_inv
+
+        has_brackets = bool(re.search(r"\[.*?\]|【.*?】", stripped))
+        norm = stripped.lower()
+        has_keywords = bool(re.search(r"\b(workshop|seminar|hội nghị|hoi nghi|hội thảo|hoi thao|cuộc thi|cuoc thi|hội thi|hoi thi|tọa đàm|toa dam|giải đấu|giai dau|trường hè|truong he|gala|khóa học|khoa hoc|mini-course|talkshow|ngày hội|ngay hoi|đăng ký|dang ky|tuyển cộng tác viên|tuyen cong tac vien|bước chân yêu thương|nét son|green day|itogether|bản lĩnh it|stellar|thi thử|program)\b", norm))
+
+        score = 0
+        if has_brackets:
+            score += 25
+        if has_keywords:
+            score += 10
+        if stripped.isupper():
+            score += 5
+        if idx == 0:
+            score += 8
+        elif idx == 1:
+            score += 6
+        elif idx == 2:
+            score += 4
+        if len(stripped) >= 10:
+            score += 2
+
+        candidates.append((score, idx, stripped))
+
+    if candidates:
+        candidates.sort(key=lambda c: (-c[0], c[1]))
+        return candidates[0][2][:180]
+
+    return lines[0][:180]
 
 
 def _normalize_iso_datetime(val: Optional[str], default_time: str = "00:00") -> Optional[str]:
@@ -927,8 +1451,21 @@ def _enrich_extracted_event_fields(
         return raw_data
 
     # 0. Clean title & fill missing description
-    if raw_data.get("title"):
-        raw_data["title"] = _clean_event_title(str(raw_data["title"]))
+    cur_title = (raw_data.get("title") or "").strip()
+    cleaned_title = _clean_event_title(cur_title)
+    if (
+        not cur_title
+        or cleaned_title == "Untitled Event"
+        or _is_greeting_line(cur_title)
+        or not GENERIC_CHANNEL_TAGS_PATTERN.sub("", cur_title).strip()
+    ):
+        inferred_title = _extract_title_from_content(content)
+        if inferred_title and inferred_title != "Untitled Event":
+            raw_data["title"] = inferred_title
+        else:
+            raw_data["title"] = cleaned_title
+    else:
+        raw_data["title"] = cleaned_title
 
     if not (raw_data.get("description") or "").strip():
         inferred_desc = _summarize_event_description(content)
@@ -1006,14 +1543,14 @@ def heuristic_extract_event(
     if not is_candidate:
         return {"is_event": False, "reason": reasoning_note}
 
-    # Title: prefer subject, else first non-empty line, preserving brackets/prefixes/postfixes
-    title = subject.strip()
+    # Title: prefer subject if non-generic, else extract from content preserving brackets
+    title = ""
+    if subject and subject.strip():
+        subj_clean = _clean_event_title(subject)
+        if subj_clean != "Untitled Event" and not _is_greeting_line(subj_clean) and GENERIC_CHANNEL_TAGS_PATTERN.sub("", subj_clean).strip():
+            title = subj_clean
     if not title:
-        for line in content.splitlines():
-            clean_line = line.strip().strip("#*-• ")
-            if len(clean_line) >= 5:
-                title = clean_line[:180]
-                break
+        title = _extract_title_from_content(combined)
     title = _clean_event_title(title)
 
     # Extract event start/end date & time (00:00 start default, 23:59 end default)
