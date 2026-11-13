@@ -14,7 +14,14 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from config import FEEDS_DIR, SCROLL_COUNT
-from database import add_fanpage, ensure_local_tz, list_fanpages, remove_fanpage, save_posts, update_fanpage_metadata
+from database import (
+    add_fanpage,
+    ensure_local_tz,
+    list_fanpages,
+    remove_fanpage,
+    save_posts,
+    update_fanpage_metadata,
+)
 from events import analyze_fanpage_posts, purge_fanpage_events, sync_all_event_folders
 from rss import generate_all_rss, generate_fanpage_rss
 from scheduler import backup_state_to_git
@@ -128,9 +135,9 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
                 latest_items = scraped_items[: body.limit]
                 total_fetched += len(latest_items)
 
-                update_fanpage_metadata(fp.id, name=page_title)
-                if page_title:
-                    fp.name = page_title
+                resolved_name = update_fanpage_metadata(fp.id, name=page_title)
+                if resolved_name:
+                    fp.name = resolved_name
 
                 new_posts = save_posts(fp.id, latest_items)
                 total_new += len(new_posts)
@@ -201,9 +208,9 @@ async def admin_import_crawl(body: ImportCrawlRequest):
         except ValueError:
             continue
 
-        update_fanpage_metadata(fp.id, name=fp_payload.name)
-        if fp_payload.name:
-            fp.name = fp_payload.name
+        resolved_name = update_fanpage_metadata(fp.id, name=fp_payload.name)
+        if resolved_name:
+            fp.name = resolved_name
 
         scraped_items = []
         for p in fp_payload.posts:

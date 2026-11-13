@@ -63,8 +63,16 @@ USER_AGENT = (
 )
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_CACHED_CONTENTS_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
 GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES") or 3)
 GEMINI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_SECONDS") or 90)
+GEMINI_CACHE_TTL_SECONDS = int(os.environ.get("GEMINI_CACHE_TTL_SECONDS") or 3600)
+GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "true").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)
 FALLBACK_GEMINI_MODELS = [
     "gemini-2.5-flash",
@@ -73,6 +81,8 @@ FALLBACK_GEMINI_MODELS = [
     "gemini-flash-latest",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
+_CACHED_SYSTEM_HANDLES: Dict[str, Tuple[str, float]] = {}
+_CACHE_UNSUPPORTED_MODELS: Set[str] = set()
 
 # ---------------------------------------------------------------------------
 # Facebook Scraper (from scraper/fb_scraper.py)
@@ -656,6 +666,68 @@ def _is_boilerplate_fb_text(text: str) -> bool:
     return bool(_LOGIN_OR_ERROR_TEXT_RE.search(text.strip()))
 
 
+_INVALID_FB_TITLES = {
+    "facebook",
+    "log in",
+    "login",
+    "log into facebook",
+    "log in to facebook",
+    "log in or sign up",
+    "sign up",
+    "sign up for facebook",
+    "đăng nhập",
+    "đăng nhập facebook",
+    "đăng nhập hoặc đăng ký",
+    "create new account",
+    "watch",
+    "notifications",
+    "home",
+    "unknown",
+    "error",
+    "page not found",
+    "content not found",
+    "security check",
+    "checkpoint",
+    "just a moment",
+    "just a moment...",
+    "something went wrong",
+    "meta",
+}
+
+
+_INVALID_FB_TITLE_PATTERNS = re.compile(
+    r"(?:"
+    r"^log\s*in(?:to)?(?:\s+to)?\s+facebook\b"
+    r"|^facebook\s*[-–|]"
+    r"|^đăng\s*nhập\b"
+    r"|tạm thời bị chặn"
+    r"|temporarily blocked"
+    r"|security check"
+    r"|confirm your identity"
+    r"|this content isn't available"
+    r"|page isn't available"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _clean_fanpage_name(raw_name: Optional[str]) -> Optional[str]:
+    if not raw_name or not isinstance(raw_name, str):
+        return None
+    text = re.sub(r"\s+", " ", raw_name).strip()
+    text = re.sub(r"^\(\d+\)\s*", "", text).strip()
+    text = re.sub(r"\s*[\|\-–]\s*Facebook.*$", "", text, flags=re.IGNORECASE).strip()
+    if not text or not re.search(r"\w", text, flags=re.UNICODE):
+        return None
+    if (
+        text.lower() in _INVALID_FB_TITLES
+        or _INVALID_FB_TITLE_PATTERNS.search(text)
+        or _LOGIN_OR_ERROR_TEXT_RE.search(text)
+    ):
+        return None
+    return text
+
+
 async def _expand_see_more(page: Page) -> None:
     """Click 'See more' / 'Xem thêm' inside post containers if present."""
     for label in ("See more", "Xem thêm"):
@@ -818,9 +890,7 @@ async def scrape_single_post(post_url: str, headless: bool = True) -> Dict[str, 
             final_url = page.url or target_url
 
             raw_title = await page.title()
-            if raw_title:
-                page_title = re.sub(r"\s*\|\s*Facebook.*$", "", raw_title, flags=re.IGNORECASE).strip()
-                page_title = re.sub(r"^\(\d+\)\s*", "", page_title).strip()
+            page_title = _clean_fanpage_name(raw_title)
 
             await _dismiss_login_popup(page)
             await _expand_see_more(page)
@@ -992,17 +1062,23 @@ async def scrape_single_post(post_url: str, headless: bool = True) -> Dict[str, 
         or _derive_fanpage_url_from_url(canonical_url)
         or _derive_fanpage_url_from_url(final_url)
     )
-    fanpage_name = (
-        chosen.get("author_name")
-        or dom_fallback.get("author_text")
-        or dom_fallback.get("og_title")
-        or page_title
-    )
-    if fanpage_name and "|" in fanpage_name:
-        fanpage_name = fanpage_name.split("|")[0].strip()
+    fanpage_name = None
+    og_title_candidate = dom_fallback.get("og_title") or ""
+    if "|" in og_title_candidate:
+        og_title_candidate = og_title_candidate.split("|")[0].strip()
+    for raw_name in (
+        chosen.get("author_name"),
+        dom_fallback.get("author_text"),
+        og_title_candidate,
+        page_title,
+    ):
+        cleaned = _clean_fanpage_name(raw_name)
+        if cleaned:
+            fanpage_name = cleaned
+            break
 
     chosen["fanpage_url"] = fanpage_url
-    chosen["fanpage_name"] = fanpage_name or None
+    chosen["fanpage_name"] = fanpage_name
     return chosen
 
 
@@ -1031,8 +1107,8 @@ EVENT_KEYWORDS = [
     "dien gia", "khach moi", "ban to chuc",
 ]
 
-PROMPT = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
-Decide whether the post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
+SYSTEM_REGULATIONS = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
+Decide whether each post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
 
 WHAT COUNTS AS AN EVENT (`is_event: true`):
 - Workshops, seminars, webinars, talkshows, academic talks, training programs (tập huấn, sinh hoạt chuyên đề), orientations (chào tân sinh viên).
@@ -1047,13 +1123,6 @@ WHAT DOES NOT COUNT (`is_event: false`):
 - Pure post-event recaps, thank-you notes, or final winner/honor roll announcements (recap, bảng vàng vinh danh, tuyên dương gương Sinh viên 5 Tốt, đóng đơn/kết thúc hoàn toàn) where the event has ALREADY completely finished and no upcoming round or activity is mentioned.
 - General news, scam warnings, memes, or administrative notices with no event.
 
-Post published at: {published_at}
-Fanpage / Source: {fanpage}
-Post text:
-\"\"\"
-{content}
-\"\"\"
-
 EXTRACTION RULES:
 - `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
@@ -1066,7 +1135,7 @@ EXTRACTION RULES:
 - `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
-{{
+{
   "is_event": boolean,
   "title": string|null,
   "description": string|null,
@@ -1082,7 +1151,16 @@ Return ONLY a JSON object with exactly these keys (use null when unknown, never 
   "target_audience": string[]|null,
   "category": string[],
   "format": string[]
-}}"""
+}"""
+
+USER_POST_TEMPLATE = """Post published at: {published_at}
+Fanpage / Source: {fanpage}
+Post text:
+\"\"\"
+{content}
+\"\"\""""
+
+PROMPT = SYSTEM_REGULATIONS + "\n\n" + USER_POST_TEMPLATE
 
 _LOCATION_LABEL_RE = re.compile(
     r"(?:^|\b)(?:dia\s*diem|dia\s*chi|noi\s*to\s*chuc|location|venue|address|room|hall|phong|hoi\s*truong|giang\s*duong|co\s*so)\b",
@@ -1142,15 +1220,87 @@ def _candidate_gemini_models() -> List[str]:
     return candidates
 
 
+def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]:
+    """Create or reuse a server-side Gemini `cachedContents` handle for `SYSTEM_REGULATIONS`."""
+    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or model in _CACHE_UNSUPPORTED_MODELS:
+        return None
+
+    now = time.time()
+    cached_entry = _CACHED_SYSTEM_HANDLES.get(model)
+    if cached_entry and cached_entry[1] - 60 > now:
+        return cached_entry[0]
+
+    full_model = model if model.startswith("models/") else f"models/{model}"
+    ttl_s = max(300, GEMINI_CACHE_TTL_SECONDS)
+    payload_bytes = json.dumps(
+        {
+            "model": full_model,
+            "displayName": "fb_rss_event_extractor_regulations_v1",
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_REGULATIONS}],
+            },
+            "ttl": f"{ttl_s}s",
+        }
+    ).encode("utf-8")
+
+    req = urllib.request.Request(
+        GEMINI_CACHED_CONTENTS_URL,
+        data=payload_bytes,
+        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        cache_name = data.get("name")
+        if isinstance(cache_name, str) and cache_name.strip():
+            _CACHED_SYSTEM_HANDLES[model] = (cache_name.strip(), now + ttl_s)
+            print(f" -> Cached regulations on Gemini ({model}) -> {cache_name.strip()} (TTL {ttl_s}s)")
+            return cache_name.strip()
+    except urllib.error.HTTPError:
+        _CACHE_UNSUPPORTED_MODELS.add(model)
+    except Exception:
+        _CACHE_UNSUPPORTED_MODELS.add(model)
+    return None
+
+
+def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> bytes:
+    cached_name = _get_or_create_cached_regulations(model, api_key)
+    payload: Dict[str, Any] = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_text}],
+            }
+        ],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+    }
+    if cached_name:
+        payload["cachedContent"] = cached_name
+    else:
+        payload["system_instruction"] = {
+            "parts": [{"text": SYSTEM_REGULATIONS}],
+        }
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
 def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float:
-    if isinstance(exc, urllib.error.HTTPError) and exc.headers:
-        ra = exc.headers.get("Retry-After")
-        if ra:
-            try:
-                return min(max(float(ra), 1.0), 30.0)
-            except ValueError:
-                pass
-    return min(3.0 * (2 ** attempt), 24.0)
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.headers:
+            ra = exc.headers.get("Retry-After")
+            if ra:
+                try:
+                    return min(max(float(ra), 1.0), 60.0)
+                except ValueError:
+                    pass
+        try:
+            err_body = exc.read().decode("utf-8", errors="ignore")
+            m_delay = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', err_body)
+            if m_delay:
+                return min(max(float(m_delay.group(1)) + 1.0, 2.0), 65.0)
+        except Exception:
+            pass
+    return min(4.0 * (2 ** attempt), 32.0)
 
 
 def call_gemini_text(
@@ -1159,26 +1309,18 @@ def call_gemini_text(
     source_name: str,
     api_key: str,
 ) -> Optional[Dict[str, Any]]:
-    """Send post text to Gemini REST API with model fallback and retry backoff."""
+    """Send ONLY the raw post text to Gemini REST API (regulations cached / in system_instruction)."""
     global _WORKING_GEMINI_MODEL
-    body_bytes = json.dumps(
-        {
-            "contents": [{
-                "parts": [{
-                    "text": PROMPT.format(
-                        published_at=published_at_str,
-                        fanpage=source_name,
-                        content=(content or "")[:6000],
-                    )
-                }]
-            }],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
-        }
-    ).encode("utf-8")
+    user_text = USER_POST_TEMPLATE.format(
+        published_at=published_at_str,
+        fanpage=source_name,
+        content=(content or "")[:6000],
+    )
 
     last_exc: Optional[Exception] = None
     for model in _candidate_gemini_models():
         for attempt in range(GEMINI_MAX_RETRIES + 1):
+            body_bytes = _build_gemini_request_body(user_text, model, api_key)
             req = urllib.request.Request(
                 GEMINI_URL.format(model=model),
                 data=body_bytes,
@@ -1196,6 +1338,10 @@ def call_gemini_text(
                 return data if isinstance(data, dict) else None
             except urllib.error.HTTPError as exc:
                 last_exc = exc
+                if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
+                    _CACHED_SYSTEM_HANDLES.pop(model, None)
+                    _CACHE_UNSUPPORTED_MODELS.add(model)
+                    continue
                 if exc.code in (400, 404):
                     break
                 if exc.code in (429, 500, 502, 503, 504):

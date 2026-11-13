@@ -27,14 +27,32 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from config import FEEDS_DIR, LOCAL_TIMEZONE
-from database import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, ensure_local_tz, get_session, init_db
+from database import (
+    EmailMessage,
+    EventRecord,
+    Fanpage,
+    Post,
+    PostAnalysis,
+    ensure_local_tz,
+    get_session,
+    init_db,
+)
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_CACHED_CONTENTS_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
-GEMINI_CALL_DELAY_SECONDS = float(os.environ.get("GEMINI_CALL_DELAY_SECONDS") or 3.0)
+GEMINI_CALL_DELAY_SECONDS = float(os.environ.get("GEMINI_CALL_DELAY_SECONDS") or 4.0)
 GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES") or 3)
 GEMINI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_SECONDS") or 90)
+GEMINI_BATCH_SIZE = max(1, int(os.environ.get("GEMINI_BATCH_SIZE") or 8))
+GEMINI_CACHE_TTL_SECONDS = int(os.environ.get("GEMINI_CACHE_TTL_SECONDS") or 3600)
+GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "true").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
 
 # Compared against lowercase, diacritics-stripped text.
 EVENT_KEYWORDS = [
@@ -59,8 +77,8 @@ EVENT_KEYWORDS = [
     "dien gia", "khach moi", "ban to chuc",
 ]
 
-PROMPT = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
-Decide whether the post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
+SYSTEM_REGULATIONS = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
+Decide whether each post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
 
 WHAT COUNTS AS AN EVENT (`is_event: true`):
 - Workshops, seminars, webinars, talkshows, academic talks, training programs (tập huấn, sinh hoạt chuyên đề), orientations (chào tân sinh viên).
@@ -75,13 +93,6 @@ WHAT DOES NOT COUNT (`is_event: false`):
 - Pure post-event recaps, thank-you notes, or final winner/honor roll announcements (recap, bảng vàng vinh danh, tuyên dương gương Sinh viên 5 Tốt, đóng đơn/kết thúc hoàn toàn) where the event has ALREADY completely finished and no upcoming round or activity is mentioned.
 - General news, scam warnings, memes, or administrative notices with no event.
 
-Post published at: {published_at}
-Fanpage / Source: {fanpage}
-Post text:
-\"\"\"
-{content}
-\"\"\"
-
 EXTRACTION RULES:
 - `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
@@ -93,8 +104,9 @@ EXTRACTION RULES:
 - `fee`: Search carefully for lines containing `Lệ phí`, `Le phi`, `Phí tham gia`, `Phí đăng ký`, `Giá vé`, `Chi phí`, `Fee`, `Ticket`, or `miễn phí`/`free` (including after emojis like `💸`). Extract the fee value from that line (e.g., "25.000 VNĐ/sinh viên", "100.000 VND", "miễn phí"); use null if not mentioned.
 - `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
-Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
-{{
+OUTPUT JSON SCHEMA PER POST (use null when unknown, never invent data):
+{
+  "post_id": string|null,             // echo back input post_id when provided in batch mode
   "is_event": boolean,
   "title": string|null,               // event title
   "description": string|null,         // summary of what the event is about and what benefits students will get (NOT raw intro text)
@@ -110,7 +122,18 @@ Return ONLY a JSON object with exactly these keys (use null when unknown, never 
   "target_audience": string[]|null,   // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies students in a major/year/school, list specifically (e.g., "sinh viên CNTT", "sinh viên K25, K26")
   "category": string[],               // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện","quyên góp","khác"; [] if unknown
   "format": string[]                  // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
-}}"""
+}
+If given a single post, return a single JSON object. If given a JSON array of posts under `posts`, return a JSON array of objects in the exact same order, each including its `post_id`."""
+
+USER_POST_TEMPLATE = """Post published at: {published_at}
+Fanpage / Source: {fanpage}
+Post text:
+\"\"\"
+{content}
+\"\"\""""
+
+# Legacy combined prompt alias for backward compatibility
+PROMPT = SYSTEM_REGULATIONS + "\n\n" + USER_POST_TEMPLATE
 
 
 def _strip_accents(text: str) -> str:
@@ -172,6 +195,10 @@ FALLBACK_GEMINI_MODELS = [
     "gemini-flash-latest",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
+# In-memory registry of active Gemini cachedContents handles per model:
+#   { model_name: (cached_content_name, expires_epoch_seconds) }
+_CACHED_SYSTEM_HANDLES: Dict[str, Tuple[str, float]] = {}
+_CACHE_UNSUPPORTED_MODELS: set[str] = set()
 
 
 def _candidate_gemini_models() -> List[str]:
@@ -195,44 +222,112 @@ def _candidate_gemini_models() -> List[str]:
     return candidates
 
 
-def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float:
-    """Compute backoff delay in seconds, honoring Retry-After if provided."""
-    if isinstance(exc, urllib.error.HTTPError) and exc.headers:
-        ra = exc.headers.get("Retry-After")
-        if ra:
-            try:
-                return min(max(float(ra), 1.0), 30.0)
-            except ValueError:
-                pass
-    return min(3.0 * (2 ** attempt), 24.0)
+def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]:
+    """
+    Create or reuse a server-side Gemini `cachedContents` resource holding `SYSTEM_REGULATIONS`
+    for `model`. If the model/tier rejects explicit context caching (e.g., < minimum token threshold
+    or free-tier restriction), marks `model` in `_CACHE_UNSUPPORTED_MODELS` and falls back to
+    `system_instruction` without extra round-trips.
+    """
+    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or model in _CACHE_UNSUPPORTED_MODELS:
+        return None
 
+    now = time.time()
+    cached_entry = _CACHED_SYSTEM_HANDLES.get(model)
+    if cached_entry and cached_entry[1] - 60 > now:
+        return cached_entry[0]
 
-def call_gemini_text(
-    content: str,
-    published_at_str: str,
-    source_name: str,
-    api_key: str,
-) -> Optional[Dict[str, Any]]:
-    """Send raw text (Facebook post or client Email content) to Gemini with model fallback and retry backoff."""
-    global _WORKING_GEMINI_MODEL
-    body_bytes = json.dumps(
+    full_model = model if model.startswith("models/") else f"models/{model}"
+    ttl_s = max(300, GEMINI_CACHE_TTL_SECONDS)
+    payload_bytes = json.dumps(
         {
-            "contents": [{
-                "parts": [{
-                    "text": PROMPT.format(
-                        published_at=published_at_str,
-                        fanpage=source_name,
-                        content=(content or "")[:6000],
-                    )
-                }]
-            }],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+            "model": full_model,
+            "displayName": "fb_rss_event_extractor_regulations_v1",
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_REGULATIONS}],
+            },
+            "ttl": f"{ttl_s}s",
         }
     ).encode("utf-8")
 
+    req = urllib.request.Request(
+        GEMINI_CACHED_CONTENTS_URL,
+        data=payload_bytes,
+        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        cache_name = data.get("name")
+        if isinstance(cache_name, str) and cache_name.strip():
+            _CACHED_SYSTEM_HANDLES[model] = (cache_name.strip(), now + ttl_s)
+            print(f"[events] Cached regulations on Gemini ({model}) -> {cache_name.strip()} (TTL {ttl_s}s)")
+            return cache_name.strip()
+    except urllib.error.HTTPError as exc:
+        # 400/403/404 usually means prompt < min token threshold (1024-4096) or free-tier caching disabled
+        _CACHE_UNSUPPORTED_MODELS.add(model)
+        if exc.code not in (400, 403, 404):
+            print(f"[events] Gemini cachedContents unavailable on {model} (HTTP {exc.code}); using system_instruction.")
+    except Exception:
+        _CACHE_UNSUPPORTED_MODELS.add(model)
+    return None
+
+
+def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> bytes:
+    """
+    Build the `generateContent` request body:
+      - Uses server-side `cachedContent` handle if available for `model` (sends ONLY raw post text).
+      - Otherwise uses `system_instruction` for `SYSTEM_REGULATIONS` (eligible for Gemini implicit
+        prefix caching) and sends ONLY the raw post text in `contents`.
+    """
+    cached_name = _get_or_create_cached_regulations(model, api_key)
+    payload: Dict[str, Any] = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_text}],
+            }
+        ],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+    }
+    if cached_name:
+        payload["cachedContent"] = cached_name
+    else:
+        payload["system_instruction"] = {
+            "parts": [{"text": SYSTEM_REGULATIONS}],
+        }
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
+def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float:
+    """Compute backoff delay in seconds, honoring Retry-After or Gemini error retryDelay if provided."""
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.headers:
+            ra = exc.headers.get("Retry-After")
+            if ra:
+                try:
+                    return min(max(float(ra), 1.0), 60.0)
+                except ValueError:
+                    pass
+        try:
+            err_body = exc.read().decode("utf-8", errors="ignore")
+            m_delay = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', err_body)
+            if m_delay:
+                return min(max(float(m_delay.group(1)) + 1.0, 2.0), 65.0)
+        except Exception:
+            pass
+    return min(4.0 * (2 ** attempt), 32.0)
+
+
+def _execute_gemini_generate(user_text: str, api_key: str) -> Any:
+    """Execute a Gemini `generateContent` request with model fallback, context caching, and 429 backoff."""
+    global _WORKING_GEMINI_MODEL
     last_exc: Optional[Exception] = None
+
     for model in _candidate_gemini_models():
         for attempt in range(GEMINI_MAX_RETRIES + 1):
+            body_bytes = _build_gemini_request_body(user_text, model, api_key)
             req = urllib.request.Request(
                 GEMINI_URL.format(model=model),
                 data=body_bytes,
@@ -244,12 +339,14 @@ def call_gemini_text(
                     payload = json.loads(resp.read().decode("utf-8"))
                 _WORKING_GEMINI_MODEL = model
                 text = payload["candidates"][0]["content"]["parts"][0]["text"]
-                data = json.loads(text)
-                if isinstance(data, list):
-                    data = data[0] if data else {}
-                return data if isinstance(data, dict) else None
+                return json.loads(text)
             except urllib.error.HTTPError as exc:
                 last_exc = exc
+                # If a cachedContent handle expired or was invalidated, evict it and retry immediately with system_instruction
+                if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
+                    _CACHED_SYSTEM_HANDLES.pop(model, None)
+                    _CACHE_UNSUPPORTED_MODELS.add(model)
+                    continue
                 if exc.code in (400, 404):
                     break  # try next model
                 if exc.code in (429, 500, 502, 503, 504):
@@ -258,7 +355,7 @@ def call_gemini_text(
                         print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
                         time.sleep(wait_s)
                         continue
-                    # Exhausted retries on this model (e.g. per-model quota/overload) -> try next fallback model
+                    # Exhausted retries on this model (e.g. per-model RPM/RPD quota) -> try next fallback model
                     break
                 raise
             except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
@@ -273,6 +370,77 @@ def call_gemini_text(
     if last_exc is not None:
         raise last_exc
     return None
+
+
+def call_gemini_text(
+    content: str,
+    published_at_str: str,
+    source_name: str,
+    api_key: str,
+) -> Optional[Dict[str, Any]]:
+    """Send ONLY the raw post/email text to Gemini (regulations are cached / passed in system_instruction)."""
+    user_text = USER_POST_TEMPLATE.format(
+        published_at=published_at_str,
+        fanpage=source_name,
+        content=(content or "")[:6000],
+    )
+    data = _execute_gemini_generate(user_text, api_key)
+    if isinstance(data, list):
+        data = data[0] if data else {}
+    return data if isinstance(data, dict) else None
+
+
+def call_gemini_batch(
+    posts: List[Post],
+    fanpage_name: str,
+    api_key: str,
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """
+    Send a batch of raw posts in a SINGLE Gemini API call while keeping `SYSTEM_REGULATIONS`
+    cached/in `system_instruction`. Dramatically reduces Requests-Per-Minute (RPM) and 429 errors.
+    Returns a dict mapping `post_id -> extracted_dict`.
+    """
+    if not posts:
+        return {}
+    if len(posts) == 1:
+        single = call_gemini(posts[0], fanpage_name, api_key)
+        return {posts[0].post_id: single} if isinstance(single, dict) else None
+
+    items_payload = [
+        {
+            "post_id": p.post_id,
+            "published_at": p.published_at.isoformat() if p.published_at else "unknown",
+            "fanpage": fanpage_name,
+            "content": (p.content or "")[:4500],
+        }
+        for p in posts
+    ]
+    user_text = (
+        f"Extract event information for each of the following {len(items_payload)} posts. "
+        f"Return a JSON array of {len(items_payload)} objects in the exact same order, "
+        f"each including its matching `post_id`:\n"
+        + json.dumps({"posts": items_payload}, ensure_ascii=False)
+    )
+    data = _execute_gemini_generate(user_text, api_key)
+    if isinstance(data, dict) and isinstance(data.get("posts"), list):
+        data = data["posts"]
+    elif isinstance(data, dict) and isinstance(data.get("events"), list):
+        data = data["events"]
+
+    if not isinstance(data, list):
+        return None
+
+    result_map: Dict[str, Dict[str, Any]] = {}
+    for idx, item in enumerate(data):
+        if not isinstance(item, dict):
+            continue
+        pid = str(item.get("post_id") or "").strip()
+        if not pid and idx < len(posts):
+            pid = posts[idx].post_id
+        if pid:
+            result_map[pid] = item
+
+    return result_map if result_map else None
 
 
 def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
@@ -1628,6 +1796,7 @@ def analyze_fanpage_posts(
                 pending.append(p)
 
         name = fanpage.name or fanpage.slug
+        llm_candidates: List[Post] = []
 
         for post in pending:
             if not looks_event_related(post.content):
@@ -1640,25 +1809,15 @@ def analyze_fanpage_posts(
                     )
                 )
                 stats["analyzed"] += 1
-                continue
-            if not api_key or stats["llm_calls"] >= max_llm_calls:
-                continue  # leave uncached; retried next cycle
-            if stats["llm_calls"] > 0 and GEMINI_CALL_DELAY_SECONDS > 0:
-                time.sleep(GEMINI_CALL_DELAY_SECONDS)
-            try:
-                stats["llm_calls"] += 1
-                data = call_gemini(post, name, api_key)
-            except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
-                stats["errors"] += 1
-                print(f"[events] LLM error for post {post.post_id}: {exc}")
-                continue
-            if not data:
-                stats["errors"] += 1
-                continue
+            else:
+                llm_candidates.append(post)
+
+        def _persist_post_analysis(post: Post, raw_item: Dict[str, Any]) -> None:
+            data = dict(raw_item)
+            data.pop("post_id", None)
             data = _enrich_extracted_event_fields(data, post.content or "", published_at=post.published_at)
             is_event = bool(data.pop("is_event", False))
             if is_event:
-                # Run through unified anchor-field deduplication/update & additional info gatherer
                 upsert_status, ev_record, changes = upsert_unified_event(
                     session=session,
                     raw_data=data,
@@ -1678,14 +1837,65 @@ def analyze_fanpage_posts(
                 elif upsert_status == "duplicate":
                     stats["duplicates"] += 1
 
-            session.add(PostAnalysis(
-                post_id=post.post_id,
-                fanpage_id=fanpage_id,
-                is_event=is_event,
-                event_json=json.dumps(data, ensure_ascii=False) if is_event else '{"reason":"llm_not_event"}',
-            ))
+            session.add(
+                PostAnalysis(
+                    post_id=post.post_id,
+                    fanpage_id=fanpage_id,
+                    is_event=is_event,
+                    event_json=json.dumps(data, ensure_ascii=False) if is_event else '{"reason":"llm_not_event"}',
+                )
+            )
             stats["analyzed"] += 1
             stats["events"] += int(is_event)
+
+        if api_key and llm_candidates:
+            for start_idx in range(0, len(llm_candidates), GEMINI_BATCH_SIZE):
+                if stats["llm_calls"] >= max_llm_calls:
+                    break
+                chunk = llm_candidates[start_idx : start_idx + GEMINI_BATCH_SIZE]
+                if stats["llm_calls"] > 0 and GEMINI_CALL_DELAY_SECONDS > 0:
+                    time.sleep(GEMINI_CALL_DELAY_SECONDS)
+
+                batch_results: Optional[Dict[str, Dict[str, Any]]] = None
+                try:
+                    stats["llm_calls"] += 1
+                    batch_results = call_gemini_batch(chunk, name, api_key)
+                except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
+                    print(f"[events] LLM batch error for fanpage {fanpage.slug} ({len(chunk)} post(s)): {exc}")
+                    batch_results = None
+
+                missing_posts: List[Post] = []
+                if batch_results:
+                    for post in chunk:
+                        item_data = batch_results.get(post.post_id)
+                        if isinstance(item_data, dict):
+                            _persist_post_analysis(post, item_data)
+                        else:
+                            missing_posts.append(post)
+                else:
+                    missing_posts = list(chunk)
+
+                if missing_posts and len(chunk) > 1:
+                    # Fallback to single-post calls if a multi-post batch failed or returned partial items
+                    for post in missing_posts:
+                        if stats["llm_calls"] >= max_llm_calls:
+                            stats["errors"] += 1
+                            continue
+                        if GEMINI_CALL_DELAY_SECONDS > 0:
+                            time.sleep(GEMINI_CALL_DELAY_SECONDS)
+                        try:
+                            stats["llm_calls"] += 1
+                            single_data = call_gemini(post, name, api_key)
+                        except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
+                            stats["errors"] += 1
+                            print(f"[events] LLM error for post {post.post_id}: {exc}")
+                            continue
+                        if not single_data:
+                            stats["errors"] += 1
+                            continue
+                        _persist_post_analysis(post, single_data)
+                elif missing_posts:
+                    stats["errors"] += len(missing_posts)
 
         session.commit()
         _write_events_json(fanpage, session)
@@ -1791,9 +2001,9 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
     if fanpage_url:
         try:
             fp, fp_created = add_fanpage(fanpage_url, name=fanpage_name)
-            update_fanpage_metadata(fp.id, name=fanpage_name)
-            if fanpage_name:
-                fp.name = fanpage_name
+            resolved_name = update_fanpage_metadata(fp.id, name=fanpage_name)
+            if resolved_name:
+                fp.name = resolved_name
             save_posts(fp.id, [post_data])
         except ValueError as exc:
             print(f"[events] Could not add derived fanpage '{fanpage_url}': {exc}")

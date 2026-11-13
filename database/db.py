@@ -13,6 +13,75 @@ from .models import Base, EmailMessage, EventRecord, Fanpage, Post, PostAnalysis
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
+_INVALID_FANPAGE_EXACT_NAMES = {
+    "facebook",
+    "log in",
+    "login",
+    "log into facebook",
+    "log in to facebook",
+    "log in or sign up",
+    "sign up",
+    "sign up for facebook",
+    "đăng nhập",
+    "đăng nhập facebook",
+    "đăng nhập hoặc đăng ký",
+    "đăng ký",
+    "create new account",
+    "watch",
+    "notifications",
+    "home",
+    "unknown",
+    "error",
+    "page not found",
+    "content not found",
+    "security check",
+    "security check required",
+    "checkpoint",
+    "just a moment",
+    "just a moment...",
+    "something went wrong",
+    "you're temporarily blocked",
+    "bạn tạm thời bị chặn",
+    "this content isn't available right now",
+    "confirm your identity",
+    "meta",
+}
+
+_INVALID_FANPAGE_NAME_PATTERNS = re.compile(
+    r"(?:"
+    r"^log\s*in(?:to)?(?:\s+to)?\s+facebook\b"
+    r"|^facebook\s*[-–|]"
+    r"|^đăng\s*nhập\b"
+    r"|tạm thời bị chặn"
+    r"|temporarily blocked"
+    r"|security check"
+    r"|confirm your identity"
+    r"|this content isn't available"
+    r"|page isn't available"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def clean_fanpage_name(raw_name: Optional[str]) -> Optional[str]:
+    """Normalize a scraped fanpage title and reject generic Facebook/login/error placeholders."""
+    if not raw_name or not isinstance(raw_name, str):
+        return None
+    text = re.sub(r"\s+", " ", raw_name).strip()
+    text = re.sub(r"^\(\d+\)\s*", "", text).strip()
+    text = re.sub(r"\s*[\|\-–]\s*Facebook.*$", "", text, flags=re.IGNORECASE).strip()
+    if not text or not re.search(r"\w", text, flags=re.UNICODE):
+        return None
+    lowered = text.lower()
+    if lowered in _INVALID_FANPAGE_EXACT_NAMES or _INVALID_FANPAGE_NAME_PATTERNS.search(text):
+        return None
+    return text
+
+
+def is_valid_fanpage_name(name: Optional[str]) -> bool:
+    """Return True if `name` is a genuine fanpage title rather than a Facebook placeholder."""
+    return clean_fanpage_name(name) is not None
+
 
 def init_db() -> None:
     """Create database tables if they do not exist."""
@@ -72,18 +141,28 @@ def add_fanpage(raw_url: str, name: Optional[str] = None) -> Tuple[Fanpage, bool
     """
     init_db()
     canonical_url, slug = normalize_fb_url(raw_url)
+    cleaned_name = clean_fanpage_name(name)
     with get_session() as session:
         existing = session.scalar(select(Fanpage).where(Fanpage.url == canonical_url))
         if existing:
+            changed = False
             if not existing.is_active:
                 existing.is_active = True
+                changed = True
+            if cleaned_name and (not is_valid_fanpage_name(existing.name) or existing.name == existing.slug):
+                existing.name = cleaned_name
+                changed = True
+            elif not is_valid_fanpage_name(existing.name):
+                existing.name = existing.slug
+                changed = True
+            if changed:
                 session.commit()
             return existing, False
 
         fanpage = Fanpage(
             url=canonical_url,
             slug=slug,
-            name=name or slug,
+            name=cleaned_name or slug,
             is_active=True,
         )
         session.add(fanpage)
@@ -131,15 +210,23 @@ def remove_fanpage(identifier: str) -> Optional[Fanpage]:
         return None
 
 
-def update_fanpage_metadata(fanpage_id: int, name: Optional[str] = None) -> None:
-    """Update last_checked_at and optionally page name."""
+def update_fanpage_metadata(fanpage_id: int, name: Optional[str] = None) -> Optional[str]:
+    """Update last_checked_at and optionally page name when valid (healing bad names to slug).
+    Returns the resulting stored name, or None if the fanpage does not exist.
+    """
+    cleaned_name = clean_fanpage_name(name)
     with get_session() as session:
         fanpage = session.get(Fanpage, fanpage_id)
-        if fanpage:
-            fanpage.last_checked_at = datetime.now(LOCAL_TIMEZONE)
-            if name and name.strip():
-                fanpage.name = name.strip()
-            session.commit()
+        if not fanpage:
+            return None
+        fanpage.last_checked_at = datetime.now(LOCAL_TIMEZONE)
+        if cleaned_name:
+            fanpage.name = cleaned_name
+        elif not is_valid_fanpage_name(fanpage.name):
+            fanpage.name = fanpage.slug
+        resolved = fanpage.name
+        session.commit()
+        return resolved
 
 
 def save_posts(fanpage_id: int, scraped_items: List[Dict]) -> List[Post]:

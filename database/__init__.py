@@ -1,6 +1,8 @@
 from .db import (
     init_db,
     get_session,
+    clean_fanpage_name,
+    is_valid_fanpage_name,
     add_fanpage,
     list_fanpages,
     remove_fanpage,
@@ -22,6 +24,8 @@ from .models import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, User
 __all__ = [
     "init_db",
     "get_session",
+    "clean_fanpage_name",
+    "is_valid_fanpage_name",
     "add_fanpage",
     "list_fanpages",
     "remove_fanpage",
