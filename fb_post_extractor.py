@@ -1086,57 +1086,76 @@ async def scrape_single_post(post_url: str, headless: bool = True) -> Dict[str, 
 # Event Extractor (from events/extractor.py)
 # ---------------------------------------------------------------------------
 EVENT_KEYWORDS = [
-    # English event types & actions
-    "event", "workshop", "seminar", "webinar", "conference", "meetup", "festival", "concert",
-    "hackathon", "contest", "competition", "launch", "livestream", "open day", "register",
-    "registration", "ticket", "rsvp", "join us", "save the date", "exhibition", "talk",
-    "talkshow", "bootcamp", "orientation", "minigame", "esports", "tournament", "training",
-    "career fair", "job fair", "timeline", "deadline", "check in", "checkin", "online", "offline",
-    "zoom", "google meet", "ms teams",
-    # Vietnamese event types & activities
-    "su kien", "hoi thao", "hoi nghi", "toa dam", "giao luu", "khai mac", "be mac", "le hoi",
-    "cuoc thi", "hoi thi", "giai dau", "san choi", "sinh hoat", "buoi", "chuong trinh",
-    "trien lam", "ngay hoi", "dem nhac", "chao tan", "tap huan", "tuyen quan",
-    "tuyen thanh vien", "tuyen cong tac vien", "dai hoi", "chien dich", "tinh nguyen",
-    "mua he xanh", "xuan tinh nguyen", "hien mau", "hoc bong",
-    # Vietnamese logistics, stages & registration signals
-    "dang ky", "link dang ky", "form dang ky", "mo don", "dong don", "han chot", "tham gia",
-    "tham du", "tuyen sinh", "lich", "vao luc", "dia diem", "thoi gian", "hoi truong",
-    "giang duong", "co so", "so khao", "ban ket", "chung ket", "vong thi", "the le",
-    "giai thuong", "co cau giai thuong", "doi tuong", "quyen loi", "le phi", "mien phi",
-    "dien gia", "khach moi", "ban to chuc",
+    # High-purity registration & call-to-action phrases (92.5%-100% Event purity)
+    "dang ky tham gia", "dang ky tham du", "dang ki tham gia", "dang ky tham quan",
+    "link dang ky", "form dang ky", "mo don dang ky", "mo link dang ky", "mo form dang ky",
+    "thoi han dang ky", "nhanh tay dang ky", "cach thuc dang ky", "cong dang ky",
+    "mo don", "dong don", "han chot dang ky", "link se dong som", "mo he thong thi",
+    # High-purity schedule, venue & participant structure labels (80%-100% Event purity)
+    "thoi gian to chuc", "dia diem to chuc", "doi tuong tham gia", "hinh thuc dang ky",
+    "thoi gian dien ra", "dia diem dien ra", "co cau giai thuong",
+    "dang ky", "dang ki", "dia diem", "thoi gian", "thoi han", "han chot",
+    "tham gia", "tham du", "tham quan", "dien gia", "bao cao vien", "khach moi",
+    "le phi", "mien phi", "the le", "ban to chuc", "hoi truong", "doi tuong",
+    "so luong", "hinh thuc", "vao luc",
+    # High-purity Vietnamese event types & activities (80%-100% Event purity)
+    "hoi thao", "toa dam", "giao luu", "cuoc thi", "trien lam", "ngay hoi",
+    "dem nhac", "chao tan", "tuyen quan", "tuyen thanh vien", "tuyen cong tac vien",
+    "hien mau", "le khai mac", "gala chung ket", "chung ket", "so khao",
+    "sinh hoat chuyen de", "chuyen de", "chien dich", "thi thu toeic", "truong he",
+    # English event types, actions & online platforms (90%-100% Event purity)
+    "workshop", "seminar", "webinar", "hackathon", "contest", "competition",
+    "meetup", "festival", "concert", "talkshow", "bootcamp", "orientation",
+    "minigame", "esports", "tournament", "career fair", "job fair", "open day",
+    "livestream", "summer school", "mini-course", "register", "registration",
+    "ticket", "rsvp", "save the date", "timeline", "deadline", "check in", "checkin",
+    "online", "offline", "zoom", "google meet", "ms teams",
 ]
 
 SYSTEM_REGULATIONS = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
-Decide whether each post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
+Decide whether each post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized student activity.
+
+CONTENT REASONING PROTOCOL (follow these 4 steps before setting `is_event`):
+Step 1 — Temporal & Intent Direction:
+  Determine whether the post is FORWARD-LOOKING / ACTIVE (inviting students to register, participate, submit entries, attend an upcoming session, or reminding them of an active deadline/round) vs. RETROSPECTIVE / PASSIVE (summarizing a finished event, thanking sponsors/speakers after the fact, announcing final winners/results already sent to email, or congratulating award recipients). Retrospective posts with no new upcoming session or registration action MUST be `is_event: false`.
+Step 2 — Entity & Activity Nature (Event vs. Non-Event Archetypes):
+  Verify that the subject is an actual organized student event, workshop, seminar, competition, campaign, club recruitment drive, or live info session — NOT an internal union committee governance congress, a pure scholarship dossier submission notice, a full-time corporate job ad, a routine academic/dormitory/graduation administrative announcement, or a companion Q&A handbook/storytelling post.
+Step 3 — Actionable Schedule or Participation Evidence:
+  Confirm that the post provides actionable participation cues (e.g., event date/time/venue, registration form/link, application timeline, or competition round instructions) or is an official countdown/speaker reveal for an upcoming event.
+Step 4 — Concise Reasoning Justification (`reason`):
+  Write a 1-sentence explanation in `reason` stating why the post qualifies as an active/upcoming event (`is_event: true`) or which disqualification rule applies (`is_event: false`).
 
 WHAT COUNTS AS AN EVENT (`is_event: true`):
-- Workshops, seminars, webinars, talkshows, academic talks, training programs (tập huấn, sinh hoạt chuyên đề), orientations (chào tân sinh viên).
-- Contests, competitions, hackathons, academic olympiads, sports/esports tournaments, singing/talent contests, minigames (cuộc thi, hội thi, giải đấu, vòng sơ khảo, đêm chung kết).
-- Concerts, music nights (đêm nhạc), festivals, fairs, career/job fairs (ngày hội việc làm), exhibitions (triển lãm), open days.
-- Conferences, congresses, ceremonies, campaign launches (hội nghị, đại hội, lễ khai mạc, lễ phát động, ngày cao điểm).
-- Club/committee/project recruitment or audition drives with specific timeline/interview dates (tuyển quân, tuyển thành viên, tuyển CTV), volunteer campaigns (chiến dịch tình nguyện, hiến máu), or scholarship info sessions.
-- Registration countdowns ("3 days left", "còn X ngày", "gia hạn đăng ký") or round/mentor/sponsor announcements that still promote an ongoing/upcoming competition or event.
+1. Academic & skill sessions: Workshops, seminars, webinars, talkshows, academic talks (`báo cáo viên`, `chuyên đề`), summer schools (`trường hè`), mini-courses, orientations (`chào tân sinh viên`), mock exams (`thi thử TOEIC`), and company/campus tours (`tham quan doanh nghiệp`).
+2. Competitions & tournaments: Contests, hackathons, academic olympiads, sports/esports tournaments, talent contests, and minigames (`cuộc thi`, `hội thi`, `giải đấu`, `mở hệ thống thi`, `vòng sơ khảo`, `gala chung kết`) that invite participation, submissions, or spectators for an active/upcoming round.
+3. Cultural, community & career events: Concerts, music nights (`đêm nhạc`), festivals (`ngày hội`, `lễ hội`), career/job fairs (`ngày hội việc làm`), exhibitions (`triển lãm`), volunteer campaigns recruiting participants/volunteers (`chiến dịch tình nguyện`, `hiến máu`), and periodic student health checkup drives (`đăng ký khám sức khỏe`) with specific dates/venues.
+4. Recruitment & info sessions with actionable timelines: Club/committee/volunteer recruitment drives (`tuyển quân`, `tuyển thành viên`, `tuyển cộng tác viên`) that open applications (`mở đơn`, `form đăng ký`) or specify timelines, and live scholarship/exchange information sessions (`buổi giới thiệu học bổng/chương trình`) with a scheduled time and venue.
+5. Active event reminders & countdowns: Registration countdowns ("24 giờ cuối", "còn X ngày", "gia hạn đăng ký", "nhắc nhở diễn ra") or speaker/topic introductions (`giới thiệu báo cáo viên/diễn giả`) for an upcoming session.
 
-WHAT DOES NOT COUNT (`is_event: false`):
-- Pure holiday/celebration greetings (e.g., 20/10, 20/11, New Year wishes) with no organized activity to attend or register for.
-- Pure post-event recaps, thank-you notes, or final winner/honor roll announcements (recap, bảng vàng vinh danh, tuyên dương gương Sinh viên 5 Tốt, đóng đơn/kết thúc hoàn toàn) where the event has ALREADY completely finished and no upcoming round or activity is mentioned.
-- General news, scam warnings, memes, or administrative notices with no event.
+WHAT DOES NOT COUNT (`is_event: false`) — Empirical Disqualification Rules:
+1. Post-event recaps, round results, retrospective thank-you notes & semester summaries: Posts summarizing an activity that has ALREADY finished (`[RECAP]`, `tổng kết`, `đã chính thức khép lại`, `hành trình khép lại`, `nhìn lại chặng đường`, `kết quả chung cuộc`, `kết quả ngày thi đấu`, `gửi lời cảm ơn`, `tri ân Ban Chấp hành`, `trân trọng cảm ơn các Quý doanh nghiệp đã đồng hành`), or announcing that recruitment results were sent to email (`kết quả tuyển dụng đã gửi đến hộp thư`), with NO new registration or upcoming spectator/participant session.
+2. Honor rolls, award announcements & congratulations: Posts congratulating or honoring individuals/teams for achievements, awards, or research publications (`chúc mừng`, `xin chúc mừng`, `vinh danh`, `đạt danh hiệu Sinh viên 5 Tốt`, `đạt giải thưởng`, `Quả Cầu Vàng`, `công bố khoa học trên hội nghị`) with no organized event to attend.
+3. Internal organizational/union governance congresses: Posts announcing or celebrating internal committee congresses or administrative decision rollouts (`Hội nghị mở rộng Ban Chấp hành`, `Chào mừng Hội nghị mở rộng Đoàn/Hội`, `kiện toàn đội ngũ Ban Chấp hành`, `Hội nghị triển khai quyết định thành lập...`) that are internal delegate/governance meetings rather than events open for general student registration (note: an open academic conference like `Hội nghị Khoa học` inviting student attendees/papers IS `is_event: true`).
+4. Pure scholarship / financial-aid dossier applications: Posts that only announce financial aid or scholarship application requirements/quotas (`Thông báo học bổng Quỹ Vượt khó`, `Học bổng Vallet`, `nhận hồ sơ đăng ký học bổng`) where students submit dossiers rather than attending a scheduled event (whereas a live `Buổi giới thiệu học bổng` seminar IS `is_event: true`).
+5. Routine academic, administrative, dormitory & graduation notices: Classroom/room changes (`phòng máy sửa chữa`), final exam schedules (`lịch thi cuối kỳ`), exam integrity rules (`phòng chống gian lận thi cử`), course-end grading notices, dormitory stay registration (`đăng ký ở Ký túc xá`), administrative graduation ceremonies (`lễ trao bằng tốt nghiệp`), and general administrative/policy surveys (`đóng góp ý kiến - hiến kế`, `khảo sát nguyện vọng kết nạp Đảng`).
+6. Corporate job postings & non-scheduled companion/promotional posts: Full-time corporate job/trainee recruitment (`Engineering Development Program`, graduate job openings without a campus talk/workshop), storytelling rubrics (`[Tin tốt chuyện đẹp]`), holiday/commemorative greetings (`20/10`, `20/11`, `10/10 Ngày Chuyển đổi số`), fundraising booth price menus (`gian hàng gây quỹ` listing drink prices without an event registration/schedule), or companion Q&A/handbook posts (`Cẩm nang... giải đáp thắc mắc trong từng bức ảnh`) that do not announce a distinct event session.
 
 EXTRACTION RULES:
-- `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
+- `reason`: 1 concise sentence explaining the content reasoning decision (why `is_event` is true or which disqualification rule made it false).
+- `title`: Extract the canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển Cộng tác viên Tình nguyện - Bước Chân Yêu Thương", "Seminar on Legal AI Beyond the Demo"). Do NOT use countdown hooks like "3 DAYS LEFT" or tags like "[HỖ TRỢ TRUYỀN THÔNG]" alone as the title.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
 - `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
 - `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
 - `reg_start_datetime`: Time that the event opens for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "mở đơn từ 19/10/2026", "mở cổng đăng ký lúc 18h ngày 01/11"); otherwise return null.
-- `reg_end_datetime`: Time that the event closes for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "đóng đơn 30/10/2026", "hạn chót đăng ký 23h59 ngày 15/11", "deadline 20/11"); otherwise return null.
-- `location`: Search carefully for location cues (especially lines starting with `Địa điểm`, `Dia diem`, `Địa chỉ`, `Dia chi`, `Nơi tổ chức`, `Location`, `Venue`, `Address`, `Phòng`, `Hội trường`, `Giảng đường`, `Cơ sở`, including with leading emojis like `📍`). Take the full venue/location line content. If no location is mentioned, use null.
+- `reg_end_datetime`: Time that the event closes for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "đóng đơn 30/10/2026", "hạn chót đăng ký 23h59 ngày 15/11", "deadline 20/11", "trước 23g59 ngày 16/11"); otherwise return null.
+- `location`: Search carefully for location cues (especially lines starting with `Địa điểm`, `Dia diem`, `Địa chỉ`, `Dia chi`, `Nơi tổ chức`, `Location`, `Venue`, `Address`, `Phòng`, `Hội trường`, `Giảng đường`, `Cơ sở`, including with leading emojis like `📍` or `🏢`). Take the full venue/location line content. If no location is mentioned, use null.
 - `fee`: Search carefully for lines containing `Lệ phí`, `Le phi`, `Phí tham gia`, `Phí đăng ký`, `Giá vé`, `Chi phí`, `Fee`, `Ticket`, or `miễn phí`/`free` (including after emojis like `💸`). Extract the fee value from that line (e.g., "25.000 VNĐ/sinh viên", "100.000 VND", "miễn phí"); use null if not mentioned.
-- `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
+- `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, tinyurl.com, luma.com). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
 Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
 {
   "is_event": boolean,
+  "reason": string,
   "title": string|null,
   "description": string|null,
   "event_start_datetime": string|null,
@@ -1201,6 +1220,133 @@ def count_event_keywords(content: str) -> int:
     )
 
 
+STRONG_EVENT_SIGNAL_RE = re.compile(
+    r"\b(dang ky tham gia|dang ky tham du|dang ki tham gia|dang ky tham quan|"
+    r"link dang ky|form dang ky|mo don dang ky|mo link dang ky|mo form dang ky|"
+    r"thoi han dang ky|nhanh tay dang ky|cach thuc dang ky|cong dang ky|"
+    r"mo don|dong don|han chot dang ky|link se dong som|mo he thong thi|"
+    r"thoi gian to chuc|dia diem to chuc|doi tuong tham gia|hinh thuc dang ky|"
+    r"thoi gian dien ra|dia diem dien ra|"
+    r"workshop|seminar|webinar|hackathon|contest|competition|meetup|festival|concert|"
+    r"talkshow|bootcamp|orientation|open day|livestream|career fair|job fair|"
+    r"summer school|mini-course|thi thu toeic|truong he|"
+    r"hoi thao|toa dam|cuoc thi|giao luu|trien lam|dem nhac|chao tan|"
+    r"tuyen quan|tuyen thanh vien|tuyen cong tac vien|hien mau|le khai mac|gala chung ket)\b",
+    flags=re.IGNORECASE,
+)
+
+NON_EVENT_SIGNAL_RE = re.compile(
+    r"(\[\s*recap\b|\brecap\s+vong\b|\bchuc\s+mung\b|\bvinh\s+danh\b|\btri\s+an\s+ban\s+chap\s+hanh\b|"
+    r"\btong\s+ket\s+(?:tieu\s+ban|ket\s+qua|mot\s+hanh\s+trinh)\b|\bket\s+qua\s+(?:chung\s+cuoc|tuyen\s+dung)\b|"
+    r"\bda\s+chinh\s+thuc\s+khep\s+lai\b|\bhanh\s+trinh\s+khep\s+lai\b|\bkhep\s+lai\s+nhung\s+man\s+tranh\s+tai\b|"
+    r"\btin\s+tot\s+chuyen\s+dep\b|\bdong\s+gop\s+y\s+kien\s*-\s*hien\s+ke\b|"
+    r"\bkhao\s+sat\s+nguyen\s+vong\s+ket\s+nap\s+dang\b|\bdang\s+ky\s+o\s+ky\s+tuc\s+xa\b|"
+    r"\ble\s+trao\s+bang\s+tot\s+nghiep\b|\blich\s+thi\s+chi\s+tiet\s+cuoi\s+ky\b|"
+    r"\bphong\s+chong\s+gian\s+lan\b|\bphong\s+may\s+.*?\s+sua\s+chua\b)",
+    flags=re.IGNORECASE,
+)
+
+ACTIVE_REGISTRATION_OVERRIDE_RE = re.compile(
+    r"\b(mo\s+don|mo\s+link\s+dang\s+ky|mo\s+form\s+dang\s+ky|dang\s+ky\s+tham\s+gia|dang\s+ky\s+tham\s+du)\b",
+    flags=re.IGNORECASE,
+)
+
+_INTERNAL_CONGRESS_RE = re.compile(
+    r"\b(hoi\s+nghi\s+mo\s+rong\s+ban\s+chap\s+hanh|chao\s+mung\s+hoi\s+nghi\s+mo\s+rong|"
+    r"hoi\s+nghi\s+trien\s+khai\s+cac\s+quyet\s+dinh|kien\s+toan\s+doi\s+ngu\s+ban\s+chap\s+hanh)\b",
+    flags=re.IGNORECASE,
+)
+_SCHOLARSHIP_DOSSIER_RE = re.compile(
+    r"\b(thong\s+bao\s+ve\s+hoc\s+bong|hoc\s+bong\s+quy\s+vuot\s+kho|hoc\s+bong\s+vallet|"
+    r"nhan\s+ho\s+so\s+dang\s+ky\s+hoc\s+bong|thoi\s+gian\s+xet\s+hoc\s+bong|nop\s+ho\s+so\s+hoc\s+bong)\b",
+    flags=re.IGNORECASE,
+)
+_LIVE_SESSION_CUE_RE = re.compile(
+    r"\b(buoi\s+gioi\s+thieu|buoi\s+training|exclusive\s+training|workshop|seminar|webinar|talkshow|"
+    r"hoi\s+thao|toa\s+dam|giao\s+luu|info\s+session|dien\s+gia|bao\s+cao\s+vien|zoom\s+meeting|google\s+meet)\b",
+    flags=re.IGNORECASE,
+)
+_CORPORATE_JOB_PROGRAM_RE = re.compile(
+    r"\b(engineering\s+development\s+program|management\s+trainee|graduate\s+trainee\s+program|"
+    r"sinh\s+vien\s+nam\s+cuoi\s+hoac\s+vua\s+tot\s+nghiep[\s\S]{0,160}ung\s+tuyen)\b",
+    flags=re.IGNORECASE,
+)
+_RETROSPECTIVE_GRATITUDE_RE = re.compile(
+    r"\b(tran\s+trong\s+cam\s+on\s+cac\s+quy\s+doanh\s+nghiep|da\s+danh\s+thoi\s+gian\s+dong\s+hanh|"
+    r"cac\s+dien\s+gia\s+da\s+mang\s+den|khep\s+lai\s+chang\s+duong)\b",
+    flags=re.IGNORECASE,
+)
+_COMPANION_HANDBOOK_RE = re.compile(
+    r"\b(cam\s+nang\s+[\w\s]{1,30}?tram\s+dung\s+nho|giai\s+dap\s+tron\s+ven\s+trong\s+tung\s+buc\s+anh)\b",
+    flags=re.IGNORECASE,
+)
+_EXPLICIT_SCHEDULE_OR_REG_LABEL_RE = re.compile(
+    r"\b(thoi\s+gian\s*(?:to\s+chuc|dien\s+ra)?\s*:|dia\s+diem\s*(?:to\s+chuc|dien\s+ra)?\s*:|"
+    r"link\s+dang\s+ky|form\s+dang\s+ky|dang\s+ky\s+tham\s+(?:gia|du|quan)|mo\s+don)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def reason_about_post_content(content: str) -> Tuple[bool, str]:
+    """Deterministic multi-step Content Reasoning engine mirrored from `events/extractor.py`."""
+    if not content or not content.strip():
+        return False, "disqualified:empty_post"
+
+    stripped = _strip_accents(content).lower()
+    has_active_reg_override = bool(ACTIVE_REGISTRATION_OVERRIDE_RE.search(stripped))
+
+    m_non = NON_EVENT_SIGNAL_RE.search(stripped)
+    if m_non and not has_active_reg_override:
+        return False, f"disqualified:non_event_signal ({m_non.group(0).strip()})"
+
+    m_cong = _INTERNAL_CONGRESS_RE.search(stripped)
+    if m_cong and not has_active_reg_override:
+        return False, f"disqualified:internal_governance_congress ({m_cong.group(0).strip()})"
+
+    m_schol = _SCHOLARSHIP_DOSSIER_RE.search(stripped)
+    if m_schol and not _LIVE_SESSION_CUE_RE.search(stripped):
+        return False, f"disqualified:scholarship_dossier_notice ({m_schol.group(0).strip()})"
+
+    m_job = _CORPORATE_JOB_PROGRAM_RE.search(stripped)
+    if m_job and not _LIVE_SESSION_CUE_RE.search(stripped):
+        return False, f"disqualified:corporate_job_posting ({m_job.group(0).strip()})"
+
+    m_retro = _RETROSPECTIVE_GRATITUDE_RE.search(stripped)
+    if m_retro and not has_active_reg_override and not _EXPLICIT_SCHEDULE_OR_REG_LABEL_RE.search(stripped):
+        return False, f"disqualified:retrospective_summary ({m_retro.group(0).strip()})"
+
+    m_hand = _COMPANION_HANDBOOK_RE.search(stripped)
+    if m_hand:
+        return False, f"disqualified:companion_qa_handbook ({m_hand.group(0).strip()})"
+
+    m_strong = STRONG_EVENT_SIGNAL_RE.search(stripped)
+    if m_strong:
+        return True, f"qualified:strong_event_signal ({m_strong.group(0).strip()})"
+
+    kw_count = count_event_keywords(content)
+    if kw_count >= max(3, MIN_KEYWORD_MATCHES + 1):
+        return True, f"qualified:keyword_density (kw_count={kw_count})"
+
+    if kw_count >= MIN_KEYWORD_MATCHES:
+        has_date_time_or_link = bool(
+            re.search(
+                r"(\b\d{1,2}[/-]\d{1,2}(?:[/-]20\d{2})?\b|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}[:hg]\d{2}\b|https?://)",
+                content,
+                flags=re.IGNORECASE,
+            )
+        )
+        if has_date_time_or_link:
+            return True, f"qualified:keywords_with_schedule_or_link (kw_count={kw_count})"
+
+    return False, f"disqualified:insufficient_event_signals (kw_count={kw_count})"
+
+
+def looks_event_related(content: str) -> bool:
+    """Empirical content-reasoning pre-filter mirrored from `events/extractor.py`."""
+    is_candidate, _ = reason_about_post_content(content)
+    return is_candidate
+
+
 def _candidate_gemini_models() -> List[str]:
     global _WORKING_GEMINI_MODEL
     if _WORKING_GEMINI_MODEL:
@@ -1235,7 +1381,7 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
     payload_bytes = json.dumps(
         {
             "model": full_model,
-            "displayName": "fb_rss_event_extractor_regulations_v1",
+            "displayName": "fb_rss_event_extractor_regulations_v2",
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_REGULATIONS}],
             },
@@ -1632,8 +1778,22 @@ def _enrich_extracted_event_fields(
     content: str,
     published_at: Optional[datetime] = None,
 ) -> Dict[str, Any]:
-    """Post-process LLM or heuristic output to normalize and backfill fields."""
-    if not raw_data or not raw_data.get("is_event"):
+    """Post-process LLM or heuristic output to enforce content reasoning and normalize fields."""
+    if not raw_data:
+        return raw_data
+
+    is_candidate, reasoning_note = reason_about_post_content(content)
+    if not raw_data.get("reason"):
+        raw_data["reason"] = reasoning_note
+
+    if not raw_data.get("is_event"):
+        return raw_data
+
+    if not is_candidate and reasoning_note.startswith("disqualified:") and not reasoning_note.startswith(
+        "disqualified:insufficient_event_signals"
+    ):
+        raw_data["is_event"] = False
+        raw_data["reason"] = f"guardrail_override ({reasoning_note})"
         return raw_data
 
     if raw_data.get("title"):
@@ -1698,16 +1858,9 @@ def heuristic_extract_event(
     """Rule-based fallback extractor when GEMINI_API_KEY is missing or Gemini fails."""
     combined = (content or "").strip()
     stripped = _strip_accents(combined).lower()
-    kw_count = count_event_keywords(combined)
-    has_strong_signal = bool(
-        re.search(
-            r"\b(workshop|seminar|webinar|conference|hackathon|contest|competition|meetup|festival|concert|"
-            r"hoi thao|hoi nghi|toa dam|cuoc thi|ngay hoi|trien lam|open day|livestream)\b",
-            stripped,
-        )
-    )
-    if not (kw_count >= 2 or (has_strong_signal and kw_count >= 1)):
-        return {"is_event": False}
+    is_candidate, reasoning_note = reason_about_post_content(combined)
+    if not is_candidate:
+        return {"is_event": False, "reason": reasoning_note}
 
     title = ""
     for line in combined.splitlines():
@@ -1764,6 +1917,7 @@ def heuristic_extract_event(
 
     return {
         "is_event": True,
+        "reason": reasoning_note,
         "title": title,
         "description": _summarize_event_description(combined) or None,
         "event_start_datetime": event_start_datetime,
@@ -1901,6 +2055,7 @@ async def process_post_url(
 
     record: Dict[str, Any] = {
         "is_event": is_event,
+        "reason": raw_data.get("reason"),
         "title": raw_data.get("title"),
         "online_mode": _derive_online_mode(is_online, fmt_list),
         "is_online": is_online,
