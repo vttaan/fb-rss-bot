@@ -1,7 +1,7 @@
 {
   "folder": "emails/anonymous",
   "client_id": "anonymous",
-  "updated_at": "2026-11-11T14:26:32.177866+07:00",
+  "updated_at": "2026-11-15T20:59:56.337647+07:00",
   "count": 1,
   "events": [
     {
@@ -13,6 +13,10 @@
       "time": "14:00",
       "start_datetime": "2026-11-20T14:00:00+07:00",
       "end_datetime": null,
+      "event_start_datetime": "2026-11-20T14:00:00+07:00",
+      "event_end_datetime": null,
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
       "location": null,
       "source_type": "email",
       "source_id": "email_dcc51d42aa11b354b3cd",
