@@ -62,10 +62,14 @@ def _load_env_file() -> None:
 
 _load_env_file()
 
-# Set your Gemini API key directly here (or leave empty to use GEMINI_API_KEY env var):
+# Set your Gemini API key(s) directly here (or configure in .env via GEMINI_API_KEY_1..3 / GEMINI_API_KEYS):
 DEFAULT_GEMINI_API_KEY = ""
-DEFAULT_GEMINI_API_KEYS: List[str] = []
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-lite"
+DEFAULT_GEMINI_API_KEYS: List[str] = [
+    # "AIzaSyYourFirstGeminiKey...",
+    # "AIzaSyYourSecondGeminiKey...",
+    # "AIzaSyYourThirdGeminiKey...",
+]
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 
 # Groq API Fallback Configuration (Free tier: https://console.groq.com)
 DEFAULT_GROQ_API_KEY = ""
@@ -86,7 +90,12 @@ GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
 
 
 class GeminiKeyPool:
-    """Manages a pool of Gemini API keys with automatic rotation on 429 (rate limits) and 403."""
+    """
+    Manages a pool of Gemini API keys (e.g., 3 keys) with:
+      1. Round-robin load balancing across every LLM call (`advance()`).
+      2. Automatic cooldown failover on HTTP 429 (rate limits) and HTTP 403.
+      3. Multi-format `.env` loading (`GEMINI_API_KEY_1..3`, `GEMINI_API_KEYS`, `GEMINI_API_KEY`).
+    """
 
     def __init__(self, initial_keys: Optional[List[str]] = None):
         self.keys: List[str] = []
@@ -105,8 +114,32 @@ class GeminiKeyPool:
                 if clean and clean not in self.keys:
                     self.keys.append(clean)
 
+    def load_from_env(self) -> None:
+        """Load Gemini API keys from `.env` / environment variables (supports 3+ keys)."""
+        _load_env_file()
+        # 1. Numbered keys: GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3 (up to 10)
+        for idx in range(1, 11):
+            self.add_keys(os.environ.get(f"GEMINI_API_KEY_{idx}"))
+        # 2. Comma-separated pool: GEMINI_API_KEYS=key1,key2,key3
+        self.add_keys(os.environ.get("GEMINI_API_KEYS"))
+        # 3. Single or comma-separated: GEMINI_API_KEY
+        self.add_keys(os.environ.get("GEMINI_API_KEY"))
+        # 4. In-code fallback constants
+        self.add_keys(DEFAULT_GEMINI_API_KEYS)
+        self.add_keys(DEFAULT_GEMINI_API_KEY)
+        if self.has_keys() and not os.environ.get("GEMINI_API_KEY"):
+            os.environ["GEMINI_API_KEY"] = self.keys[0]
+
     def has_keys(self) -> bool:
         return bool(self.keys)
+
+    def key_label(self, key: str) -> str:
+        suffix = f"...{key[-6:]}" if len(key) > 6 else key
+        try:
+            slot = self.keys.index(key) + 1
+            return f"Key {slot}/{len(self.keys)} ({suffix})"
+        except ValueError:
+            return f"Key ({suffix})"
 
     def get_active_key(self) -> Optional[str]:
         if not self.keys:
@@ -120,24 +153,26 @@ class GeminiKeyPool:
                 return k
         return min(self.keys, key=lambda k: self._cooldowns.get(k, 0))
 
+    def advance(self) -> None:
+        """Advance the round-robin pointer to the next key in the pool after a successful call."""
+        if len(self.keys) > 1:
+            self._index = (self._index + 1) % len(self.keys)
+
     def mark_rate_limited(self, key: str, wait_seconds: float = 60.0) -> Optional[str]:
         self._cooldowns[key] = time.time() + max(10.0, wait_seconds)
-        self._index = (self._index + 1) % len(self.keys)
+        if self.keys:
+            self._index = (self._index + 1) % len(self.keys)
         return self.get_active_key()
 
     def mark_invalid(self, key: str) -> Optional[str]:
         self._cooldowns[key] = time.time() + 86400.0  # 24h
-        self._index = (self._index + 1) % len(self.keys)
+        if self.keys:
+            self._index = (self._index + 1) % len(self.keys)
         return self.get_active_key()
 
 
 _GLOBAL_KEY_POOL = GeminiKeyPool()
-_GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEYS"))
-_GLOBAL_KEY_POOL.add_keys(os.environ.get("GEMINI_API_KEY"))
-_GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEYS)
-_GLOBAL_KEY_POOL.add_keys(DEFAULT_GEMINI_API_KEY)
-if _GLOBAL_KEY_POOL.has_keys() and not os.environ.get("GEMINI_API_KEY"):
-    os.environ["GEMINI_API_KEY"] = _GLOBAL_KEY_POOL.get_active_key() or ""
+_GLOBAL_KEY_POOL.load_from_env()
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GEMINI_LIST_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -157,37 +192,43 @@ GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "tru
 )
 
 # Compared against lowercase, diacritics-stripped text.
-# Empirically selected from a 100-post labeled university corpus (60 Event, 40 Non-Event;
-# 24,416 n-grams in post_word_frequency_v2.csv). Generic high-leakage words such as
-# "chuong trinh" (41.3% non-event), "co so" (20.8% non-event), "hoi nghi" (88.9% non-event),
-# "buoi" (38.5% non-event), "giai thuong" (57.1% non-event), "hoc bong" (50.0% non-event),
-# "quyen loi" (42.9% non-event), and "lich" (matches "lich su"/"lich thi"/"lich hoc")
+# Empirically selected from a 150-post labeled university corpus (108 Event, 42 Non-Event;
+# 37,061 n-grams in post_word_frequency_v4.csv). Generic high-leakage words such as
+# "chuong trinh", "co so", "hoi nghi" (88.9% non-event), "buoi", "giai thuong",
+# "hoc bong", "quyen loi", and "lich" (matches "lich su"/"lich thi"/"lich hoc")
 # are intentionally excluded from the pre-filter keyword list.
 EVENT_KEYWORDS = [
-    # High-purity registration & call-to-action phrases (92.5%-100% Event purity)
+    # High-purity registration, launch & call-to-action phrases (92.5%-100% Event purity in v4)
     "dang ky tham gia", "dang ky tham du", "dang ki tham gia", "dang ky tham quan",
     "link dang ky", "form dang ky", "mo don dang ky", "mo link dang ky", "mo form dang ky",
-    "thoi han dang ky", "nhanh tay dang ky", "cach thuc dang ky", "cong dang ky",
-    "mo don", "dong don", "han chot dang ky", "link se dong som", "mo he thong thi",
-    # High-purity schedule, venue & participant structure labels (80%-100% Event purity)
+    "mo cong dang ky", "mo cong nhan ho so", "bieu mau dang ky", "thong tin dang ky",
+    "thoi han dang ky", "thoi gian dang ky", "nhanh tay dang ky", "vui long dang ky",
+    "cach thuc dang ky", "cong dang ky", "mo don", "mo cong", "dong don",
+    "chinh thuc mo", "chinh thuc khoi dong", "chinh thuc phat dong",
+    "han chot dang ky", "link se dong som", "mo he thong thi", "bo lo co hoi",
+    # High-purity schedule, venue, incentive & participant structure labels (85%-100% Event purity in v4)
     "thoi gian to chuc", "dia diem to chuc", "doi tuong tham gia", "hinh thuc dang ky",
-    "thoi gian dien ra", "dia diem dien ra", "co cau giai thuong",
+    "thoi gian dien ra", "dia diem dien ra", "thong tin chi tiet", "co cau giai thuong",
+    "le phi tham gia", "giay chung nhan", "diem ren luyen", "than moi",
+    "tham gia hoat dong", "sinh vien quan tam", "thoi gian lam bai",
     "dang ky", "dang ki", "dia diem", "thoi gian", "thoi han", "han chot",
     "tham gia", "tham du", "tham quan", "dien gia", "bao cao vien", "khach moi",
     "le phi", "mien phi", "the le", "ban to chuc", "hoi truong", "doi tuong",
     "so luong", "hinh thuc", "vao luc",
-    # High-purity Vietnamese event types & activities (80%-100% Event purity)
+    # High-purity Vietnamese event types & activities (85%-100% Event purity in v4)
     "hoi thao", "toa dam", "giao luu", "cuoc thi", "trien lam", "ngay hoi",
-    "dem nhac", "chao tan", "tuyen quan", "tuyen thanh vien", "tuyen cong tac vien",
+    "ngay hoi van hoa", "ngay hoi truyen thong", "hoi trai", "dem nhac", "chao tan",
+    "tuyen quan", "tuyen thanh vien", "tuyen cong tac vien", "tuyen chien si", "mua he xanh",
     "hien mau", "le khai mac", "gala chung ket", "chung ket", "so khao",
+    "trac nghiem truc tuyen", "du thi", "bai thi", "lam bai",
     "sinh hoat chuyen de", "chuyen de", "chien dich", "thi thu toeic", "truong he",
     # English event types, actions & online platforms (90%-100% Event purity)
     "workshop", "seminar", "webinar", "hackathon", "contest", "competition",
     "meetup", "festival", "concert", "talkshow", "bootcamp", "orientation",
-    "minigame", "esports", "tournament", "career fair", "job fair", "open day",
-    "livestream", "summer school", "mini-course", "register", "registration",
-    "ticket", "rsvp", "save the date", "timeline", "deadline", "check in", "checkin",
-    "online", "offline", "zoom", "google meet", "ms teams",
+    "minigame", "esports", "tournament", "teambuilding", "offline run",
+    "career fair", "job fair", "open day", "livestream", "summer school", "mini-course",
+    "register", "registration", "ticket", "rsvp", "save the date", "timeline",
+    "deadline", "check in", "checkin", "online", "offline", "zoom", "google meet", "ms teams",
 ]
 
 SYSTEM_REGULATIONS = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
@@ -195,28 +236,30 @@ Decide whether each post announces, promotes, opens registration for, or gives s
 
 CONTENT REASONING PROTOCOL (follow these 4 steps before setting `is_event`):
 Step 1 — Temporal & Intent Direction:
-  Determine whether the post is FORWARD-LOOKING / ACTIVE (inviting students to register, participate, submit entries, attend an upcoming session, or reminding them of an active deadline/round) vs. RETROSPECTIVE / PASSIVE (summarizing a finished event, thanking sponsors/speakers after the fact, announcing final winners/results already sent to email, or congratulating award recipients). Retrospective posts with no new upcoming session or registration action MUST be `is_event: false`.
+  Determine whether the post is FORWARD-LOOKING / ACTIVE (inviting students to register, participate, submit entries, take an online quiz/test, attend an upcoming session, or reminding them of an active deadline/round) vs. RETROSPECTIVE / PASSIVE (summarizing a finished event, thanking sponsors/speakers after the fact, announcing final winners/results already sent to email, or congratulating past award recipients). Retrospective posts with no new upcoming session or registration action MUST be `is_event: false`.
+  *Nuance*: If an active competition/award announcement says it WILL honor winners in the future (e.g., "Mở cổng nhận hồ sơ... sẽ vinh danh Top 10"), it is FORWARD-LOOKING (`is_event: true`).
 Step 2 — Entity & Activity Nature (Event vs. Non-Event Archetypes):
-  Verify that the subject is an actual organized student event, workshop, seminar, competition, campaign, club recruitment drive, or live info session — NOT an internal union committee governance congress, a pure scholarship dossier submission notice, a full-time corporate job ad, a routine academic/dormitory/graduation administrative announcement, or a companion Q&A handbook/storytelling post.
+  Verify that the subject is an actual organized student event, workshop, seminar, competition/award call, online quiz challenge, traditional camp (`hội trại`), teambuilding, volunteer campaign (`tuyển chiến sĩ`, `mùa hè xanh`), club recruitment drive, or live info session — NOT an internal union committee governance congress, a pure scholarship dossier submission notice, a full-time corporate job ad, a routine academic/dormitory/graduation administrative announcement, or a passive Q&A handbook/storytelling post.
+  *Nuance*: If a post uses a rubric tag like `[Tin tốt, chuyện đẹp]` or `[Hưởng ứng tuần lễ...]` but launches an active online quiz/minigame with a participation link and test window (e.g., "chính thức mở cổng", "Thời gian làm bài", "link Aloha/form"), it IS an active event (`is_event: true`).
 Step 3 — Actionable Schedule or Participation Evidence:
-  Confirm that the post provides actionable participation cues (e.g., event date/time/venue, registration form/link, application timeline, or competition round instructions) or is an official countdown/speaker reveal for an upcoming event.
+  Confirm that the post provides actionable participation cues (e.g., event date/time/venue, registration form/link, quiz portal link, application timeline, or competition round instructions) or is an official countdown/speaker reveal for an upcoming event.
 Step 4 — Concise Reasoning Justification (`reason`):
   Write a 1-sentence explanation in `reason` stating why the post qualifies as an active/upcoming event (`is_event: true`) or which disqualification rule applies (`is_event: false`).
 
 WHAT COUNTS AS AN EVENT (`is_event: true`):
-1. Academic & skill sessions: Workshops, seminars, webinars, talkshows, academic talks (`báo cáo viên`, `chuyên đề`), summer schools (`trường hè`), mini-courses, orientations (`chào tân sinh viên`), mock exams (`thi thử TOEIC`), and company/campus tours (`tham quan doanh nghiệp`).
-2. Competitions & tournaments: Contests, hackathons, academic olympiads, sports/esports tournaments, talent contests, and minigames (`cuộc thi`, `hội thi`, `giải đấu`, `mở hệ thống thi`, `vòng sơ khảo`, `gala chung kết`) that invite participation, submissions, or spectators for an active/upcoming round.
-3. Cultural, community & career events: Concerts, music nights (`đêm nhạc`), festivals (`ngày hội`, `lễ hội`), career/job fairs (`ngày hội việc làm`), exhibitions (`triển lãm`), volunteer campaigns recruiting participants/volunteers (`chiến dịch tình nguyện`, `hiến máu`), and periodic student health checkup drives (`đăng ký khám sức khỏe`) with specific dates/venues.
+1. Academic & skill sessions: Workshops, seminars, webinars, talkshows, academic talks (`báo cáo viên`, `chuyên đề`), summer schools (`trường hè`), mini-courses, orientations (`chào tân sinh viên`), mock exams (`thi thử TOEIC`), and company/campus tours (`tham quan doanh nghiệp`, `VNU Tour`).
+2. Competitions, award calls & online quizzes: Contests, startup/innovation awards opening submissions (`mở cổng nhận hồ sơ đăng ký`), hackathons, academic olympiads, online multiple-choice quizzes (`cuộc thi trắc nghiệm trực tuyến`, `mở hệ thống thi`, `myaloha`), sports/esports/chess/tug-of-war/running tournaments (`giải đấu`, `offline run`), talent contests, and minigames that invite participation, submissions, or spectators for an active/upcoming round.
+3. Cultural, community, camp & career events: Concerts, music nights (`đêm nhạc`), festivals (`ngày hội văn hóa`, `ngày hội truyền thống`), faculty camps (`hội trại truyền thống`), teambuilding, career/job fairs (`ngày hội việc làm`), exhibitions (`triển lãm`), alumni/teacher appreciation gatherings (`chương trình họp mặt kỷ niệm 20/11`), volunteer campaigns recruiting participants/soldiers (`chiến dịch tình nguyện`, `mùa hè xanh`, `tuyển chiến sĩ`, `hiến máu`), and periodic student health checkup drives (`đăng ký khám sức khỏe`) with specific dates/venues.
 4. Recruitment & info sessions with actionable timelines: Club/committee/volunteer recruitment drives (`tuyển quân`, `tuyển thành viên`, `tuyển cộng tác viên`) that open applications (`mở đơn`, `form đăng ký`) or specify timelines, and live scholarship/exchange information sessions (`buổi giới thiệu học bổng/chương trình`) with a scheduled time and venue.
-5. Active event reminders & countdowns: Registration countdowns ("24 giờ cuối", "còn X ngày", "gia hạn đăng ký", "nhắc nhở diễn ra") or speaker/topic introductions (`giới thiệu báo cáo viên/diễn giả`) for an upcoming session.
+5. Active event reminders & countdowns: Registration countdowns ("24 giờ cuối", "chỉ còn 20 giờ nữa", "còn X ngày", "gia hạn đăng ký", "nhắc nhở diễn ra") or speaker/topic introductions (`giới thiệu báo cáo viên/diễn giả`) for an upcoming session.
 
 WHAT DOES NOT COUNT (`is_event: false`) — Empirical Disqualification Rules:
 1. Post-event recaps, round results, retrospective thank-you notes & semester summaries: Posts summarizing an activity that has ALREADY finished (`[RECAP]`, `tổng kết`, `đã chính thức khép lại`, `hành trình khép lại`, `nhìn lại chặng đường`, `kết quả chung cuộc`, `kết quả ngày thi đấu`, `gửi lời cảm ơn`, `tri ân Ban Chấp hành`, `trân trọng cảm ơn các Quý doanh nghiệp đã đồng hành`), or announcing that recruitment results were sent to email (`kết quả tuyển dụng đã gửi đến hộp thư`), with NO new registration or upcoming spectator/participant session.
-2. Honor rolls, award announcements & congratulations: Posts congratulating or honoring individuals/teams for achievements, awards, or research publications (`chúc mừng`, `xin chúc mừng`, `vinh danh`, `đạt danh hiệu Sinh viên 5 Tốt`, `đạt giải thưởng`, `Quả Cầu Vàng`, `công bố khoa học trên hội nghị`) with no organized event to attend.
+2. Honor rolls, past award announcements & congratulations: Posts congratulating or honoring individuals/teams for already-achieved awards or research publications (`chúc mừng`, `xin chúc mừng`, `vinh danh cá nhân/đội thi đạt giải`, `đạt danh hiệu Sinh viên 5 Tốt`, `Quả Cầu Vàng`, `công bố khoa học trên hội nghị`) with no organized event or open competition to enter.
 3. Internal organizational/union governance congresses: Posts announcing or celebrating internal committee congresses or administrative decision rollouts (`Hội nghị mở rộng Ban Chấp hành`, `Chào mừng Hội nghị mở rộng Đoàn/Hội`, `kiện toàn đội ngũ Ban Chấp hành`, `Hội nghị triển khai quyết định thành lập...`) that are internal delegate/governance meetings rather than events open for general student registration (note: an open academic conference like `Hội nghị Khoa học` inviting student attendees/papers IS `is_event: true`).
-4. Pure scholarship / financial-aid dossier applications: Posts that only announce financial aid or scholarship application requirements/quotas (`Thông báo học bổng Quỹ Vượt khó`, `Học bổng Vallet`, `nhận hồ sơ đăng ký học bổng`) where students submit dossiers rather than attending a scheduled event (whereas a live `Buổi giới thiệu học bổng` seminar IS `is_event: true`).
+4. Pure scholarship / financial-aid dossier applications: Posts that only announce financial aid or scholarship application requirements/quotas (`Thông báo học bổng Quỹ Vượt khó`, `Học bổng Vallet`, `nhận hồ sơ đăng ký học bổng`) where students submit financial-aid dossiers rather than attending a scheduled event or entering a competition (whereas a live `Buổi giới thiệu học bổng` seminar IS `is_event: true`).
 5. Routine academic, administrative, dormitory & graduation notices: Classroom/room changes (`phòng máy sửa chữa`), final exam schedules (`lịch thi cuối kỳ`), exam integrity rules (`phòng chống gian lận thi cử`), course-end grading notices, dormitory stay registration (`đăng ký ở Ký túc xá`), administrative graduation ceremonies (`lễ trao bằng tốt nghiệp`), and general administrative/policy surveys (`đóng góp ý kiến - hiến kế`, `khảo sát nguyện vọng kết nạp Đảng`).
-6. Corporate job postings & non-scheduled companion/promotional posts: Full-time corporate job/trainee recruitment (`Engineering Development Program`, graduate job openings without a campus talk/workshop), storytelling rubrics (`[Tin tốt chuyện đẹp]`), holiday/commemorative greetings (`20/10`, `20/11`, `10/10 Ngày Chuyển đổi số`), fundraising booth price menus (`gian hàng gây quỹ` listing drink prices without an event registration/schedule), or companion Q&A/handbook posts (`Cẩm nang... giải đáp thắc mắc trong từng bức ảnh`) that do not announce a distinct event session.
+6. Corporate job postings & passive companion/storytelling posts: Full-time corporate job/trainee recruitment (`Engineering Development Program`, graduate job openings without a campus talk/workshop), passive storytelling rubrics (`[Tin tốt chuyện đẹp]` praising a student/story without an interactive quiz/challenge link), holiday/commemorative greetings (`20/10`, `10/10 Ngày Chuyển đổi số`), fundraising booth price menus (`gian hàng gây quỹ` listing drink prices without an event registration/schedule), or companion Q&A/handbook posts (`Cẩm nang... giải đáp thắc mắc trong từng bức ảnh`) that do not announce a distinct event session.
 
 EXTRACTION RULES:
 - `reason`: 1 concise sentence explaining the content reasoning decision (why `is_event` is true or which disqualification rule made it false).
@@ -306,29 +349,34 @@ def count_event_keywords(content: str) -> int:
     )
 
 
-# Tier-1 phrases with 90%-100% empirical Event purity in the 100-post study.
+# Tier-1 phrases with 90%-100% empirical Event purity in the 150-post study (post_word_frequency_v4.csv).
 # Note: "hoi nghi" (88.9% non-event) and "tap huan" (100% non-event in recaps) are excluded here.
 STRONG_EVENT_SIGNAL_RE = re.compile(
     r"\b(dang ky tham gia|dang ky tham du|dang ki tham gia|dang ky tham quan|"
     r"link dang ky|form dang ky|mo don dang ky|mo link dang ky|mo form dang ky|"
-    r"thoi han dang ky|nhanh tay dang ky|cach thuc dang ky|cong dang ky|"
-    r"mo don|dong don|han chot dang ky|link se dong som|mo he thong thi|"
+    r"mo cong dang ky|mo cong nhan ho so|bieu mau dang ky|thong tin dang ky|"
+    r"thoi han dang ky|nhanh tay dang ky|vui long dang ky|cach thuc dang ky|cong dang ky|"
+    r"mo don|dong don|chinh thuc mo|chinh thuc khoi dong|chinh thuc phat dong|"
+    r"han chot dang ky|link se dong som|mo he thong thi|bo lo co hoi|le phi tham gia|"
     r"thoi gian to chuc|dia diem to chuc|doi tuong tham gia|hinh thuc dang ky|"
-    r"thoi gian dien ra|dia diem dien ra|"
+    r"thoi gian dien ra|dia diem dien ra|trac nghiem truc tuyen|"
     r"workshop|seminar|webinar|hackathon|contest|competition|meetup|festival|concert|"
     r"talkshow|bootcamp|orientation|open day|livestream|career fair|job fair|"
-    r"summer school|mini-course|thi thu toeic|truong he|"
-    r"hoi thao|toa dam|cuoc thi|giao luu|trien lam|dem nhac|chao tan|"
+    r"summer school|mini-course|thi thu toeic|truong he|teambuilding|offline run|"
+    r"hoi thao|toa dam|cuoc thi|giao luu|trien lam|dem nhac|chao tan|hoi trai|"
+    r"ngay hoi van hoa|ngay hoi truyen thong|tuyen chien si|mua he xanh|"
     r"tuyen quan|tuyen thanh vien|tuyen cong tac vien|hien mau|le khai mac|gala chung ket)\b",
     flags=re.IGNORECASE,
 )
 
-# High-purity Non-Event / Recap / Honor / Routine-Admin signals (75%-100% Non-Event in corpus).
+# High-purity Non-Event / Recap / Honor / Routine-Admin signals (75%-100% Non-Event in v4 corpus).
+# Note: `(?<!se\s)\bvinh\s+danh\b` avoids matching future-tense "sẽ vinh danh Top 10" inside active award calls.
 NON_EVENT_SIGNAL_RE = re.compile(
-    r"(\[\s*recap\b|\brecap\s+vong\b|\bchuc\s+mung\b|\bvinh\s+danh\b|\btri\s+an\s+ban\s+chap\s+hanh\b|"
+    r"(\[\s*recap\b|\brecap\s+vong\b|\bxin\s+chuc\s+mung\b|\bchuc\s+mung\b|(?<!se\s)\bvinh\s+danh\b|"
+    r"\btri\s+an\s+ban\s+chap\s+hanh\b|\bxuat\s+sac\s+dat\b|\bhoan\s+thanh\s+xuat\s+sac\b|"
     r"\btong\s+ket\s+(?:tieu\s+ban|ket\s+qua|mot\s+hanh\s+trinh)\b|\bket\s+qua\s+(?:chung\s+cuoc|tuyen\s+dung)\b|"
     r"\bda\s+chinh\s+thuc\s+khep\s+lai\b|\bhanh\s+trinh\s+khep\s+lai\b|\bkhep\s+lai\s+nhung\s+man\s+tranh\s+tai\b|"
-    r"\btin\s+tot\s+chuyen\s+dep\b|\bdong\s+gop\s+y\s+kien\s*-\s*hien\s+ke\b|"
+    r"\btin\s+tot\s*,?\s*chuyen\s+dep\b|\bdong\s+gop\s+y\s+kien\s*-\s*hien\s+ke\b|"
     r"\bkhao\s+sat\s+nguyen\s+vong\s+ket\s+nap\s+dang\b|\bdang\s+ky\s+o\s+ky\s+tuc\s+xa\b|"
     r"\ble\s+trao\s+bang\s+tot\s+nghiep\b|\blich\s+thi\s+chi\s+tiet\s+cuoi\s+ky\b|"
     r"\bphong\s+chong\s+gian\s+lan\b|\bphong\s+may\s+.*?\s+sua\s+chua\b)",
@@ -336,7 +384,10 @@ NON_EVENT_SIGNAL_RE = re.compile(
 )
 
 ACTIVE_REGISTRATION_OVERRIDE_RE = re.compile(
-    r"\b(mo\s+don|mo\s+link\s+dang\s+ky|mo\s+form\s+dang\s+ky|dang\s+ky\s+tham\s+gia|dang\s+ky\s+tham\s+du)\b",
+    r"\b(mo\s+don|mo\s+link\s+dang\s+ky|mo\s+form\s+dang\s+ky|mo\s+cong\s+dang\s+ky|"
+    r"mo\s+cong\s+nhan\s+ho\s+so|bieu\s+mau\s+dang\s+ky|chinh\s+thuc\s+mo|"
+    r"chinh\s+thuc\s+khoi\s+dong|chinh\s+thuc\s+phat\s+dong|thoi\s+gian\s+lam\s+bai|"
+    r"dang\s+ky\s+tham\s+gia|dang\s+ky\s+tham\s+du)\b",
     flags=re.IGNORECASE,
 )
 
@@ -559,18 +610,25 @@ def _candidate_gemini_models(api_key: str = "") -> List[str]:
     return candidates
 
 
+def _cache_scope_key(model: str, api_key: str) -> str:
+    """Scope cachedContents handles per (model, api_key) so rotated keys do not share project-bound cache IDs."""
+    key_id = api_key[-8:] if len(api_key) > 8 else api_key
+    return f"{model}:{key_id}"
+
+
 def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]:
     """
     Create or reuse a server-side Gemini `cachedContents` resource holding `SYSTEM_REGULATIONS`
-    for `model`. If the model/tier rejects explicit context caching (e.g., < minimum token threshold
-    or free-tier restriction), marks `model` in `_CACHE_UNSUPPORTED_MODELS` and falls back to
+    for `(model, api_key)`. If the model/tier rejects explicit context caching (e.g., < minimum token threshold
+    or free-tier restriction), marks `cache_key` in `_CACHE_UNSUPPORTED_MODELS` and falls back to
     `system_instruction` without extra round-trips.
     """
-    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or model in _CACHE_UNSUPPORTED_MODELS:
+    cache_key = _cache_scope_key(model, api_key)
+    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or cache_key in _CACHE_UNSUPPORTED_MODELS:
         return None
 
     now = time.time()
-    cached_entry = _CACHED_SYSTEM_HANDLES.get(model)
+    cached_entry = _CACHED_SYSTEM_HANDLES.get(cache_key)
     if cached_entry and cached_entry[1] - 60 > now:
         return cached_entry[0]
 
@@ -579,7 +637,7 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
     payload_bytes = json.dumps(
         {
             "model": full_model,
-            "displayName": "fb_rss_event_extractor_regulations_v2",
+            "displayName": "fb_rss_event_extractor_regulations_v3",
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_REGULATIONS}],
             },
@@ -598,17 +656,50 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
             data = json.loads(resp.read().decode("utf-8"))
         cache_name = data.get("name")
         if isinstance(cache_name, str) and cache_name.strip():
-            _CACHED_SYSTEM_HANDLES[model] = (cache_name.strip(), now + ttl_s)
-            print(f"[events] Cached regulations on Gemini ({model}) -> {cache_name.strip()} (TTL {ttl_s}s)")
+            _CACHED_SYSTEM_HANDLES[cache_key] = (cache_name.strip(), now + ttl_s)
+            print(f"[events] Cached regulations on Gemini ({model}, {_GLOBAL_KEY_POOL.key_label(api_key)}) -> {cache_name.strip()} (TTL {ttl_s}s)")
             return cache_name.strip()
     except urllib.error.HTTPError as exc:
         # 400/403/404 usually means prompt < min token threshold (1024-4096) or free-tier caching disabled
-        _CACHE_UNSUPPORTED_MODELS.add(model)
+        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
         if exc.code not in (400, 403, 404):
             print(f"[events] Gemini cachedContents unavailable on {model} (HTTP {exc.code}); using system_instruction.")
     except Exception:
-        _CACHE_UNSUPPORTED_MODELS.add(model)
+        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
     return None
+
+
+GEMINI_RESPONSE_SCHEMA: Dict[str, Any] = {
+    "type": "OBJECT",
+    "required": ["is_event", "reason", "category", "format"],
+    "properties": {
+        "is_event": {"type": "BOOLEAN"},
+        "reason": {"type": "STRING"},
+        "title": {"type": "STRING"},
+        "description": {"type": "STRING"},
+        "event_start_datetime": {"type": "STRING"},
+        "event_end_datetime": {"type": "STRING"},
+        "reg_start_datetime": {"type": "STRING"},
+        "reg_end_datetime": {"type": "STRING"},
+        "location": {"type": "STRING"},
+        "organizer": {"type": "STRING"},
+        "registration_url": {"type": "STRING"},
+        "fee": {"type": "STRING"},
+        "is_online": {"type": "BOOLEAN"},
+        "target_audience": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "category": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "format": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+    },
+}
 
 
 def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> bytes:
@@ -619,6 +710,11 @@ def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> byte
         prefix caching) and sends ONLY the raw post text in `contents`.
     """
     cached_name = _get_or_create_cached_regulations(model, api_key)
+    gen_config: Dict[str, Any] = {
+        "responseMimeType": "application/json",
+        "responseSchema": GEMINI_RESPONSE_SCHEMA,
+        "temperature": 0,
+    }
     payload: Dict[str, Any] = {
         "contents": [
             {
@@ -626,7 +722,7 @@ def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> byte
                 "parts": [{"text": user_text}],
             }
         ],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+        "generationConfig": gen_config,
     }
     if cached_name:
         payload["cachedContent"] = cached_name
@@ -841,16 +937,12 @@ def _call_groq_json(user_text: str, groq_key: str = "", max_output_tokens: int =
 
 
 def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
-    """Execute a Gemini `generateContent` request with key rotation across pooled keys, model fallback, and retry."""
+    """Execute a Gemini `generateContent` request with round-robin key rotation across pooled keys, model fallback, and retry."""
     global _WORKING_GEMINI_MODEL, _GLOBAL_KEY_POOL
     pool = _GLOBAL_KEY_POOL
+    pool.load_from_env()
     if api_key:
         pool.add_keys(api_key)
-    if not pool.has_keys():
-        pool.add_keys(os.environ.get("GEMINI_API_KEYS"))
-        pool.add_keys(os.environ.get("GEMINI_API_KEY"))
-        pool.add_keys(DEFAULT_GEMINI_API_KEYS)
-        pool.add_keys(DEFAULT_GEMINI_API_KEY)
 
     if not pool.has_keys():
         raise ValueError("No Gemini API key configured.")
@@ -863,6 +955,7 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
             break
 
         for model in _candidate_gemini_models(active_key):
+            cache_key = _cache_scope_key(model, active_key)
             for attempt in range(GEMINI_MAX_RETRIES + 1):
                 body_bytes = _build_gemini_request_body(user_text, model, active_key)
                 req = urllib.request.Request(
@@ -875,19 +968,21 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
                     with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
                         payload = json.loads(resp.read().decode("utf-8"))
                     _WORKING_GEMINI_MODEL = model
+                    # Advance round-robin pointer so the next extraction uses the next key in the pool
+                    pool.advance()
                     text = payload["candidates"][0]["content"]["parts"][0]["text"]
                     return json.loads(text)
                 except urllib.error.HTTPError as exc:
                     last_exc = exc
-                    if exc.code in (400, 404) and model in _CACHED_SYSTEM_HANDLES:
-                        _CACHED_SYSTEM_HANDLES.pop(model, None)
-                        _CACHE_UNSUPPORTED_MODELS.add(model)
+                    if exc.code in (400, 404) and cache_key in _CACHED_SYSTEM_HANDLES:
+                        _CACHED_SYSTEM_HANDLES.pop(cache_key, None)
+                        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
                         continue
                     if exc.code in (400, 404):
                         print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
                         break
                     if exc.code == 403:
-                        print(f"[events] Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) returned HTTP 403 Forbidden ({exc.reason}).")
+                        print(f"[events] Gemini {pool.key_label(active_key)} returned HTTP 403 Forbidden ({exc.reason}).")
                         if len(pool.keys) > 1:
                             pool.mark_invalid(active_key)
                             break
@@ -895,7 +990,7 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
                     if exc.code in (429, 500, 502, 503, 504):
                         if exc.code == 429 and len(pool.keys) > 1:
                             wait_s = _retry_delay_seconds(attempt, exc)
-                            print(f"[events] Gemini key (...{active_key[-6:] if len(active_key) > 6 else active_key}) hit HTTP 429 Rate Limit. Rotating to next key in pool...")
+                            print(f"[events] Gemini {pool.key_label(active_key)} hit HTTP 429 Rate Limit. Rotating to next key in pool...")
                             pool.mark_rate_limited(active_key, wait_s)
                             break
                         if attempt < GEMINI_MAX_RETRIES:
@@ -2338,8 +2433,9 @@ def ingest_email_message(
                 "inbox_message": existing_msg.to_dict(),
             }
 
-        # 2. Extract event candidate via Gemini LLM (or heuristic fallback if GEMINI_API_KEY unset)
-        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        # 2. Extract event candidate via Gemini LLM pool (or heuristic fallback if no keys configured)
+        _GLOBAL_KEY_POOL.load_from_env()
+        has_gemini = _GLOBAL_KEY_POOL.has_keys()
         full_email_text = (
             f"Subject: {clean_subject}\n"
             f"From: {sender or 'unknown'}\n"
@@ -2348,13 +2444,12 @@ def ingest_email_message(
         source_label = f"Email ({sender or clean_client})"
 
         raw_data: Optional[Dict[str, Any]] = None
-        if api_key:
+        if has_gemini:
             try:
                 raw_data = call_gemini_text(
                     content=full_email_text,
                     published_at_str=rec_dt.isoformat(),
                     source_name=source_label,
-                    api_key=api_key,
                 )
             except Exception as exc:
                 print(f"[events] Gemini error for email {clean_msg_id}, falling back to heuristic: {exc}")
@@ -2457,7 +2552,8 @@ def analyze_fanpage_posts(
     """
     init_db()
     stats = {"analyzed": 0, "llm_calls": 0, "events": 0, "updated": 0, "duplicates": 0, "errors": 0}
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    _GLOBAL_KEY_POOL.load_from_env()
+    has_gemini = _GLOBAL_KEY_POOL.has_keys()
     max_llm_calls = max(MAX_LLM_CALLS_PER_FANPAGE, limit) if (limit and limit > 0) else MAX_LLM_CALLS_PER_FANPAGE
     with get_session() as session:
         fanpage = session.get(Fanpage, fanpage_id)
@@ -2544,7 +2640,7 @@ def analyze_fanpage_posts(
             stats["analyzed"] += 1
             stats["events"] += int(is_event)
 
-        if api_key and llm_candidates:
+        if has_gemini and llm_candidates:
             for start_idx in range(0, len(llm_candidates), GEMINI_BATCH_SIZE):
                 if stats["llm_calls"] >= max_llm_calls:
                     break
@@ -2555,7 +2651,7 @@ def analyze_fanpage_posts(
                 batch_results: Optional[Dict[str, Dict[str, Any]]] = None
                 try:
                     stats["llm_calls"] += 1
-                    batch_results = call_gemini_batch(chunk, name, api_key)
+                    batch_results = call_gemini_batch(chunk, name)
                 except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
                     print(f"[events] LLM batch error for fanpage {fanpage.slug} ({len(chunk)} post(s)): {exc}")
                     batch_results = None
@@ -2581,7 +2677,7 @@ def analyze_fanpage_posts(
                             time.sleep(GEMINI_CALL_DELAY_SECONDS)
                         try:
                             stats["llm_calls"] += 1
-                            single_data = call_gemini(post, name, api_key)
+                            single_data = call_gemini(post, name)
                         except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
                             stats["errors"] += 1
                             print(f"[events] LLM error for post {post.post_id}: {exc}")
@@ -2644,16 +2740,16 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
             "detail": "Could not extract any text or media from that Facebook post URL.",
         }
 
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    _GLOBAL_KEY_POOL.load_from_env()
+    has_gemini = _GLOBAL_KEY_POOL.has_keys()
     source_label = fanpage_name or fanpage_url or "Facebook Post"
     raw_data: Optional[Dict[str, Any]] = None
-    if api_key and content:
+    if has_gemini and content:
         try:
             raw_data = call_gemini_text(
                 content=content,
                 published_at_str=pub_iso,
                 source_name=source_label,
-                api_key=api_key,
             )
         except Exception as exc:
             print(f"[events] Gemini error for single post {post_id}, falling back to heuristic: {exc}")
