@@ -2038,6 +2038,11 @@ def upsert_unified_event(
         "seen_at": now_dt.isoformat(),
     }
 
+    # Step 3 of Unified Extraction: gather additional fields and decode QR code
+    extra_info = gather_additional_event_info(raw_data, media, source_id=source_id)
+    raw_data["registration_url"] = extra_info.get("registration_url")
+    raw_data["registration_status"] = extra_info.get("registration_status")
+
     if status == "duplicate" and existing is not None:
         try:
             stored_info = json.loads(existing.event_json or "{}")
@@ -2087,11 +2092,6 @@ def upsert_unified_event(
 
         existing.event_json = json.dumps(stored_info, ensure_ascii=False)
         return "duplicate", existing, {}
-
-    # Gather additional information (runs QR scanner and metadata normalization)
-    extra_info = gather_additional_event_info(raw_data, media, source_id=source_id)
-    raw_data["registration_url"] = extra_info.get("registration_url")
-    raw_data["registration_status"] = extra_info.get("registration_status")
 
     if status == "updated" and existing is not None:
         try:
@@ -2688,6 +2688,15 @@ def analyze_fanpage_posts(
                         _persist_post_analysis(post, single_data)
                 elif missing_posts:
                     stats["errors"] += len(missing_posts)
+        elif llm_candidates:
+            # Fallback when Gemini is unavailable / unconfigured
+            for post in llm_candidates:
+                heuristic_data = heuristic_extract_event(
+                    content=post.content or "",
+                    sender=name,
+                    published_at=post.published_at,
+                )
+                _persist_post_analysis(post, heuristic_data)
 
         session.commit()
         _write_events_json(fanpage, session)
@@ -2729,7 +2738,15 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
     fanpage_url = post_data.get("fanpage_url")
     fanpage_name = post_data.get("fanpage_name")
 
+    if not fanpage_url and post_url:
+        try:
+            from scraper.fb_scraper import _derive_fanpage_url_from_url
+            fanpage_url = _derive_fanpage_url_from_url(post_url)
+        except Exception:
+            pass
+
     if not content and not media_urls:
+        err_msg = post_data.get("error") or "Could not extract any text or media from that Facebook post URL."
         return {
             "status": "error",
             "is_event": False,
@@ -2737,7 +2754,8 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
             "fanpage": None,
             "fanpage_url": fanpage_url,
             "event": None,
-            "detail": "Could not extract any text or media from that Facebook post URL.",
+            "detail": err_msg,
+            "error": post_data.get("error"),
         }
 
     _GLOBAL_KEY_POOL.load_from_env()
@@ -2774,6 +2792,8 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
         "content": content,
         "media_urls": media_urls,
         "published_at": pub_iso,
+        "fanpage_name": fanpage_name,
+        "fanpage_url": fanpage_url,
     }
 
     if not is_event:
@@ -2787,6 +2807,9 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
             "post": post_summary,
             "detail": "Post fetched and analyzed, but it does not announce an upcoming/ongoing event.",
         }
+
+    # If it is an event, decode QR from media if registration_url is missing
+    fill_registration_from_media(media_urls, raw_data, source_id=f"post {post_id}")
 
     fp: Optional[Fanpage] = None
     fp_created = False
@@ -2863,5 +2886,32 @@ async def extract_single_post_url(post_url: str) -> Dict[str, Any]:
     import asyncio
     from scraper import scrape_single_post
 
-    post_data = await scrape_single_post(post_url)
+    clean_url = (post_url or "").strip()
+    if not clean_url:
+        return {
+            "status": "error",
+            "is_event": False,
+            "fanpage_added": False,
+            "fanpage": None,
+            "fanpage_url": None,
+            "event": None,
+            "detail": "Post URL is required.",
+            "error": "empty_url",
+        }
+
+    try:
+        post_data = await scrape_single_post(clean_url)
+    except Exception as exc:
+        print(f"[events] Exception while scraping single post '{clean_url}': {exc}")
+        return {
+            "status": "error",
+            "is_event": False,
+            "fanpage_added": False,
+            "fanpage": None,
+            "fanpage_url": None,
+            "event": None,
+            "detail": f"Failed to crawl Facebook post URL: {exc}",
+            "error": str(exc),
+        }
+
     return await asyncio.to_thread(_process_single_post_extraction, post_data)

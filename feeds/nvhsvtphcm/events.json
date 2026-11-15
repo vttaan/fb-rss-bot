@@ -1,0 +1,39 @@
+{
+  "fanpage": {
+    "name": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+    "url": "https://www.facebook.com/nvhsvtphcm",
+    "slug": "nvhsvtphcm"
+  },
+  "updated_at": "2026-11-15T20:14:58.536880+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "1555862486566713",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid027nGBZQSeBCE4EXAZPhHGpk5oNf6VaQt65VLh5zSY3gbEg9cRiMrEUcLqZqGcACqLl",
+      "posted_at": "2026-11-15T19:30:10",
+      "reason": "qualified:strong_event_signal (ngay hoi van hoa)",
+      "title": "🇻🇳 [CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [6]: VĨNH LONG",
+      "description": "Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Vĩnh Long (bao gồm: thưởng thức âm vang Đờn ca tài tử Nam Bộ, hương vị thanh ngọt của Bưởi Năm Roi, món cá tai tượng chiên xù trứ danh, sự đa dạng bởi các món được làm từ dừa đặc biệt là kẹo dừa Bến Tre, đời sống gắn kết của đồng bào dân tộc Kinh và Khmer, không gian linh thiêng tại Lễ hội Vu lan Thắng hội và Chùa Âng, cùng vẻ đẹp hữu tình của Cù lao An Bình) và chia sẻ những thông tin, hiểu biế...",
+      "event_start_datetime": "2026-11-15T00:00:00+07:00",
+      "event_end_datetime": "2026-11-15T23:59:00+07:00",
+      "start_datetime": "2026-11-15T00:00:00+07:00",
+      "end_datetime": "2026-11-15T23:59:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "location": null,
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/sEFX9qDcgjnVfRGQ9",
+      "fee": null,
+      "is_online": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ngày hội"
+      ],
+      "format": [],
+      "registration_status": "link",
+      "dedup_status": "duplicate"
+    }
+  ]
+}
