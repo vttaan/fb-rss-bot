@@ -2647,14 +2647,18 @@ def heuristic_extract_event(
 
 
 def scan_qr_link(image_url: str) -> Optional[str]:
-    """Download an image and decode a QR code locally via OpenCV."""
+    """Download an image (or read local file) and decode a QR code locally via OpenCV."""
     import cv2
     import numpy as np
+    from pathlib import Path
 
-    req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read(10 * 1024 * 1024)
-    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if Path(image_url).is_file():
+        img = cv2.imread(image_url, cv2.IMREAD_COLOR)
+    else:
+        req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read(10 * 1024 * 1024)
+        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         return None
     detector = cv2.QRCodeDetector()

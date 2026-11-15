@@ -1877,17 +1877,21 @@ def compare_anchor_fields(
 
 
 def scan_qr_link(image_url: str) -> Optional[str]:
-    """Download an image and decode a QR code locally (OpenCV). Returns an http(s) URL or None.
+    """Download an image (or read local file) and decode a QR code locally (OpenCV). Returns an http(s) URL or None.
 
     Raises on download/decoder-unavailable errors so the caller can tell "no QR" from "could not check".
     """
     import cv2  # opencv-python-headless
     import numpy as np
+    from pathlib import Path
 
-    req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read(10 * 1024 * 1024)
-    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if Path(image_url).is_file():
+        img = cv2.imread(image_url, cv2.IMREAD_COLOR)
+    else:
+        req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read(10 * 1024 * 1024)
+        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         return None
     detector = cv2.QRCodeDetector()
@@ -1904,23 +1908,26 @@ def scan_qr_link(image_url: str) -> Optional[str]:
 
 
 def fill_registration_from_media(media_urls: List[str], data: Dict[str, Any], source_id: str = "") -> None:
-    """Fallback chain: link in text -> QR in first image -> "free" (registration_status tells which)."""
+    """Fallback chain: link in text -> QR in post images (up to 3) -> "free" (registration_status tells which)."""
     if data.get("registration_url") and data.get("registration_url") != "free":
         data["registration_status"] = "link"
         return
     if media_urls:
-        try:
-            link = scan_qr_link(media_urls[0])
-        except Exception as exc:  # download/decoder problem: don't claim "free"
-            print(f"[events] QR scan failed for {source_id}: {exc}")
-            data["registration_status"] = "unknown"
-            return
-        if link:
-            data["registration_url"] = link
-            data["registration_status"] = "qr"
-            return
-    data["registration_url"] = "free"
-    data["registration_status"] = "free"
+        for img_url in media_urls[:3]:
+            try:
+                link = scan_qr_link(img_url)
+            except Exception as exc:  # download/decoder problem
+                print(f"[events] QR scan attempt failed for {source_id}: {exc}")
+                continue
+            if link:
+                data["registration_url"] = link
+                data["registration_status"] = "qr"
+                return
+        # If all images were checked and no valid QR found
+        data["registration_status"] = "unknown" if not data.get("registration_status") else data["registration_status"]
+    data["registration_url"] = data.get("registration_url") or "free"
+    if not data.get("registration_status"):
+        data["registration_status"] = "free"
 
 
 def fill_registration(post: Post, data: Dict[str, Any]) -> None:
