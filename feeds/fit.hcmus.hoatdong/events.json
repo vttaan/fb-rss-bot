@@ -1,0 +1,88 @@
+{
+  "fanpage": {
+    "name": "FIT HCMUS Kênh Hoạt động",
+    "url": "https://www.facebook.com/fit.hcmus.hoatdong",
+    "slug": "fit.hcmus.hoatdong"
+  },
+  "updated_at": "2026-11-15T21:48:37.298032+07:00",
+  "count": 2,
+  "events": [
+    {
+      "post_id": "1613804823872674",
+      "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid0vZaxCVtouxWmUTc4qB8WJmUgRLPu2wzAbEnF4nuwN6M7eAfd6HKbBLWiy3ZiTwyYl",
+      "posted_at": "2026-09-08T20:00:06+07:00",
+      "is_event": true,
+      "title": "🔥 [ITogether] - MỞ LINK ĐĂNG KÝ 🔥",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-09-18",
+      "time": "07:30",
+      "start_datetime": "2026-09-18T07:30:00+07:00",
+      "end_datetime": "2026-09-18T12:00:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": "2026-09-18T23:59:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (Cơ sở phường Đông Hòa)",
+      "description": "“ITogether” là hoạt động teambuilding ngoài trời sôi nổi dành riêng cho tân sinh viên, mang đến chuỗi thử thách gắn kết đồng đội cùng cơ hội làm quen với những người bạn mới. Đến với chương trình, bạn sẽ được trực tiếp giao lưu với các CLB/Đội/Nhóm và Đoàn khoa - Liên chi Hội khoa Công nghệ thông tin, kết nối cùng các anh chị khóa trên, đồng thời khám phá trọn vẹn khuôn viên trường đại học nơi bạn sẽ gắn bó suốt những năm tháng sắp tới.",
+      "organizer": "FIT HCMUS Kênh Hoạt động",
+      "registration_url": "https://bit.ly/ITogether_2026.",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid0vZaxCVtouxWmUTc4qB8WJmUgRLPu2wzAbEnF4nuwN6M7eAfd6HKbBLWiy3ZiTwyYl?rdid=GVLjIPcHhGXjbyeb#",
+      "fanpage_name": "FIT HCMUS Kênh Hoạt động",
+      "fanpage_url": "https://www.facebook.com/fit.hcmus.hoatdong",
+      "media_urls": [
+        "https://scontent.fsgn2-6.fna.fbcdn.net/v/t39.99422-6/799869153_1641284771045752_3337175573805592169_n.png?stp=dst-jpg_tt6&cstp=mx2048x2048&ctp=p526x296&_nc_cat=107&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=yp2GbvBaJUsQ7kNvwEjOjsX&_nc_oc=Adpg1TQhrwf602g3gazyFXTz0hCVHAs17n3EHZEdtfnxQF57pffgbtf008GITukspoOZ9CIrLUTS9yJJ4Ix7EUMt&_nc_zt=14&_nc_ht=scontent.fsgn2-6.fna&_nc_gid=GCsWJU3SDn0juwKLvrtIAg&_nc_ss=78289&oh=00_AQQyY0j-Fk0dgRGLHrIB7X6IoUV86UfFo3NTUedQAYWdDg&oe=6AFA5790"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T20:26:36.464340+07:00"
+    },
+    {
+      "post_id": "1538504158069408",
+      "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid02V7HMycVEnJVQdf4jnWsLugMapPg8o8JvtuBx136WdhN6dr6sSe5SQgZT8XxppMPGl",
+      "posted_at": "2026-06-14T12:15:47+07:00",
+      "is_event": true,
+      "title": "Đăng ký tham gia Seminar on Legal AI Beyond the Demo: Building systems that work in practice",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-06-29",
+      "time": "09:00",
+      "start_datetime": "2026-06-29T09:00:00+07:00",
+      "end_datetime": "2026-06-29T10:30:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": "2026-06-25T15:00:00+07:00",
+      "location": "Phòng I.23 - Cơ sở 227 Nguyễn Văn Cừ, phường Chợ Quán, Tp.HCM",
+      "description": "FIT.HCMUS thân mời Quý Thầy Cô và các bạn Học viên Cao học, Sinh viên tham gia Seminar on Legal AI Beyond the Demo: Building systems that work in practice với thông tin như sau. Diễn giả: Dr. Chia Chong Cher - Head of Digital Transformation at the Singapore Institute of Legal Education. 1. This talk examines both the opportunities and the practical realities of applying large language models in the legal domain.",
+      "organizer": "FIT HCMUS Kênh Hoạt động",
+      "registration_url": "https://www.fit.hcmus.edu.vn/tin-tuc/d/dang-ky-tham-gia-seminar-on-legal-ai-beyond-the-demo-building-systems-that-work-in-practice-17436",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "seminar",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/share/p/1dYwaTgYiP/",
+      "fanpage_name": "FIT HCMUS Kênh Hoạt động",
+      "fanpage_url": "https://www.facebook.com/fit.hcmus.hoatdong",
+      "media_urls": [
+        "https://scontent.fsgn2-11.fna.fbcdn.net/v/t39.99422-6/724123620_1358685049465600_9202387933179275243_n.png?stp=dst-jpg_tt6&cstp=mx1080x1080&ctp=p526x296&_nc_cat=103&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=1xNxkrFQ6EMQ7kNvwHfoNOq&_nc_oc=AdqJ4EEwUjZ6T3CRDQAYX2hazb_6O6rS4Xbvc9GtWoKQL-DxRH1Qnq1rwTSHIGvjR72POQB74JUyD4Eh-lDCsqWL&_nc_zt=14&_nc_ht=scontent.fsgn2-11.fna&_nc_gid=Ik1A2erafVRptUM-fL5qVg&_nc_ss=78289&oh=00_AQSfQ-ToQI0VcCqAryS8_0wy5NxrFiqTIj5SaSi50aIFKw&oe=6AFA3E53"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T19:42:38.531872+07:00"
+    }
+  ]
+}

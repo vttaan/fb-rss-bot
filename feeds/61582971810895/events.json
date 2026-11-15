@@ -1,0 +1,49 @@
+{
+  "fanpage": {
+    "name": "Chi Đoàn - Chi Hội 25 KDL HCMUS",
+    "url": "https://www.facebook.com/people/Chi-%C4%90o%C3%A0n-Chi-H%E1%BB%99i-25-KDL-HCMUS/61582971810895",
+    "slug": "61582971810895"
+  },
+  "updated_at": "2026-11-15T21:48:37.286781+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "122125433139099060",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02vnufS159jwtqyzyCfQhM74KiYY6hPnVgBzVQCLu6hMNiLM4RAdh11ho6TfNqspwAl&id=61582971810895",
+      "posted_at": "2026-05-19T08:00:07+07:00",
+      "is_event": true,
+      "title": "🌸 MỞ ĐƠN ĐĂNG KÝ THAM GIA - [ TRAO YÊU THƯƠNG - ĐỔI HẠNH PHÚC ] 🌸",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-05-19",
+      "time": "08:00",
+      "start_datetime": "2026-05-19T08:00:00+07:00",
+      "end_datetime": "2026-05-22T23:59:00+07:00",
+      "reg_start_datetime": "2026-05-19T00:00:00+07:00",
+      "reg_end_datetime": "2026-05-22T23:59:00+07:00",
+      "location": "Chùa Tân Hưng ( QL1K, Đông Hòa, Hồ Chí Minh, Việt Nam) - Bệnh Viện Ung Bướu Tp.HCM (12 Đ. Số 400, Tăng Nhơn Phú, Hồ Chí Minh, Việt Nam)",
+      "description": "Nhằm lan tỏa tinh thần tương thân tương ái, tạo môi trường để sinh viên rèn luyện kỹ năng và đóng góp sức trẻ, Chi hội 25KDL1 phối hợp cùng Chi hội 25TTH3 tổ chức hoạt động tình nguyện chuẩn bị tại Chùa Tân Hưng và phân phát suất ăn thiện nguyện tại Bệnh viện Ung Bướu Thành Phố Hồ Chí Minh. Khi tham gia cùng với chúng mình, các bạn sẽ có cơ hội. Trực tiếp tham gia vào đội ngũ phân phát, trao tận tay những suất ăn đến với các bệnh nhân tại bệnh vi...",
+      "organizer": "Chi Đoàn - Chi Hội 25 KDL HCMUS",
+      "registration_url": "https://forms.gle/N7VvumcP58MEBswd6",
+      "registration_status": "link",
+      "fee": "30.000 đồng",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/share/p/196qwzECcR/",
+      "fanpage_name": "Chi Đoàn - Chi Hội 25 KDL HCMUS",
+      "fanpage_url": "https://www.facebook.com/people/Chi-%C4%90o%C3%A0n-Chi-H%E1%BB%99i-25-KDL-HCMUS/61582971810895",
+      "media_urls": [
+        "https://scontent.fsgn2-5.fna.fbcdn.net/v/t39.30808-6/702375839_122125437837099060_2902076815214123063_n.jpg?stp=dst-jpg_tt6&cstp=mx1448x2048&ctp=s720x720&_nc_cat=110&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=YHqEe7L8KVIQ7kNvwG99Lic&_nc_oc=AdpJrmWRcTmAgl7kviAhZy-E7QwIBXRt-6_51AoPamq8A5BzTT1o5-uq_mMoDFtFA1srZcSmJbfYdNV3EUNqtWL6&_nc_zt=23&_nc_ht=scontent.fsgn2-5.fna&_nc_gid=SeBn2R6XiOAHt6zv3jcrew&_nc_ss=78289&oh=00_AQR7HKlJjSjhG_jdVHgRJkqgKPlfCqY-NdyBRdXW7OpJOQ&oe=6AFA1DE8"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T19:36:52.642421+07:00"
+    }
+  ]
+}

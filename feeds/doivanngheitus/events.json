@@ -1,0 +1,49 @@
+{
+  "fanpage": {
+    "name": "Đội Văn Nghệ ITUS",
+    "url": "https://www.facebook.com/doivanngheitus",
+    "slug": "doivanngheitus"
+  },
+  "updated_at": "2026-11-15T21:48:37.300965+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "1622430336564651",
+      "post_url": "https://www.facebook.com/doivanngheitus/posts/pfbid023xte1BksLNhByMyjCHjfVdL4LUCLtQB3UrEKt1QuYDJUFL7zvZN3JdU7d4BtmCagl",
+      "posted_at": "2026-11-11T20:00:00+07:00",
+      "is_event": true,
+      "title": "[GALA CHUNG KẾT SCHALLENGE 2026 - SẴN SÀNG BÙNG NỔ CHẶNG ĐUA CUỐI CÙNG] 🔥",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-14",
+      "time": "12:30",
+      "start_datetime": "2026-11-14T12:30:00+07:00",
+      "end_datetime": "2026-11-14T23:59:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "location": "Hội trường A, Trường Đại học Kinh tế - Luật, ĐHQG - HCM.",
+      "description": "Hành trình CHIẾN LƯỢC XUYÊN BIÊN GIỚI XIV – SCHALLENGE 2026 đang dần đi đến hồi kết, nơi Top 4 đội thi xuất sắc nhất sẽ cùng bước vào vòng Chung kết để tranh tài và chinh phục ngôi vị cao nhất. Với chủ đề “Supply Chain Resilience: Strategic Risk Governance in Global Supply Chains”, Gala Chung kết hứa hẹn mang đến những màn tranh biện kịch tính, những chiến lược ấn tượng cùng nhiều khoảnh khắc đáng mong đợi! 🌎. Lắng nghe những góc nhìn và chia sẻ ...",
+      "organizer": "Đội Văn Nghệ ITUS",
+      "registration_url": "https://byvn.net/Nm7W",
+      "registration_status": "link",
+      "fee": "Hoàn toàn miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/doivanngheitus/posts/pfbid023xte1BksLNhByMyjCHjfVdL4LUCLtQB3UrEKt1QuYDJUFL7zvZN3JdU7d4BtmCagl?rdid=meI0mNDZFBIoegEP#",
+      "fanpage_name": "Đội Văn Nghệ ITUS",
+      "fanpage_url": "https://www.facebook.com/doivanngheitus",
+      "media_urls": [
+        "https://scontent.fsgn2-8.fna.fbcdn.net/v/t39.30808-6/896659207_1622429956564689_8972588751510967779_n.jpg?stp=dst-jpg_tt6&cstp=mx1000x1000&ctp=p526x296&_nc_cat=106&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=r2-GKYbbYSIQ7kNvwEigFZy&_nc_oc=Adq-xmYR_xsO-N4R8GRKyfcFLTL1r9HGubeh30uaT5XvYW1UO_HItm4YX50cZpJJqUp_eiNMU2EPawUNFLGzl0v8&_nc_zt=23&_nc_ht=scontent.fsgn2-8.fna&_nc_gid=b7Gi-oH66QkdTDOBHVEqeg&_nc_ss=78289&oh=00_AQShZr7xR_iS8fqXJS5NYDqEGu1w_2tjClhjvu15_xe5dw&oe=6AFA3214"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T20:33:03.686266+07:00"
+    }
+  ]
+}
