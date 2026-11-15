@@ -49,12 +49,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import parse_qs, urljoin, urlparse
 from zoneinfo import ZoneInfo
 
-try:
-    from playwright.async_api import Browser, BrowserContext, Page, Response, async_playwright
-except ImportError:
-    Page = Any  # type: ignore
-    Response = Any  # type: ignore
-    async_playwright = None
+#from playwright.async_api import Page, Response, async_playwright
 
 def _load_env_file() -> None:
     """Lightweight zero-dependency .env loader that checks cwd and parent dirs."""

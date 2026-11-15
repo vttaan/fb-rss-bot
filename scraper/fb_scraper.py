@@ -44,33 +44,6 @@ def _extract_page_slug(page_url: str) -> str:
     return parts[-1].lower()
 
 
-def _extract_post_ids_from_url(url: str) -> Set[str]:
-    """Extract all candidate post identifiers (numeric ID, pfbid, fbid, story_fbid) from a URL."""
-    ids: Set[str] = set()
-    if not url:
-        return ids
-
-    for pattern in (
-        r"/posts/(pfbid[A-Za-z0-9]+|\d+)",
-        r"/permalink/(pfbid[A-Za-z0-9]+|\d+)",
-        r"/(?:videos|reel|events)/(\d+)",
-        r"/photos/[^/]+/(\d+)",
-    ):
-        for m in re.finditer(pattern, url):
-            ids.add(m.group(1))
-
-    qs = parse_qs(urlparse(url).query)
-    for key in ("story_fbid", "fbid"):
-        for val in qs.get(key, []):
-            if val:
-                ids.add(val)
-
-    for m in re.finditer(r"(pfbid[A-Za-z0-9]{15,})", url):
-        ids.add(m.group(1))
-
-    return ids
-
-
 def _extract_post_id_from_url(url: str) -> Optional[str]:
     """Extract a canonical post identifier from a Facebook post URL."""
     if not url:
@@ -446,7 +419,6 @@ def _extract_comet_story_unit(
             "published_at": published_dt,
             "author_name": actor_name or (existing.get("author_name") if existing else None),
             "author_url": actor_url or (existing.get("author_url") if existing else None),
-            "_candidate_ids": {post_id} | _extract_post_ids_from_url(clean_url) | _extract_post_ids_from_url(page_url),
         }
 
 
@@ -535,23 +507,6 @@ def _attach_graphql_listener(
     page.on("response", handle_response)
 
 
-async def _safe_page_evaluate(page: Page, script: str, default: Any = None, retries: int = 2) -> Any:
-    """Safely evaluate JavaScript in page, retrying if execution context was destroyed by navigation."""
-    for attempt in range(retries):
-        try:
-            return await page.evaluate(script)
-        except Exception as exc:
-            err_msg = str(exc).lower()
-            if "destroyed" in err_msg or "navigation" in err_msg or "target closed" in err_msg:
-                try:
-                    await page.wait_for_timeout(800)
-                except Exception:
-                    pass
-                continue
-            return default
-    return default
-
-
 async def _parse_embedded_scripts(
     page: Page,
     page_url: str,
@@ -559,16 +514,14 @@ async def _parse_embedded_scripts(
     collected_posts: Dict[str, Dict],
 ) -> None:
     """Parse embedded <script type="application/json"> Relay payloads from initial HTML."""
-    scripts_json = await _safe_page_evaluate(
-        page,
+    scripts_json = await page.evaluate(
         """() => {
             return Array.from(document.querySelectorAll('script[type="application/json"]'))
                 .map(s => s.textContent)
                 .filter(Boolean);
-        }""",
-        default=[],
+        }"""
     )
-    for raw_script in (scripts_json or []):
+    for raw_script in scripts_json:
         try:
             data = json.loads(raw_script)
             _walk_graphql_for_posts(data, page_url, page_slug, collected_posts)
@@ -577,52 +530,47 @@ async def _parse_embedded_scripts(
 
 
 async def _dismiss_login_popup(page: Page) -> None:
-    """Close Facebook's unauthenticated login modal/banner without deleting post/photo dialogs."""
+    """Close Facebook's unauthenticated login modal/banner and restore page scrollability."""
     try:
-        removed_login_dialog = await _safe_page_evaluate(
-            page,
+        has_dialog = await page.evaluate(
+            "() => document.querySelectorAll('div[role=\"dialog\"]').length > 0"
+        )
+    except Exception:
+        has_dialog = False
+
+    if has_dialog:
+        try:
+            await page.keyboard.press("Escape")
+        except Exception:
+            pass
+
+        close_selectors = [
+            'div[role="dialog"] [aria-label="Close"]',
+            'div[role="dialog"] [aria-label="Đóng"]',
+            '[aria-label="Close"][role="button"]',
+        ]
+        for selector in close_selectors:
+            try:
+                btn = page.locator(selector).first
+                if await btn.is_visible(timeout=250):
+                    await btn.click(timeout=800)
+                    await page.wait_for_timeout(200)
+                    break
+            except Exception:
+                continue
+
+    try:
+        await page.evaluate(
             """() => {
-                let removed = false;
-                const dialogs = document.querySelectorAll('div[role="dialog"]');
-                dialogs.forEach(d => {
-                    const hasPostMsg = Boolean(d.querySelector('div[data-ad-preview="message"], div[data-ad-comet-preview="message"], div[data-ad-rendering-role="story_message"]'));
-                    if (hasPostMsg) return;
-                    const hasLoginForm = Boolean(d.querySelector('input[name="email"], input[name="pass"], form[action*="login"], a[href*="/login"]'));
-                    const text = (d.innerText || '').toLowerCase();
-                    const looksLikeGate = hasLoginForm || text.includes('see more on facebook') || text.includes('log in or sign up') || text.includes('đăng nhập hoặc đăng ký');
-                    if (looksLikeGate) {
-                        d.remove();
-                        removed = true;
-                    }
-                });
-                if (removed && document.body) {
+                document.querySelectorAll('div[role="dialog"]').forEach(d => d.remove());
+                document.documentElement.style.overflow = 'auto';
+                if (document.body) {
                     document.body.style.overflow = 'auto';
                 }
-                return removed;
-            }""",
-            default=False,
+            }"""
         )
-        if removed_login_dialog:
-            return
     except Exception:
         pass
-
-    close_selectors = [
-        'div[role="dialog"]:has(input[name="email"]) [aria-label="Close"]',
-        'div[role="dialog"]:has(input[name="email"]) [aria-label="Đóng"]',
-        'div[role="dialog"]:has(a[href*="/login"]) [aria-label="Close"]',
-        'div[role="dialog"]:has(a[href*="/login"]) [aria-label="Đóng"]',
-        '[aria-label="Close"][role="button"]',
-    ]
-    for selector in close_selectors:
-        try:
-            btn = page.locator(selector).first
-            if await btn.is_visible(timeout=250):
-                await btn.click(timeout=800)
-                await page.wait_for_timeout(200)
-                break
-        except Exception:
-            continue
 
 
 async def _extract_page_metadata(page: Page) -> Dict[str, Any]:
@@ -926,104 +874,6 @@ def _derive_fanpage_url_from_url(url: Optional[str]) -> Optional[str]:
     return f"https://www.facebook.com/{parts[0]}"
 
 
-async def _expand_see_more(page: Page) -> None:
-    """Click 'See more' / 'Xem thêm' inside post containers if present."""
-    for label in ("See more", "Xem thêm"):
-        try:
-            btn = page.locator(f'div[role="button"]:has-text("{label}")').first
-            if await btn.is_visible(timeout=300):
-                await btn.click(timeout=600)
-                await page.wait_for_timeout(200)
-                break
-        except Exception:
-            continue
-
-
-async def _scrape_via_embed_plugin(page: Page, post_url: str) -> Optional[Dict[str, Any]]:
-    """Fallback to Facebook's public post embed endpoint when guest visit is blocked or redirects."""
-    from urllib.parse import quote
-    import hashlib
-
-    embed_url = f"https://www.facebook.com/plugins/post.php?href={quote(post_url, safe='')}&show_text=true&width=500"
-    try:
-        await page.goto(embed_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
-        await page.wait_for_timeout(1500)
-        embed_data = await _safe_page_evaluate(
-            page,
-            """() => {
-                const bodyText = (document.body ? document.body.innerText : '') || '';
-                const msgEl = document.querySelector('div[data-testid="post_message"], div.userContent, div._5pbx, div[data-ad-preview="message"]');
-                const authorEl = document.querySelector('span.fwb a, a[href*="facebook.com/"]');
-                const imgs = Array.from(document.querySelectorAll('img[src*="scontent"]'))
-                    .filter(img => (img.naturalWidth || 0) >= 120 || img.width >= 120)
-                    .map(img => img.src);
-                return {
-                    body_text: bodyText.trim(),
-                    msg_text: msgEl ? (msgEl.innerText || '').trim() : '',
-                    author_name: authorEl ? (authorEl.innerText || '').trim() : '',
-                    author_href: authorEl ? (authorEl.getAttribute('href') || '').trim() : '',
-                    media_urls: Array.from(new Set(imgs)),
-                };
-            }""",
-            default={},
-        )
-    except Exception:
-        return None
-
-    if not embed_data:
-        return None
-    msg_text = (embed_data.get("msg_text") or "").strip()
-    media_urls = embed_data.get("media_urls") or []
-    if not msg_text and not media_urls:
-        return None
-
-    pid = _extract_post_id_from_url(post_url) or hashlib.sha256(post_url.encode("utf-8")).hexdigest()[:16]
-    return {
-        "post_id": pid,
-        "post_url": _clean_post_url(post_url, post_url),
-        "content": msg_text,
-        "media_urls": media_urls,
-        "published_at": datetime.now(LOCAL_TIMEZONE),
-        "author_name": embed_data.get("author_name") or None,
-        "author_url": embed_data.get("author_href") or None,
-    }
-
-
-def _match_collected_post(
-    collected_posts: Dict[str, Dict[str, Any]],
-    expected_ids: Set[str],
-    dom_fallback: Dict[str, Any],
-    allow_single_unidentified: bool = True,
-) -> Optional[Dict[str, Any]]:
-    """Strictly match target post inside `collected_posts` by candidate IDs or snippet."""
-    if not collected_posts:
-        return None
-
-    if expected_ids:
-        matches: List[Dict[str, Any]] = []
-        for pid, post in collected_posts.items():
-            cand_ids = set(post.get("_candidate_ids") or set()) | {pid}
-            cand_ids.update(_extract_post_ids_from_url(post.get("post_url", "")))
-            if expected_ids & cand_ids:
-                matches.append(post)
-        if matches:
-            return max(matches, key=lambda x: len(x.get("content", "")))
-
-    snippet_source = (dom_fallback.get("msg_text") or dom_fallback.get("og_description") or "").strip()
-    if len(snippet_source) >= 20:
-        needle = re.sub(r"\s+", " ", snippet_source[:80]).lower()
-        for post in collected_posts.values():
-            hay = re.sub(r"\s+", " ", (post.get("content") or "")).lower()
-            if needle[:40] in hay or (len(hay) >= 25 and hay[:40] in needle):
-                return post
-
-    if allow_single_unidentified and len(collected_posts) == 1:
-        return next(iter(collected_posts.values()))
-    elif collected_posts:
-        return max(collected_posts.values(), key=lambda x: len(x.get("content", "")))
-    return None
-
-
 async def scrape_single_post(post_url: str) -> Dict[str, Any]:
     """
     Scrape a single public Facebook post URL without logging in.
@@ -1039,7 +889,6 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
     final_url = target_url
     page_title: Optional[str] = None
     dom_fallback: Dict[str, Any] = {}
-    embed_fallback: Optional[Dict[str, Any]] = None
 
     async with async_playwright() as p:
         browser = await _launch_browser(p)
@@ -1049,57 +898,35 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
 
         try:
             await page.goto(target_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
-            try:
-                await page.wait_for_selector(
-                    'div[data-ad-preview="message"], div[data-ad-comet-preview="message"], div[data-ad-rendering-role="story_message"], div[role="article"]',
-                    timeout=5000,
-                )
-            except Exception:
-                pass
-            await page.wait_for_timeout(1500)
+            await page.wait_for_timeout(2500)
             final_url = page.url or target_url
 
-            try:
-                raw_title = await page.title()
-                page_title = clean_fanpage_name(raw_title)
-            except Exception:
-                page_title = None
+            raw_title = await page.title()
+            page_title = clean_fanpage_name(raw_title)
 
             await _dismiss_login_popup(page)
-            await _expand_see_more(page)
             await _parse_embedded_scripts(page, final_url, "", collected_posts)
 
             if not collected_posts:
-                try:
-                    await page.evaluate("window.scrollBy(0, 500)")
-                    await page.wait_for_timeout(1500)
-                except Exception:
-                    pass
+                await page.evaluate("window.scrollBy(0, 600)")
+                await page.wait_for_timeout(2000)
 
-            dom_fallback = await _safe_page_evaluate(
-                page,
+            dom_fallback = await page.evaluate(
                 """() => {
                     const meta = (prop) => {
                         const el = document.querySelector(`meta[property="${prop}"], meta[name="${prop}"]`);
                         return el ? (el.getAttribute('content') || '').trim() : '';
                     };
-                    const msgEl = document.querySelector(
-                        'div[data-ad-preview="message"], div[data-ad-comet-preview="message"], div[data-ad-rendering-role="story_message"], div.x1iorvi4'
-                    );
+                    const msgEl = document.querySelector('div[data-ad-preview="message"], div[data-ad-comet-preview="message"]');
                     const articleEl = document.querySelector('div[role="article"]');
                     const authorLink = articleEl ? articleEl.querySelector('h2 a[href*="facebook.com"], h3 a[href*="facebook.com"], strong a[href*="facebook.com"]') : null;
                     const canonicalEl = document.querySelector('link[rel="canonical"]');
-                    const root = articleEl || document;
-                    const imgs = Array.from(root.querySelectorAll('img[src*="scontent"]'))
-                        .filter(img => !img.src.includes('emoji') && ((img.naturalWidth || 0) >= 150 || img.width >= 150))
-                        .map(img => img.src);
                     const h1Texts = Array.from(document.querySelectorAll('h1'))
                         .map(el => (el.innerText || '').trim())
                         .filter(Boolean);
                     return {
                         og_title: meta('og:title'),
                         og_description: meta('og:description'),
-                        meta_description: meta('description'),
                         og_image: meta('og:image'),
                         canonical: canonicalEl ? (canonicalEl.getAttribute('href') || '').trim() : '',
                         msg_text: msgEl ? (msgEl.innerText || '').trim() : '',
@@ -1107,52 +934,38 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
                         author_href: authorLink ? (authorLink.getAttribute('href') || '').trim() : '',
                         author_text: authorLink ? (authorLink.innerText || '').trim() : '',
                         h1_texts: h1Texts,
-                        dom_images: Array.from(new Set(imgs)),
                     };
-                }""",
-                default={},
-            ) or {}
-
-            # If no post collected via GraphQL/DOM, try embed plugin
-            if not collected_posts and not dom_fallback.get("msg_text"):
-                embed_fallback = await _scrape_via_embed_plugin(page, target_url)
-        except Exception as exc:
-            print(f"[scraper] Warning during single post navigation/extraction: {exc}")
+                }"""
+            )
         finally:
             await context.close()
             await browser.close()
 
-    expected_ids = (
-        _extract_post_ids_from_url(target_url)
-        | _extract_post_ids_from_url(final_url)
-        | _extract_post_ids_from_url(dom_fallback.get("canonical", ""))
-    )
+    expected_ids = {
+        pid for pid in (
+            _extract_post_id_from_url(target_url),
+            _extract_post_id_from_url(final_url),
+            _extract_post_id_from_url(dom_fallback.get("canonical", "")),
+        ) if pid
+    }
 
-    chosen: Optional[Dict[str, Any]] = _match_collected_post(
-        collected_posts,
-        expected_ids,
-        dom_fallback,
-        allow_single_unidentified=True,
-    )
-
-    if chosen is None and embed_fallback is not None:
-        chosen = embed_fallback
+    chosen: Optional[Dict[str, Any]] = None
+    if collected_posts:
+        for pid in expected_ids:
+            if pid in collected_posts:
+                chosen = collected_posts[pid]
+                break
+        if chosen is None:
+            chosen = max(collected_posts.values(), key=lambda x: len(x.get("content", "")))
 
     if chosen is None:
         fallback_text = (
             dom_fallback.get("msg_text")
             or dom_fallback.get("og_description")
-            or dom_fallback.get("meta_description")
             or dom_fallback.get("article_text")
             or ""
         ).strip()
-        fallback_media: List[str] = []
-        if dom_fallback.get("og_image") and "rsrc.php" not in dom_fallback["og_image"]:
-            fallback_media.append(dom_fallback["og_image"])
-        for img in dom_fallback.get("dom_images") or []:
-            if img not in fallback_media:
-                fallback_media.append(img)
-
+        fallback_media = [dom_fallback["og_image"]] if dom_fallback.get("og_image") else []
         canon_or_final = dom_fallback.get("canonical") or final_url
         pid = next(iter(expected_ids), None) or hashlib.sha256(canon_or_final.encode("utf-8")).hexdigest()[:16]
         chosen = {
@@ -1165,7 +978,6 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
             "author_url": dom_fallback.get("author_href") or None,
         }
 
-    chosen.pop("_candidate_ids", None)
     fanpage_url = (
         _derive_fanpage_url_from_url(chosen.get("author_url"))
         or _derive_fanpage_url_from_url(chosen.get("post_url"))

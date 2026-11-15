@@ -477,81 +477,47 @@ Following **Slide 9 ("Rules or Learning?")**, **Slide 11 ("Rule, Model or Both?"
 ## 7. Ingestion & Extraction Pipeline Flowchart (`[M]` and `[R]` Boxes with Fallback Checks)
 
 Per **Slide 30 ("Flowcharts With a Model Box")** and **Slide 35 ("Draw Your Pipeline")**:
-- The flowchart starts from **both Ingestion Channels**: **Channel A (Facebook Timeline Scraping with Playwright & GraphQL)** and **Channel B (Client Email Ingestion via REST API)**.
 - Every step is labeled **`[R]`** (Rule) or **`[M]`** (Model).
-- Every **`[M]`** box is immediately followed by a **`<Good enough?>` decision diamond** with both an explicit **`Yes`** path and a **`No` (fallback)** path.
+- Every **`[M]`** box is immediately followed by a **`<Good enough?>` decision diamond** with both a **`Yes`** path and a **`No` (fallback)** path.
 
 ```mermaid
 flowchart TD
-    %% ----------------------------------------------------
-    %% INGESTION CHANNEL A: FACEBOOK SCRAPING
-    %% ----------------------------------------------------
-    subgraph Sub_FB ["Channel A: Facebook Scraping Ingestion (scraper/fb_scraper.py)"]
-        FB_Start(["Start A: Facebook Fanpage URL / Post Permalink"]) --> FB_1["[R] FB-1: Launch Headless Playwright Chromium<br/>(Stealth context, anti-bot flags, vi-VN/en-US locale)"]
-        FB_1 --> FB_2["[R] FB-2: Navigate to URL & Dismiss Login Modals<br/>(_dismiss_login_popup: clear dialogs & restore overflow)"]
-        FB_2 --> FB_3["[R] FB-3: Attach Network Listener on /api/graphql<br/>(_attach_graphql_listener intercepting JSON payloads)"]
-        FB_3 --> FB_4["[R] FB-4: Scroll Page SCROLL_COUNT Times with SCROLL_DELAY_MS<br/>(Trigger dynamic Comet/Relay GraphQL lazy loading)"]
-        FB_4 --> D_FB_GQL{"[R] Intercepted GraphQL<br/>Story Nodes?"}
-        D_FB_GQL -- "No" --> FB_FBK["[R] Fallback: Parse Embedded <script> JSON<br/>& Query DOM div[role='article'] Elements"] --> FB_5
-        D_FB_GQL -- "Yes" --> FB_5["[R] FB-5: Deconstruct Story Units into Raw Fields<br/>(post_id, clean permalink, text, media_urls, published_at +07:00)"]
-        FB_5 --> FB_6["[R] FB-6: Filter Existing Posts in SQLite<br/>(database/db.py :: save_posts by post_id)"]
-        FB_6 --> D_FB_New{"[R] Post ID Already<br/>in Database?"}
-        D_FB_New -- "Yes" --> Out_FB_Skip[/"Skip: Already Scraped in DB"/] --> EndNode(["End"])
-        D_FB_New -- "No" --> FB_7["[R] FB-7: Insert Raw Post into SQLite 'posts' Table"]
-    end
+    Start(["Start: Raw FB Post URL, .txt File, or Client Email"]) --> R1["[R] Step 1: Ingest & Normalize Input<br/>(scrape_fanpage / _parse_post_text_file / ingest_email_message)<br/>Strip tracking params, parse published_at (+07:00), extract text & media_urls"]
+    R1 --> D_Empty{"[R] Both content and media_urls empty?"}
+    D_Empty -- "Yes" --> Out_Err[/"Output: Reject Invalid Input (status = 'error' / None)"/] --> EndNode(["End"])
 
-    %% ----------------------------------------------------
-    %% INGESTION CHANNEL B: CLIENT EMAIL INGESTION
-    %% ----------------------------------------------------
-    subgraph Sub_Email ["Channel B: Client Email Ingestion (server.py & events/extractor.py)"]
-        EM_Start(["Start B: Client Email Ingestion"]) --> EM_1["[R] EM-1: Client sends HTTP POST /api/inbox (or /batch)<br/>(JSON: client_id, message_id, subject, sender, content, media_urls)"]
-        EM_1 --> D_EM_Val{"[R] Payload Validation:<br/>Is content non-empty?"}
-        D_EM_Val -- "No" --> Out_EM_Err[/"Output: Reject HTTP 400 Bad Request<br/>('Email content must not be empty')"/] --> EndNode
-        D_EM_Val -- "Yes" --> EM_2["[R] EM-2: Resolve User(client_id) & Insert Record<br/>(Save EmailMessage in SQLite with status = 'pending')"]
-        EM_2 --> EM_3["[R] EM-3: Concatenate Email Text & Metadata<br/>(full_text = subject + '\\n' + content, bind attachments & timestamp)"]
-    end
+    D_Empty -- "No" --> R2["[R] Step 2: Stage-1 Empirical Content Reasoning Pre-Filter<br/>(reason_about_post_content: 6 Disqualification Rules + 3 Qualification Tiers)"]
+    R2 --> D_Pre{"[R] Passes Pre-Filter Gate?<br/>(is_candidate == true)"}
+    D_Pre -- "No (Disqualified Non-Event)" --> Out_Non1[/"Output: Record is_event = false & diagnostic reason<br/>(0 LLM calls spent)"/] --> EndNode
 
-    %% ----------------------------------------------------
-    %% CONVERGENCE INTO EVENT EXTRACTION PIPELINE
-    %% ----------------------------------------------------
-    FB_7 --> R_Pre
-    EM_3 --> R_Pre
+    D_Pre -- "Yes (Candidate Event)" --> M1["[M] Model Box 1: Semantic Event Classifier & 16-Field JSON Extractor<br/>Primary: google/gemini-2.0-flash-lite | Secondary: Llama-3.3-70B / Qwen3-1.7B"]
+    M1 --> D_M1{"<Check after M1><br/>HTTP 200 & Valid JSON Dict<br/>with required keys?"}
 
-    subgraph Sub_Extract ["Core Event Extraction & Classification Pipeline (events/extractor.py)"]
-        R_Pre["[R] Step 2: Stage-1 Empirical Content Reasoning Pre-Filter<br/>(reason_about_post_content: 6 Disqualification Rules + 3 Qualification Tiers)"]
-        R_Pre --> D_Pre{"[R] Passes Event<br/>Pre-Filter Gate?"}
-        D_Pre -- "No (Disqualified Non-Event)" --> Out_Disq[/"Output: Cache is_event = false & Diagnostic Reason<br/>(FB: PostAnalysis is_event=false | Email: status='ignored')<br/>0 LLM Calls Spent!"/] --> EndNode
+    D_M1 -- "No (Rate Limit 429 / Timeout / Malformed JSON / No API Key)" --> FB_M1["[R] Fallback 1: Rotate GeminiKeyPool -> Try Groq LLM -> Run Deterministic Regex Extractor (heuristic_extract_event)"]
+    D_M1 -- "Yes" --> R3["[R] Step 3b: Rule-Based Field Enrichment & Date/Time Repair<br/>(_enrich_extracted_event_fields: verify start/end dates, reg deadlines, fee, location, ISO +07:00)"]
+    FB_M1 --> R3
 
-        D_Pre -- "Yes (Event Candidate)" --> M1["[M] Model Box 1: Semantic Event Classifier & 16-Field JSON Extractor<br/>Primary: google/gemini-2.0-flash-lite | Secondary: Llama-3.3-70B / Qwen3-1.7B"]
+    R3 --> D_IsEv{"[R] Extracted is_event == true?"}
+    D_IsEv -- "No" --> Out_Non2[/"Output: Record is_event = false"/] --> EndNode
 
-        M1 --> D_M1{"<Check after M1><br/>HTTP 200 & Valid JSON Dict<br/>with required fields?"}
-        D_M1 -- "No (HTTP 429 Rate Limit / Timeout / Malformed JSON / No API Key)" --> FB_M1["[R] Fallback 1: Rotate GeminiKeyPool -> Try Groq LLM -> Run Deterministic Regex Extractor (heuristic_extract_event)"]
-        D_M1 -- "Yes" --> R_Post["[R] Step 3b: Field Enrichment & ISO-8601 Verification<br/>(_enrich_extracted_event_fields: verify start/end dates, reg deadlines, fee, venue, ISO +07:00)"]
-        FB_M1 --> R_Post
+    D_IsEv -- "Yes" --> D_NeedQR{"[R] registration_url is null<br/>AND media_urls non-empty?"}
+    D_NeedQR -- "No (Has text link or no images)" --> R4["[R] Step 5: Extract 5 Canonical Anchor Fields<br/>(title, online_mode, event_date, event_time, location)"]
 
-        R_Post --> D_IsEv{"[R] Extracted<br/>is_event == true?"}
-        D_IsEv -- "No" --> Out_NonEv[/"Output: Record is_event = false in Cache / DB"/] --> EndNode
+    D_NeedQR -- "Yes" --> M2["[M] Model Box 2: Poster QR & Visual Link Decoder<br/>(scan_qr_link: OpenCV QRCodeDetector / Qwen3-VL-2B-Instruct)"]
+    M2 --> D_M2{"<Check after M2><br/>Decoded string matches<br/>^https?:// ?"}
+    D_M2 -- "Yes" --> SetQR["[R] Set registration_url = qr_url<br/>registration_status = 'qr_image'"] --> R4
+    D_M2 -- "No (No QR / Unreadable / Non-URL text)" --> FB_M2["[R] Fallback 2: Keep registration_url = null<br/>(Never hallucinate a link)"] --> R4
 
-        D_IsEv -- "Yes" --> D_NeedQR{"[R] registration_url is null<br/>AND media_urls non-empty?"}
-        D_NeedQR -- "No (Has text link or no images)" --> R_Anchors["[R] Step 5: Extract 5 Canonical Anchor Fields<br/>(title, online_mode, event_date, event_time, location)"]
+    R4 --> R5["[R] Step 6: 5-Anchor Deduplication & Version Upsert<br/>(compare_anchor_fields: Title SequenceMatcher >= 0.78 + Date/Time/Venue Match)"]
+    R5 --> D_Dedup{"[R] Anchor Match Outcome?"}
+    D_Dedup -- "New" --> Act_New["[R] Create EventRecord (version = 1)"]
+    D_Dedup -- "Updated" --> Act_Upd["[R] Merge Null/Changed Fields, Log Delta & Increment version"]
+    D_Dedup -- "Duplicate" --> Act_Dup["[R] Append Provenance to sources[] Only"]
 
-        D_NeedQR -- "Yes" --> M2["[M] Model Box 2: Poster QR & Visual Link Decoder<br/>(scan_qr_link: OpenCV QRCodeDetector / Qwen3-VL-2B-Instruct)"]
-        M2 --> D_M2{"<Check after M2><br/>Decoded string matches<br/>^https?:// ?"}
-        D_M2 -- "Yes" --> SetQR["[R] Set registration_url = qr_url<br/>registration_status = 'qr_image'"] --> R_Anchors
-        D_M2 -- "No (No QR / Blurry / Non-URL)" --> FB_M2["[R] Fallback 2: Keep registration_url = null<br/>(Never invent or hallucinate URLs)"] --> R_Anchors
-
-        R_Anchors --> R_Dedup["[R] Step 6: 5-Anchor Deduplication & History Matching<br/>(compare_anchor_fields: Title SequenceMatcher >= 0.78 + Date/Time/Venue Compatibility)"]
-        R_Dedup --> D_Dedup{"[R] Anchor Match<br/>Outcome?"}
-        D_Dedup -- "New Event" --> Act_New["[R] Insert EventRecord (version = 1, sources = [source_ref])"]
-        D_Dedup -- "Updated Fields" --> Act_Upd["[R] Merge Non-Null Fields, Log Diff in update_history, Increment version"]
-        D_Dedup -- "Duplicate Event" --> Act_Dup["[R] Append Source Provenance to sources[] Only (No Duplicate Card)"]
-
-        Act_New --> Out_Final
-        Act_Upd --> Out_Final
-        Act_Dup --> Out_Final
-
-        Out_Final[/"[R] Final Persistence & Synchronization<br/>1. Save EventRecord, PostAnalysis & EmailMessage (status='created'|'updated'|'duplicate')<br/>2. Sync feeds/**/events.json directory trees<br/>3. Broadcast WebSocket event (new_posts / inbox_updated)"/] --> EndNode
-    end
+    Act_New --> Out_Final[/"Output: Persist Unified Event JSON (events.json / extracted_events.json)"/]
+    Act_Upd --> Out_Final
+    Act_Dup --> Out_Final
+    Out_Final --> EndNode
 ```
 
 ---
