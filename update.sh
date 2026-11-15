@@ -13,14 +13,25 @@ echo " [$(date '+%Y-%m-%d %H:%M:%S')] Starting VM Auto-Update"
 echo " Working directory: $SCRIPT_DIR"
 echo "=================================================="
 
-# 2. Stash or rebase local runtime changes (e.g. auto-generated feeds/db) safely
-echo ">> Stashing any uncommitted local changes..."
-git stash || true
+# 2. Stop running server first so SQLite database and feed files are released
+echo ">> Stopping any running server to unlock database files..."
+if systemctl is-active --quiet rss-bot 2>/dev/null; then
+    sudo systemctl stop rss-bot || true
+elif systemctl is-active --quiet fb-rss 2>/dev/null; then
+    sudo systemctl stop fb-rss || true
+fi
+SERVER_PID=$(pgrep -f "python.*server\.py" || true)
+if [ -n "$SERVER_PID" ]; then
+    echo ">> Terminating background server process (PID: $SERVER_PID)..."
+    kill -15 "$SERVER_PID" 2>/dev/null || kill -9 "$SERVER_PID" 2>/dev/null
+    sleep 1
+fi
 
-# 3. Pull latest commits from GitHub
-echo ">> Pulling latest commits from origin/main..."
+# 3. Fetch latest commits and reset working tree to origin/main cleanly
+echo ">> Fetching latest commits from origin/main..."
 git fetch origin main
-git pull --rebase origin main
+echo ">> Resetting working tree to origin/main (clean sync for rss_bot.db & feeds)..."
+git reset --hard origin/main
 
 # 4. Activate Python virtual environment
 VENV_DIR=""
