@@ -477,6 +477,7 @@ async def api_ingest_email(body: EmailIngestRequest):
         result = await asyncio.to_thread(
             ingest_email_message,
             content=body.content,
+            content_hash = body.content_hash,
             subject=body.subject,
             client_id=body.client_id,
             message_id=body.message_id,
