@@ -1,11 +1,12 @@
 import asyncio
 import hashlib
 import json
+import os
 import re
 from collections import Counter
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Response
 
@@ -455,15 +456,40 @@ Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
 """
 
 
+def _build_playwright_proxy() -> Optional[Dict[str, str]]:
+    """Build Playwright proxy dict from FB_PROXY_URL (e.g. http://user:pass@host:port or socks5://host:port)."""
+    raw = os.environ.get("FB_PROXY_URL", "").strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"http://{raw}"
+    parsed = urlparse(raw)
+    if not parsed.hostname:
+        return None
+    server = f"{parsed.scheme}://{parsed.hostname}"
+    if parsed.port:
+        server = f"{server}:{parsed.port}"
+    proxy: Dict[str, str] = {"server": server}
+    if parsed.username is not None:
+        proxy["username"] = unquote(parsed.username)
+    if parsed.password is not None:
+        proxy["password"] = unquote(parsed.password)
+    return proxy
+
+
 async def _launch_browser(p: Any) -> Browser:
-    return await p.chromium.launch(
-        headless=True,
-        args=[
+    launch_kwargs: Dict[str, Any] = {
+        "headless": True,
+        "args": [
             "--disable-blink-features=AutomationControlled",
             "--disable-notifications",
             "--no-sandbox",
         ],
-    )
+    }
+    proxy_cfg = _build_playwright_proxy()
+    if proxy_cfg:
+        launch_kwargs["proxy"] = proxy_cfg
+    return await p.chromium.launch(**launch_kwargs)
 
 
 async def _new_stealth_context(browser: Browser) -> BrowserContext:
