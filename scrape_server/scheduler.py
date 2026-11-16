@@ -163,9 +163,9 @@ async def run_scrape_cycle(
                 console.print(
                     f"[cyan]   New fanpage: keeping {len(scraped_items)} most recent post(s).[/cyan]"
                 )
-            update_fanpage_metadata(fp.id, name=page_title)
-            if page_title:
-                fp.name = page_title
+            resolved_name = update_fanpage_metadata(fp.id, name=page_title)
+            if resolved_name:
+                fp.name = resolved_name
 
             new_posts = save_posts(fp.id, scraped_items)
             total_new_posts += len(new_posts)

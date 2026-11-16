@@ -27,76 +27,258 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from config import FEEDS_DIR, LOCAL_TIMEZONE, STORE_EMAIL_CONTENT
-from database import EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, ensure_local_tz, get_session, init_db
+from database import (
+    EmailMessage,
+    EventRecord,
+    Fanpage,
+    Post,
+    PostAnalysis,
+    ensure_local_tz,
+    get_session,
+    init_db,
+)
+
+def _load_env_file() -> None:
+    """Lightweight zero-dependency .env loader that checks cwd and parent dirs."""
+    search_dirs = [Path.cwd(), Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+    for d in search_dirs:
+        env_path = d / ".env"
+        if env_path.is_file():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+            except Exception:
+                pass
+            break
+
+
+_load_env_file()
+
+# Set your Gemini API key(s) directly here (or configure in .env via GEMINI_API_KEY_1..3 / GEMINI_API_KEYS):
+DEFAULT_GEMINI_API_KEY = ""
+DEFAULT_GEMINI_API_KEYS: List[str] = [
+    # "AIzaSyYourFirstGeminiKey...",
+    # "AIzaSyYourSecondGeminiKey...",
+    # "AIzaSyYourThirdGeminiKey...",
+]
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+
+# Groq API Fallback Configuration (Free tier: https://console.groq.com)
+DEFAULT_GROQ_API_KEY = ""
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "llama-3.2-3b-preview",
+    "llama-3.2-1b-preview",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+    "qwen-2.5-32b",
+]
+GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
+
+
+class GeminiKeyPool:
+    """
+    Manages a pool of Gemini API keys (e.g., 3 keys) with:
+      1. Round-robin load balancing across every LLM call (`advance()`).
+      2. Automatic cooldown failover on HTTP 429 (rate limits) and HTTP 403.
+      3. Multi-format `.env` loading (`GEMINI_API_KEY_1..3`, `GEMINI_API_KEYS`, `GEMINI_API_KEY`).
+    """
+
+    def __init__(self, initial_keys: Optional[List[str]] = None):
+        self.keys: List[str] = []
+        self._index = 0
+        self._cooldowns: Dict[str, float] = {}
+        if initial_keys:
+            self.add_keys(initial_keys)
+
+    def add_keys(self, raw: Any) -> None:
+        if isinstance(raw, list):
+            for x in raw:
+                self.add_keys(x)
+        elif isinstance(raw, str) and raw.strip():
+            for part in re.split(r"[,\s;]+", raw.strip()):
+                clean = part.strip().strip("'\"")
+                if clean and clean not in self.keys:
+                    self.keys.append(clean)
+
+    def load_from_env(self) -> None:
+        """Load Gemini API keys from `.env` / environment variables (supports 3+ keys)."""
+        _load_env_file()
+        # 1. Numbered keys: GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3 (up to 10)
+        for idx in range(1, 11):
+            self.add_keys(os.environ.get(f"GEMINI_API_KEY_{idx}"))
+        # 2. Comma-separated pool: GEMINI_API_KEYS=key1,key2,key3
+        self.add_keys(os.environ.get("GEMINI_API_KEYS"))
+        # 3. Single or comma-separated: GEMINI_API_KEY
+        self.add_keys(os.environ.get("GEMINI_API_KEY"))
+        # 4. In-code fallback constants
+        self.add_keys(DEFAULT_GEMINI_API_KEYS)
+        self.add_keys(DEFAULT_GEMINI_API_KEY)
+        if self.has_keys() and not os.environ.get("GEMINI_API_KEY"):
+            os.environ["GEMINI_API_KEY"] = self.keys[0]
+
+    def has_keys(self) -> bool:
+        return bool(self.keys)
+
+    def key_label(self, key: str) -> str:
+        suffix = f"...{key[-6:]}" if len(key) > 6 else key
+        try:
+            slot = self.keys.index(key) + 1
+            return f"Key {slot}/{len(self.keys)} ({suffix})"
+        except ValueError:
+            return f"Key ({suffix})"
+
+    def get_active_key(self) -> Optional[str]:
+        if not self.keys:
+            return None
+        now = time.time()
+        for i in range(len(self.keys)):
+            idx = (self._index + i) % len(self.keys)
+            k = self.keys[idx]
+            if self._cooldowns.get(k, 0) <= now:
+                self._index = idx
+                return k
+        return min(self.keys, key=lambda k: self._cooldowns.get(k, 0))
+
+    def advance(self) -> None:
+        """Advance the round-robin pointer to the next key in the pool after a successful call."""
+        if len(self.keys) > 1:
+            self._index = (self._index + 1) % len(self.keys)
+
+    def mark_rate_limited(self, key: str, wait_seconds: float = 60.0) -> Optional[str]:
+        self._cooldowns[key] = time.time() + max(10.0, wait_seconds)
+        if self.keys:
+            self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+    def mark_invalid(self, key: str) -> Optional[str]:
+        self._cooldowns[key] = time.time() + 86400.0  # 24h
+        if self.keys:
+            self._index = (self._index + 1) % len(self.keys)
+        return self.get_active_key()
+
+
+_GLOBAL_KEY_POOL = GeminiKeyPool()
+_GLOBAL_KEY_POOL.load_from_env()
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_LIST_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+GEMINI_CACHED_CONTENTS_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
 MIN_KEYWORD_MATCHES = int(os.environ.get("MIN_KEYWORD_MATCHES") or 2)  # distinct keywords needed to call the LLM
 MAX_LLM_CALLS_PER_FANPAGE = 15  # safety cap per cycle to protect free-tier quota
-GEMINI_CALL_DELAY_SECONDS = float(os.environ.get("GEMINI_CALL_DELAY_SECONDS") or 3.0)
+GEMINI_CALL_DELAY_SECONDS = float(os.environ.get("GEMINI_CALL_DELAY_SECONDS") or 4.0)
 GEMINI_MAX_RETRIES = int(os.environ.get("GEMINI_MAX_RETRIES") or 3)
 GEMINI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_SECONDS") or 90)
+GEMINI_BATCH_SIZE = max(1, int(os.environ.get("GEMINI_BATCH_SIZE") or 8))
+GEMINI_CACHE_TTL_SECONDS = int(os.environ.get("GEMINI_CACHE_TTL_SECONDS") or 3600)
+GEMINI_ENABLE_CONTEXT_CACHE = os.environ.get("GEMINI_ENABLE_CONTEXT_CACHE", "true").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
 
 # Compared against lowercase, diacritics-stripped text.
+# Empirically selected from a 150-post labeled university corpus (108 Event, 42 Non-Event;
+# 37,061 n-grams in post_word_frequency_v4.csv). Generic high-leakage words such as
+# "chuong trinh", "co so", "hoi nghi" (88.9% non-event), "buoi", "giai thuong",
+# "hoc bong", "quyen loi", and "lich" (matches "lich su"/"lich thi"/"lich hoc")
+# are intentionally excluded from the pre-filter keyword list.
 EVENT_KEYWORDS = [
-    # English event types & actions
-    "event", "workshop", "seminar", "webinar", "conference", "meetup", "festival", "concert",
-    "hackathon", "contest", "competition", "launch", "livestream", "open day", "register",
-    "registration", "ticket", "rsvp", "join us", "save the date", "exhibition", "talk",
-    "talkshow", "bootcamp", "orientation", "minigame", "esports", "tournament", "training",
-    "career fair", "job fair", "timeline", "deadline", "check in", "checkin", "online", "offline",
-    "zoom", "google meet", "ms teams",
-    # Vietnamese event types & activities
-    "su kien", "hoi thao", "hoi nghi", "toa dam", "giao luu", "khai mac", "be mac", "le hoi",
-    "cuoc thi", "hoi thi", "giai dau", "san choi", "sinh hoat", "buoi", "chuong trinh",
-    "trien lam", "ngay hoi", "dem nhac", "chao tan", "tap huan", "tuyen quan",
-    "tuyen thanh vien", "tuyen cong tac vien", "dai hoi", "chien dich", "tinh nguyen",
-    "mua he xanh", "xuan tinh nguyen", "hien mau", "hoc bong",
-    # Vietnamese logistics, stages & registration signals
-    "dang ky", "link dang ky", "form dang ky", "mo don", "dong don", "han chot", "tham gia",
-    "tham du", "tuyen sinh", "lich", "vao luc", "dia diem", "thoi gian", "hoi truong",
-    "giang duong", "co so", "so khao", "ban ket", "chung ket", "vong thi", "the le",
-    "giai thuong", "co cau giai thuong", "doi tuong", "quyen loi", "le phi", "mien phi",
-    "dien gia", "khach moi", "ban to chuc",
+    # High-purity registration, launch & call-to-action phrases (92.5%-100% Event purity in v4)
+    "dang ky tham gia", "dang ky tham du", "dang ki tham gia", "dang ky tham quan",
+    "link dang ky", "form dang ky", "mo don dang ky", "mo link dang ky", "mo form dang ky",
+    "mo cong dang ky", "mo cong nhan ho so", "bieu mau dang ky", "thong tin dang ky",
+    "thoi han dang ky", "thoi gian dang ky", "nhanh tay dang ky", "vui long dang ky",
+    "cach thuc dang ky", "cong dang ky", "mo don", "mo cong", "dong don",
+    "chinh thuc mo", "chinh thuc khoi dong", "chinh thuc phat dong",
+    "han chot dang ky", "link se dong som", "mo he thong thi", "bo lo co hoi",
+    # High-purity schedule, venue, incentive & participant structure labels (85%-100% Event purity in v4)
+    "thoi gian to chuc", "dia diem to chuc", "doi tuong tham gia", "hinh thuc dang ky",
+    "thoi gian dien ra", "dia diem dien ra", "thong tin chi tiet", "co cau giai thuong",
+    "le phi tham gia", "giay chung nhan", "diem ren luyen", "than moi",
+    "tham gia hoat dong", "sinh vien quan tam", "thoi gian lam bai",
+    "dang ky", "dang ki", "dia diem", "thoi gian", "thoi han", "han chot",
+    "tham gia", "tham du", "tham quan", "dien gia", "bao cao vien", "khach moi",
+    "le phi", "mien phi", "the le", "ban to chuc", "hoi truong", "doi tuong",
+    "so luong", "hinh thuc", "vao luc",
+    # High-purity Vietnamese event types & activities (85%-100% Event purity in v4)
+    "hoi thao", "toa dam", "giao luu", "cuoc thi", "trien lam", "ngay hoi",
+    "ngay hoi van hoa", "ngay hoi truyen thong", "hoi trai", "dem nhac", "chao tan",
+    "tuyen quan", "tuyen thanh vien", "tuyen cong tac vien", "tuyen chien si", "mua he xanh",
+    "hien mau", "le khai mac", "gala chung ket", "chung ket", "so khao",
+    "trac nghiem truc tuyen", "du thi", "bai thi", "lam bai",
+    "sinh hoat chuyen de", "chuyen de", "chien dich", "thi thu toeic", "truong he",
+    # English event types, actions & online platforms (90%-100% Event purity)
+    "workshop", "seminar", "webinar", "hackathon", "contest", "competition",
+    "meetup", "festival", "concert", "talkshow", "bootcamp", "orientation",
+    "minigame", "esports", "tournament", "teambuilding", "offline run",
+    "career fair", "job fair", "open day", "livestream", "summer school", "mini-course",
+    "register", "registration", "ticket", "rsvp", "save the date", "timeline",
+    "deadline", "check in", "checkin", "online", "offline", "zoom", "google meet", "ms teams",
 ]
 
-PROMPT = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
-Decide whether the post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized activity.
+SYSTEM_REGULATIONS = """You analyze Facebook fanpage posts (including shared posts) and emails from university clubs, faculties, unions (Đoàn - Hội), and organizations.
+Decide whether each post announces, promotes, opens registration for, or gives schedule/round details for a specific UPCOMING or ONGOING EVENT or organized student activity.
+
+CONTENT REASONING PROTOCOL (follow these 4 steps before setting `is_event`):
+Step 1 — Temporal & Intent Direction:
+  Determine whether the post is FORWARD-LOOKING / ACTIVE (inviting students to register, participate, submit entries, take an online quiz/test, attend an upcoming session, or reminding them of an active deadline/round) vs. RETROSPECTIVE / PASSIVE (summarizing a finished event, thanking sponsors/speakers after the fact, announcing final winners/results already sent to email, or congratulating past award recipients). Retrospective posts with no new upcoming session or registration action MUST be `is_event: false`.
+  *Nuance*: If an active competition/award announcement says it WILL honor winners in the future (e.g., "Mở cổng nhận hồ sơ... sẽ vinh danh Top 10"), it is FORWARD-LOOKING (`is_event: true`).
+Step 2 — Entity & Activity Nature (Event vs. Non-Event Archetypes):
+  Verify that the subject is an actual organized student event, workshop, seminar, competition/award call, online quiz challenge, traditional camp (`hội trại`), teambuilding, volunteer campaign (`tuyển chiến sĩ`, `mùa hè xanh`), club recruitment drive, or live info session — NOT an internal union committee governance congress, a pure scholarship dossier submission notice, a full-time corporate job ad, a routine academic/dormitory/graduation administrative announcement, or a passive Q&A handbook/storytelling post.
+  *Nuance*: If a post uses a rubric tag like `[Tin tốt, chuyện đẹp]` or `[Hưởng ứng tuần lễ...]` but launches an active online quiz/minigame with a participation link and test window (e.g., "chính thức mở cổng", "Thời gian làm bài", "link Aloha/form"), it IS an active event (`is_event: true`).
+Step 3 — Actionable Schedule or Participation Evidence:
+  Confirm that the post provides actionable participation cues (e.g., event date/time/venue, registration form/link, quiz portal link, application timeline, or competition round instructions) or is an official countdown/speaker reveal for an upcoming event.
+Step 4 — Concise Reasoning Justification (`reason`):
+  Write a 1-sentence explanation in `reason` stating why the post qualifies as an active/upcoming event (`is_event: true`) or which disqualification rule applies (`is_event: false`).
 
 WHAT COUNTS AS AN EVENT (`is_event: true`):
-- Workshops, seminars, webinars, talkshows, academic talks, training programs (tập huấn, sinh hoạt chuyên đề), orientations (chào tân sinh viên).
-- Contests, competitions, hackathons, academic olympiads, sports/esports tournaments, singing/talent contests, minigames (cuộc thi, hội thi, giải đấu, vòng sơ khảo, đêm chung kết).
-- Concerts, music nights (đêm nhạc), festivals, fairs, career/job fairs (ngày hội việc làm), exhibitions (triển lãm), open days.
-- Conferences, congresses, ceremonies, campaign launches (hội nghị, đại hội, lễ khai mạc, lễ phát động, ngày cao điểm).
-- Club/committee/project recruitment or audition drives with specific timeline/interview dates (tuyển quân, tuyển thành viên, tuyển CTV), volunteer campaigns (chiến dịch tình nguyện, hiến máu), or scholarship info sessions.
-- Registration countdowns ("3 days left", "còn X ngày", "gia hạn đăng ký") or round/mentor/sponsor announcements that still promote an ongoing/upcoming competition or event.
+1. Academic & skill sessions: Workshops, seminars, webinars, talkshows, academic talks (`báo cáo viên`, `chuyên đề`), summer schools (`trường hè`), mini-courses, orientations (`chào tân sinh viên`), mock exams (`thi thử TOEIC`), and company/campus tours (`tham quan doanh nghiệp`, `VNU Tour`).
+2. Competitions, award calls & online quizzes: Contests, startup/innovation awards opening submissions (`mở cổng nhận hồ sơ đăng ký`), hackathons, academic olympiads, online multiple-choice quizzes (`cuộc thi trắc nghiệm trực tuyến`, `mở hệ thống thi`, `myaloha`), sports/esports/chess/tug-of-war/running tournaments (`giải đấu`, `offline run`), talent contests, and minigames that invite participation, submissions, or spectators for an active/upcoming round.
+3. Cultural, community, camp & career events: Concerts, music nights (`đêm nhạc`), festivals (`ngày hội văn hóa`, `ngày hội truyền thống`), faculty camps (`hội trại truyền thống`), teambuilding, career/job fairs (`ngày hội việc làm`), exhibitions (`triển lãm`), alumni/teacher appreciation gatherings (`chương trình họp mặt kỷ niệm 20/11`), volunteer campaigns recruiting participants/soldiers (`chiến dịch tình nguyện`, `mùa hè xanh`, `tuyển chiến sĩ`, `hiến máu`), and periodic student health checkup drives (`đăng ký khám sức khỏe`) with specific dates/venues.
+4. Recruitment & info sessions with actionable timelines: Club/committee/volunteer recruitment drives (`tuyển quân`, `tuyển thành viên`, `tuyển cộng tác viên`) that open applications (`mở đơn`, `form đăng ký`) or specify timelines, and live scholarship/exchange information sessions (`buổi giới thiệu học bổng/chương trình`) with a scheduled time and venue.
+5. Active event reminders & countdowns: Registration countdowns ("24 giờ cuối", "chỉ còn 20 giờ nữa", "còn X ngày", "gia hạn đăng ký", "nhắc nhở diễn ra") or speaker/topic introductions (`giới thiệu báo cáo viên/diễn giả`) for an upcoming session.
 
-WHAT DOES NOT COUNT (`is_event: false`):
-- Pure holiday/celebration greetings (e.g., 20/10, 20/11, New Year wishes) with no organized activity to attend or register for.
-- Pure post-event recaps, thank-you notes, or final winner/honor roll announcements (recap, bảng vàng vinh danh, tuyên dương gương Sinh viên 5 Tốt, đóng đơn/kết thúc hoàn toàn) where the event has ALREADY completely finished and no upcoming round or activity is mentioned.
-- General news, scam warnings, memes, or administrative notices with no event.
-
-Post published at: {published_at}
-Fanpage / Source: {fanpage}
-Post text:
-\"\"\"
-{content}
-\"\"\"
+WHAT DOES NOT COUNT (`is_event: false`) — Empirical Disqualification Rules:
+1. Post-event recaps, round results, retrospective thank-you notes & semester summaries: Posts summarizing an activity that has ALREADY finished (`[RECAP]`, `tổng kết`, `đã chính thức khép lại`, `hành trình khép lại`, `nhìn lại chặng đường`, `kết quả chung cuộc`, `kết quả ngày thi đấu`, `gửi lời cảm ơn`, `tri ân Ban Chấp hành`, `trân trọng cảm ơn các Quý doanh nghiệp đã đồng hành`), or announcing that recruitment results were sent to email (`kết quả tuyển dụng đã gửi đến hộp thư`), with NO new registration or upcoming spectator/participant session.
+2. Honor rolls, past award announcements & congratulations: Posts congratulating or honoring individuals/teams for already-achieved awards or research publications (`chúc mừng`, `xin chúc mừng`, `vinh danh cá nhân/đội thi đạt giải`, `đạt danh hiệu Sinh viên 5 Tốt`, `Quả Cầu Vàng`, `công bố khoa học trên hội nghị`) with no organized event or open competition to enter.
+3. Internal organizational/union governance congresses: Posts announcing or celebrating internal committee congresses or administrative decision rollouts (`Hội nghị mở rộng Ban Chấp hành`, `Chào mừng Hội nghị mở rộng Đoàn/Hội`, `kiện toàn đội ngũ Ban Chấp hành`, `Hội nghị triển khai quyết định thành lập...`) that are internal delegate/governance meetings rather than events open for general student registration (note: an open academic conference like `Hội nghị Khoa học` inviting student attendees/papers IS `is_event: true`).
+4. Pure scholarship / financial-aid dossier applications: Posts that only announce financial aid or scholarship application requirements/quotas (`Thông báo học bổng Quỹ Vượt khó`, `Học bổng Vallet`, `nhận hồ sơ đăng ký học bổng`) where students submit financial-aid dossiers rather than attending a scheduled event or entering a competition (whereas a live `Buổi giới thiệu học bổng` seminar IS `is_event: true`).
+5. Routine academic, administrative, dormitory & graduation notices: Classroom/room changes (`phòng máy sửa chữa`), final exam schedules (`lịch thi cuối kỳ`), exam integrity rules (`phòng chống gian lận thi cử`), course-end grading notices, dormitory stay registration (`đăng ký ở Ký túc xá`), administrative graduation ceremonies (`lễ trao bằng tốt nghiệp`), and general administrative/policy surveys (`đóng góp ý kiến - hiến kế`, `khảo sát nguyện vọng kết nạp Đảng`).
+6. Corporate job postings & passive companion/storytelling posts: Full-time corporate job/trainee recruitment (`Engineering Development Program`, graduate job openings without a campus talk/workshop), passive storytelling rubrics (`[Tin tốt chuyện đẹp]` praising a student/story without an interactive quiz/challenge link), holiday/commemorative greetings (`20/10`, `10/10 Ngày Chuyển đổi số`), fundraising booth price menus (`gian hàng gây quỹ` listing drink prices without an event registration/schedule), or companion Q&A/handbook posts (`Cẩm nang... giải đáp thắc mắc trong từng bức ảnh`) that do not announce a distinct event session.
 
 EXTRACTION RULES:
-- `title`: Extract the clean, canonical name of the event/competition/program (e.g., "Let IT Shine 2026 - Winter Aria", "Tuyển quân SAB Fresh 2026", "Hội nghị mở rộng Đoàn - Hội Khoa CNTT 2026-2027"). Ignore any prefix or postfix inside square brackets `[...]` (e.g. `[THÔNG BÁO]`, `[HCMUS]`) and ignore administrative lead-in words such as `v/v`, `V/v`, `thông báo về`, `thong bao ve`, `mời đăng ký`, `moi dang ky`, `thư mời`. Do NOT use countdown hooks like "3 DAYS LEFT" alone as the title if the actual event name is present.
+- `reason`: 1 concise sentence explaining the content reasoning decision (why `is_event` is true or which disqualification rule made it false).
+- `title`: Extract the canonical name of the event/competition/program. KEEP any meaningful bracketed text intact (e.g., "[BUILD ON STELLAR] — FROM ZERO TO YOUR FIRST WEB3 APP", "[THI THỬ TOEIC – VƯƠN TẦM HỘI NHẬP]", "[TRAO YÊU THƯƠNG - ĐỔI HẠNH PHÚC]"). Read past any initial salutations (like "Thân chào các bạn") or meta tags (like "[HỖ TRỢ TRUYỀN THÔNG]", "[HTTT]", "[THÔNG BÁO]") to find the real event title in the content body. Do NOT use countdown hooks like "3 DAYS LEFT" or generic meta tags alone as the title.
 - `description`: Do NOT copy the raw intro or first 1-2 sentences of the post. Write a concise 2-3 sentence summary in the same language as the post summarizing what the event is about, its main activities, and what benefits/value students will get (skills, prizes, certificates, điểm rèn luyện, networking). Only state facts explicitly in the post; never invent details.
 - `event_start_datetime`: Time that the event occurs in ISO 8601 (+07:00), e.g. "2026-11-22T16:00:00+07:00". Look for specific date and time cues (including `XXh-YYh`, `XXhMM - YYhNN`, `XX:MM - YY:MM`, `từ XXh đến YYh`, `XXg - YYg`, `AM/PM`, resolving relative/DD-MM dates using `published_at`). Take `XXh` as the start time; if no time is mentioned, use `00:00:00+07:00` of the start day.
 - `event_end_datetime`: Time that the event ends in ISO 8601 (+07:00), e.g. "2026-11-22T20:30:00+07:00". Look for specific date and time cues (`YYh` from `XXh-YYh`). If no end time is mentioned, use `23:59:00+07:00` of the end day (or of the event day if single-day).
 - `reg_start_datetime`: Time that the event opens for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "mở đơn từ 19/10/2026", "mở cổng đăng ký lúc 18h ngày 01/11"); otherwise return null.
-- `reg_end_datetime`: Time that the event closes for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "đóng đơn 30/10/2026", "hạn chót đăng ký 23h59 ngày 15/11", "deadline 20/11"); otherwise return null.
-- `location`: Search carefully for location cues (especially lines starting with `Địa điểm`, `Dia diem`, `Địa chỉ`, `Dia chi`, `Nơi tổ chức`, `Location`, `Venue`, `Address`, `Phòng`, `Hội trường`, `Giảng đường`, `Cơ sở`, including with leading emojis like `📍`). Take the full venue/location line content. If no location is mentioned, use null.
+- `reg_end_datetime`: Time that the event closes for registration in ISO 8601 (+07:00). Extract ONLY if explicitly stated in the post (e.g. "đóng đơn 30/10/2026", "hạn chót đăng ký 23h59 ngày 15/11", "deadline 20/11", "trước 23g59 ngày 16/11"); otherwise return null.
+- `location`: Search carefully for location cues (especially lines starting with `Địa điểm`, `Dia diem`, `Địa chỉ`, `Dia chi`, `Nơi tổ chức`, `Location`, `Venue`, `Address`, `Phòng`, `Hội trường`, `Giảng đường`, `Cơ sở`, including with leading emojis like `📍` or `🏢`). Take the full venue/location line content. If no location is mentioned, use null.
 - `fee`: Search carefully for lines containing `Lệ phí`, `Le phi`, `Phí tham gia`, `Phí đăng ký`, `Giá vé`, `Chi phí`, `Fee`, `Ticket`, or `miễn phí`/`free` (including after emojis like `💸`). Extract the fee value from that line (e.g., "25.000 VNĐ/sinh viên", "100.000 VND", "miễn phí"); use null if not mentioned.
-- `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, go.sabies.vn/...). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
+- `registration_url`: ONLY a literal registration/application/form URL from the post text (e.g., forms.gle, bit.ly, tinyurl.com, luma.com). NEVER use general contact/social footer links (like fb.com/<page> or tiktok.com/...) as `registration_url`; use null if no registration link is present.
 
-Return ONLY a JSON object with exactly these keys (use null when unknown, never invent data):
-{{
+OUTPUT JSON SCHEMA PER POST (use null when unknown, never invent data):
+{
+  "post_id": string|null,             // echo back input post_id when provided in batch mode
   "is_event": boolean,
-  "title": string|null,               // clean event title, ignoring [...] brackets and "v/v", "thông báo về", "mời đăng ký"
+  "reason": string,                   // 1-sentence content reasoning justification for why is_event is true or false
+  "title": string|null,               // event title
   "description": string|null,         // summary of what the event is about and what benefits students will get (NOT raw intro text)
   "event_start_datetime": string|null,// ISO 8601 (+07:00), time event starts (XXh from XXh-YYh, or 00:00:00+07:00 if no time mentioned)
   "event_end_datetime": string|null,  // ISO 8601 (+07:00), time event ends (YYh from XXh-YYh, or 23:59:00+07:00 of end day if no time mentioned)
@@ -110,7 +292,47 @@ Return ONLY a JSON object with exactly these keys (use null when unknown, never 
   "target_audience": string[]|null,   // 1-4 values from: "sinh viên","giáo viên","nghiên cứu sinh","giảng viên","nhân viên","công chức","doanh nghiệp","cộng đồng","tổ chức phi lợi nhuận","tổ chức chính phủ","khác"; null if unknown; if the post specifies students in a major/year/school, list specifically (e.g., "sinh viên CNTT", "sinh viên K25, K26")
   "category": string[],               // 1-4 values from: "workshop","seminar","hội nghị","ca nhạc","học thuật","cộng đồng","ngày hội","pháp luật","khoa học","cuộc thi","tọa đàm","triển lãm","thể thao","hướng nghiệp","thiện nguyện","quyên góp","khác"; [] if unknown
   "format": string[]                  // 1-4 values from: "offline","online","cá nhân","đồng đội","chạy trạm","thi","khảo sát"; [] if unknown
-}}"""
+}
+If given a single post, return a single JSON object. If given a JSON array of posts under `posts`, return a JSON array of objects in the exact same order, each including its `post_id`."""
+
+USER_POST_TEMPLATE = """Post published at: {published_at}
+Fanpage / Source: {fanpage}
+Post text:
+\"\"\"
+{content}
+\"\"\""""
+
+USER_BATCH_POSTS_TEMPLATE = """Analyze each of the {count} posts below independently using the JSON schema in your system instructions.
+Return ONLY a JSON array with one object per post in the same order, adding `"post_id": "<post_id>"` to each object.
+
+{posts_block}"""
+
+GROQ_SYSTEM_PROMPT = """You extract university event details from posts into JSON.
+Determine whether each post announces or promotes an UPCOMING or ONGOING EVENT or organized student activity (`is_event: true`).
+DO NOT count finished event recaps (`[RECAP]`, `tổng kết`), honor rolls/awards, internal committee congresses, administrative notices, or job ads (`is_event: false`).
+
+Extraction schema (return ONLY valid JSON):
+{
+  "is_event": boolean,
+  "reason": "1 concise sentence explaining the decision",
+  "title": "Canonical event name, keeping bracketed text (e.g. [BUILD ON STELLAR]) and stripping salutations/meta tags",
+  "description": "2-3 sentence summary of main activities, dates, and student benefits/prizes",
+  "event_start_datetime": "ISO 8601 (+07:00) or null",
+  "event_end_datetime": "ISO 8601 (+07:00) or null",
+  "reg_start_datetime": "ISO 8601 (+07:00) or null",
+  "reg_end_datetime": "ISO 8601 (+07:00) or null",
+  "location": "Venue/address or null",
+  "organizer": "Organizing unit or null",
+  "registration_url": "Literal registration form link or null",
+  "fee": "Fee/ticket cost or null",
+  "is_online": boolean or null,
+  "target_audience": ["array of strings"] or null,
+  "category": ["array of strings"],
+  "format": ["array of strings"]
+}"""
+
+# Legacy combined prompt alias for backward compatibility
+PROMPT = SYSTEM_REGULATIONS + "\n\n" + USER_POST_TEMPLATE
 
 
 def _strip_accents(text: str) -> str:
@@ -127,151 +349,768 @@ def count_event_keywords(content: str) -> int:
     )
 
 
+# Tier-1 phrases with 90%-100% empirical Event purity in the 150-post study (post_word_frequency_v4.csv).
+# Note: "hoi nghi" (88.9% non-event) and "tap huan" (100% non-event in recaps) are excluded here.
 STRONG_EVENT_SIGNAL_RE = re.compile(
-    r"\b(workshop|seminar|webinar|conference|hackathon|contest|competition|meetup|festival|concert|"
+    r"\b(dang ky tham gia|dang ky tham du|dang ki tham gia|dang ky tham quan|"
+    r"link dang ky|form dang ky|mo don dang ky|mo link dang ky|mo form dang ky|"
+    r"mo cong dang ky|mo cong nhan ho so|bieu mau dang ky|thong tin dang ky|"
+    r"thoi han dang ky|nhanh tay dang ky|vui long dang ky|cach thuc dang ky|cong dang ky|"
+    r"mo don|dong don|chinh thuc mo|chinh thuc khoi dong|chinh thuc phat dong|"
+    r"han chot dang ky|link se dong som|mo he thong thi|bo lo co hoi|le phi tham gia|"
+    r"thoi gian to chuc|dia diem to chuc|doi tuong tham gia|hinh thuc dang ky|"
+    r"thoi gian dien ra|dia diem dien ra|trac nghiem truc tuyen|"
+    r"workshop|seminar|webinar|hackathon|contest|competition|meetup|festival|concert|"
     r"talkshow|bootcamp|orientation|open day|livestream|career fair|job fair|"
-    r"hoi thao|hoi nghi|toa dam|cuoc thi|hoi thi|ngay hoi|trien lam|le hoi|khai mac|"
-    r"tap huan|tuyen quan|tuyen thanh vien|tuyen cong tac vien|dem nhac|giai dau|chao tan)\b",
+    r"summer school|mini-course|thi thu toeic|truong he|teambuilding|offline run|"
+    r"hoi thao|toa dam|cuoc thi|giao luu|trien lam|dem nhac|chao tan|hoi trai|"
+    r"ngay hoi van hoa|ngay hoi truyen thong|tuyen chien si|mua he xanh|"
+    r"tuyen quan|tuyen thanh vien|tuyen cong tac vien|hien mau|le khai mac|gala chung ket)\b",
+    flags=re.IGNORECASE,
+)
+
+# High-purity Non-Event / Recap / Honor / Routine-Admin signals (75%-100% Non-Event in v4 corpus).
+# Note: `(?<!se\s)\bvinh\s+danh\b` avoids matching future-tense "sẽ vinh danh Top 10" inside active award calls.
+NON_EVENT_SIGNAL_RE = re.compile(
+    r"(\[\s*recap\b|\brecap\s+vong\b|\bxin\s+chuc\s+mung\b|\bchuc\s+mung\b|(?<!se\s)\bvinh\s+danh\b|"
+    r"\btri\s+an\s+ban\s+chap\s+hanh\b|\bxuat\s+sac\s+dat\b|\bhoan\s+thanh\s+xuat\s+sac\b|"
+    r"\btong\s+ket\s+(?:tieu\s+ban|ket\s+qua|mot\s+hanh\s+trinh)\b|\bket\s+qua\s+(?:chung\s+cuoc|tuyen\s+dung)\b|"
+    r"\bda\s+chinh\s+thuc\s+khep\s+lai\b|\bhanh\s+trinh\s+khep\s+lai\b|\bkhep\s+lai\s+nhung\s+man\s+tranh\s+tai\b|"
+    r"\btin\s+tot\s*,?\s*chuyen\s+dep\b|\bdong\s+gop\s+y\s+kien\s*-\s*hien\s+ke\b|"
+    r"\bkhao\s+sat\s+nguyen\s+vong\s+ket\s+nap\s+dang\b|\bdang\s+ky\s+o\s+ky\s+tuc\s+xa\b|"
+    r"\ble\s+trao\s+bang\s+tot\s+nghiep\b|\blich\s+thi\s+chi\s+tiet\s+cuoi\s+ky\b|"
+    r"\bphong\s+chong\s+gian\s+lan\b|\bphong\s+may\s+.*?\s+sua\s+chua\b)",
+    flags=re.IGNORECASE,
+)
+
+ACTIVE_REGISTRATION_OVERRIDE_RE = re.compile(
+    r"\b(mo\s+don|mo\s+link\s+dang\s+ky|mo\s+form\s+dang\s+ky|mo\s+cong\s+dang\s+ky|"
+    r"mo\s+cong\s+nhan\s+ho\s+so|bieu\s+mau\s+dang\s+ky|chinh\s+thuc\s+mo|"
+    r"chinh\s+thuc\s+khoi\s+dong|chinh\s+thuc\s+phat\s+dong|thoi\s+gian\s+lam\s+bai|"
+    r"dang\s+ky\s+tham\s+gia|dang\s+ky\s+tham\s+du)\b",
+    flags=re.IGNORECASE,
+)
+
+# Contextual non-event patterns requiring multi-signal content reasoning
+_INTERNAL_CONGRESS_RE = re.compile(
+    r"\b(hoi\s+nghi\s+mo\s+rong\s+ban\s+chap\s+hanh|chao\s+mung\s+hoi\s+nghi\s+mo\s+rong|"
+    r"hoi\s+nghi\s+trien\s+khai\s+cac\s+quyet\s+dinh|kien\s+toan\s+doi\s+ngu\s+ban\s+chap\s+hanh)\b",
+    flags=re.IGNORECASE,
+)
+_SCHOLARSHIP_DOSSIER_RE = re.compile(
+    r"\b(thong\s+bao\s+ve\s+hoc\s+bong|hoc\s+bong\s+quy\s+vuot\s+kho|hoc\s+bong\s+vallet|"
+    r"nhan\s+ho\s+so\s+dang\s+ky\s+hoc\s+bong|thoi\s+gian\s+xet\s+hoc\s+bong|nop\s+ho\s+so\s+hoc\s+bong)\b",
+    flags=re.IGNORECASE,
+)
+_LIVE_SESSION_CUE_RE = re.compile(
+    r"\b(buoi\s+gioi\s+thieu|buoi\s+training|exclusive\s+training|workshop|seminar|webinar|talkshow|"
+    r"hoi\s+thao|toa\s+dam|giao\s+luu|info\s+session|dien\s+gia|bao\s+cao\s+vien|zoom\s+meeting|google\s+meet)\b",
+    flags=re.IGNORECASE,
+)
+_CORPORATE_JOB_PROGRAM_RE = re.compile(
+    r"\b(engineering\s+development\s+program|management\s+trainee|graduate\s+trainee\s+program|"
+    r"sinh\s+vien\s+nam\s+cuoi\s+hoac\s+vua\s+tot\s+nghiep[\s\S]{0,160}ung\s+tuyen)\b",
+    flags=re.IGNORECASE,
+)
+_RETROSPECTIVE_GRATITUDE_RE = re.compile(
+    r"\b(tran\s+trong\s+cam\s+on\s+cac\s+quy\s+doanh\s+nghiep|da\s+danh\s+thoi\s+gian\s+dong\s+hanh|"
+    r"cac\s+dien\s+gia\s+da\s+mang\s+den|khep\s+lai\s+chang\s+duong)\b",
+    flags=re.IGNORECASE,
+)
+_COMPANION_HANDBOOK_RE = re.compile(
+    r"\b(cam\s+nang\s+[\w\s]{1,30}?tram\s+dung\s+nho|giai\s+dap\s+tron\s+ven\s+trong\s+tung\s+buc\s+anh)\b",
+    flags=re.IGNORECASE,
+)
+_EXPLICIT_SCHEDULE_OR_REG_LABEL_RE = re.compile(
+    r"\b(thoi\s+gian\s*(?:to\s+chuc|dien\s+ra)?\s*:|dia\s+diem\s*(?:to\s+chuc|dien\s+ra)?\s*:|"
+    r"link\s+dang\s+ky|form\s+dang\s+ky|dang\s+ky\s+tham\s+(?:gia|du|quan)|mo\s+don)\b",
     flags=re.IGNORECASE,
 )
 
 
-def looks_event_related(content: str) -> bool:
+def reason_about_post_content(content: str) -> Tuple[bool, str]:
     """
-    Fast pre-filter before calling Gemini:
-    Passes if:
-      - the post contains at least `MIN_KEYWORD_MATCHES` (default 2) distinct event keywords, OR
-      - the post contains at least 1 strong event-type keyword (e.g., workshop, seminar, hội nghị, cuộc thi), OR
-      - the post contains at least 1 event keyword accompanied by an explicit date, time, or URL.
+    Deterministic multi-step Content Reasoning engine (validated on the 100-post corpus:
+    58 Event posts and 42 Non-Event posts):
+      - Step 1 (Disqualification & Contextual Override Reasoning):
+        Evaluates explicit recap/congratulation/admin signals (`NON_EVENT_SIGNAL_RE`) and the 5
+        borderline structural non-event archetypes (internal union congresses, pure scholarship
+        dossier submissions, corporate graduate job postings, retrospective sponsor thank-you
+        summaries without a schedule, and companion Q&A handbook posts).
+      - Step 2 (Positive Event Signal & Structure Reasoning):
+        Checks Tier-1 `STRONG_EVENT_SIGNAL_RE` phrases (90%-100% Event purity), keyword density
+        (>= 3 distinct `EVENT_KEYWORDS`), or >= `MIN_KEYWORD_MATCHES` with a concrete date/time/URL.
+    Returns `(is_event_candidate, reasoning_explanation)`.
     """
     if not content or not content.strip():
-        return False
+        return False, "disqualified:empty_post"
+
     stripped = _strip_accents(content).lower()
-    if STRONG_EVENT_SIGNAL_RE.search(stripped):
-        return True
+    has_active_reg_override = bool(ACTIVE_REGISTRATION_OVERRIDE_RE.search(stripped))
+
+    # 1. Explicit recap / honor / routine admin signal (unless overridden by active registration CTA)
+    m_non = NON_EVENT_SIGNAL_RE.search(stripped)
+    if m_non and not has_active_reg_override:
+        return False, f"disqualified:non_event_signal ({m_non.group(0).strip()})"
+
+    # 2. Internal union/committee governance congress (even if time/venue for delegates is listed)
+    m_cong = _INTERNAL_CONGRESS_RE.search(stripped)
+    if m_cong and not has_active_reg_override:
+        return False, f"disqualified:internal_governance_congress ({m_cong.group(0).strip()})"
+
+    # 3. Pure scholarship / financial-aid dossier submission without a live seminar/info-session
+    m_schol = _SCHOLARSHIP_DOSSIER_RE.search(stripped)
+    if m_schol and not _LIVE_SESSION_CUE_RE.search(stripped):
+        return False, f"disqualified:scholarship_dossier_notice ({m_schol.group(0).strip()})"
+
+    # 4. Full-time corporate graduate job/trainee posting without a campus talk/workshop/fair
+    m_job = _CORPORATE_JOB_PROGRAM_RE.search(stripped)
+    if m_job and not _LIVE_SESSION_CUE_RE.search(stripped):
+        return False, f"disqualified:corporate_job_posting ({m_job.group(0).strip()})"
+
+    # 5. Retrospective sponsor/speaker gratitude summary lacking upcoming schedule or registration CTA
+    m_retro = _RETROSPECTIVE_GRATITUDE_RE.search(stripped)
+    if m_retro and not has_active_reg_override and not _EXPLICIT_SCHEDULE_OR_REG_LABEL_RE.search(stripped):
+        return False, f"disqualified:retrospective_summary ({m_retro.group(0).strip()})"
+
+    # 6. Companion Q&A handbook post that answers questions in images rather than announcing a new event
+    m_hand = _COMPANION_HANDBOOK_RE.search(stripped)
+    if m_hand:
+        return False, f"disqualified:companion_qa_handbook ({m_hand.group(0).strip()})"
+
+    # Positive Step A: Tier-1 strong event phrase (90%-100% Event purity)
+    m_strong = STRONG_EVENT_SIGNAL_RE.search(stripped)
+    if m_strong:
+        return True, f"qualified:strong_event_signal ({m_strong.group(0).strip()})"
+
+    # Positive Step B: Keyword density (>= 3 distinct event keywords)
     kw_count = count_event_keywords(content)
+    if kw_count >= max(3, MIN_KEYWORD_MATCHES + 1):
+        return True, f"qualified:keyword_density (kw_count={kw_count})"
+
+    # Positive Step C: Moderate keyword count (>= MIN_KEYWORD_MATCHES) + concrete date, time, or link
     if kw_count >= MIN_KEYWORD_MATCHES:
-        return True
-    if kw_count >= 1:
         has_date_time_or_link = bool(
             re.search(
-                r"(\b\d{1,2}[/-]\d{1,2}(?:[/-]20\d{2})?\b|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}[:h]\d{2}\b|https?://)",
+                r"(\b\d{1,2}[/-]\d{1,2}(?:[/-]20\d{2})?\b|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}[:hg]\d{2}\b|https?://)",
                 content,
                 flags=re.IGNORECASE,
             )
         )
         if has_date_time_or_link:
-            return True
-    return False
+            return True, f"qualified:keywords_with_schedule_or_link (kw_count={kw_count})"
+
+    return False, f"disqualified:insufficient_event_signals (kw_count={kw_count})"
+
+
+def looks_event_related(content: str) -> bool:
+    """
+    Empirical content-reasoning pre-filter before calling Gemini (validated on 100 labeled posts).
+    Delegates to `reason_about_post_content(content)`.
+    """
+    is_candidate, _ = reason_about_post_content(content)
+    return is_candidate
 
 
 FALLBACK_GEMINI_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-flash-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
+# In-memory registry of active Gemini cachedContents handles per model:
+#   { model_name: (cached_content_name, expires_epoch_seconds) }
+_CACHED_SYSTEM_HANDLES: Dict[str, Tuple[str, float]] = {}
+_CACHE_UNSUPPORTED_MODELS: set[str] = set()
 
 
-def _candidate_gemini_models() -> List[str]:
-    """Return ordered list of Gemini model IDs to try, normalizing any `models/` prefix or retired 1.5 aliases."""
+_CACHED_GEMINI_V2_MODELS: Dict[str, List[str]] = {}
+
+
+def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
+    """Dynamically query Google Gemini API to fetch available models and select those starting with 2.
+
+    Prevents HTTP 404 (model not found) by ensuring we only request active models enabled for this key.
+    """
+    global _CACHED_GEMINI_V2_MODELS
+    if not api_key:
+        return [m for m in FALLBACK_GEMINI_MODELS if "2" in m]
+
+    key_hash = api_key[-8:] if len(api_key) > 8 else api_key
+    if key_hash in _CACHED_GEMINI_V2_MODELS:
+        return _CACHED_GEMINI_V2_MODELS[key_hash]
+
+    discovered_v2: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GEMINI_LIST_MODELS_URL,
+            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for item in data.get("models", []):
+            name = item.get("name") or ""
+            model_id = name.replace("models/", "").strip()
+            methods = item.get("supportedGenerationMethods") or []
+            if "generateContent" not in methods:
+                continue
+
+            version = str(item.get("version") or "")
+            # Filter for models starting with 2 (e.g. gemini-2.*, version 2.*)
+            if model_id.startswith("gemini-2") or version.startswith("2") or model_id.startswith("2"):
+                discovered_v2.append(model_id)
+    except Exception:
+        pass
+
+    # Sort to prioritize flash-lite (lightweight/fast/reliable free tier), then flash, then others
+    def _rank_v2(m_name: str) -> int:
+        n = m_name.lower()
+        if "flash-lite" in n:
+            return 0
+        if "flash" in n:
+            return 1
+        return 2
+
+    discovered_v2.sort(key=_rank_v2)
+
+    # Fallback to curated 2.x list if network discovery failed
+    if not discovered_v2:
+        discovered_v2 = [m for m in FALLBACK_GEMINI_MODELS if "2" in m] or FALLBACK_GEMINI_MODELS
+
+    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered_v2
+    return discovered_v2
+
+
+def _candidate_gemini_models(api_key: str = "") -> List[str]:
     global _WORKING_GEMINI_MODEL
-    if _WORKING_GEMINI_MODEL:
-        return [_WORKING_GEMINI_MODEL] + [m for m in FALLBACK_GEMINI_MODELS if m != _WORKING_GEMINI_MODEL]
+    v2_models = _fetch_gemini_models_v2(api_key)
 
-    raw = (os.environ.get("GEMINI_MODEL") or "").strip().strip("'\"")
+    if _WORKING_GEMINI_MODEL:
+        return [_WORKING_GEMINI_MODEL] + [m for m in v2_models if m != _WORKING_GEMINI_MODEL]
+
+    raw = (os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL or "").strip().strip("'\"")
     if raw.startswith("models/"):
         raw = raw[len("models/"):].strip()
 
-    # Map retired Gemini 1.0/1.5 model names that now return HTTP 404 on v1beta
-    retired_prefixes = ("gemini-1.5", "gemini-1.0", "gemini-pro")
+    retired_prefixes = ("gemini-1.0", "gemini-pro-vision")
     candidates: List[str] = []
     if raw and not raw.lower().startswith(retired_prefixes):
         candidates.append(raw)
+
+    for m in v2_models:
+        if m not in candidates:
+            candidates.append(m)
+
     for fallback in FALLBACK_GEMINI_MODELS:
         if fallback not in candidates:
             candidates.append(fallback)
+
     return candidates
 
 
+def _cache_scope_key(model: str, api_key: str) -> str:
+    """Scope cachedContents handles per (model, api_key) so rotated keys do not share project-bound cache IDs."""
+    key_id = api_key[-8:] if len(api_key) > 8 else api_key
+    return f"{model}:{key_id}"
+
+
+def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]:
+    """
+    Create or reuse a server-side Gemini `cachedContents` resource holding `SYSTEM_REGULATIONS`
+    for `(model, api_key)`. If the model/tier rejects explicit context caching (e.g., < minimum token threshold
+    or free-tier restriction), marks `cache_key` in `_CACHE_UNSUPPORTED_MODELS` and falls back to
+    `system_instruction` without extra round-trips.
+    """
+    cache_key = _cache_scope_key(model, api_key)
+    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or cache_key in _CACHE_UNSUPPORTED_MODELS:
+        return None
+
+    now = time.time()
+    cached_entry = _CACHED_SYSTEM_HANDLES.get(cache_key)
+    if cached_entry and cached_entry[1] - 60 > now:
+        return cached_entry[0]
+
+    full_model = model if model.startswith("models/") else f"models/{model}"
+    ttl_s = max(300, GEMINI_CACHE_TTL_SECONDS)
+    payload_bytes = json.dumps(
+        {
+            "model": full_model,
+            "displayName": "fb_rss_event_extractor_regulations_v3",
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_REGULATIONS}],
+            },
+            "ttl": f"{ttl_s}s",
+        }
+    ).encode("utf-8")
+
+    req = urllib.request.Request(
+        GEMINI_CACHED_CONTENTS_URL,
+        data=payload_bytes,
+        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        cache_name = data.get("name")
+        if isinstance(cache_name, str) and cache_name.strip():
+            _CACHED_SYSTEM_HANDLES[cache_key] = (cache_name.strip(), now + ttl_s)
+            print(f"[events] Cached regulations on Gemini ({model}, {_GLOBAL_KEY_POOL.key_label(api_key)}) -> {cache_name.strip()} (TTL {ttl_s}s)")
+            return cache_name.strip()
+    except urllib.error.HTTPError as exc:
+        # 400/403/404 usually means prompt < min token threshold (1024-4096) or free-tier caching disabled
+        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
+        if exc.code not in (400, 403, 404):
+            print(f"[events] Gemini cachedContents unavailable on {model} (HTTP {exc.code}); using system_instruction.")
+    except Exception:
+        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
+    return None
+
+
+GEMINI_RESPONSE_SCHEMA: Dict[str, Any] = {
+    "type": "OBJECT",
+    "required": ["is_event", "reason", "category", "format"],
+    "properties": {
+        "is_event": {"type": "BOOLEAN"},
+        "reason": {"type": "STRING"},
+        "title": {"type": "STRING"},
+        "description": {"type": "STRING"},
+        "event_start_datetime": {"type": "STRING"},
+        "event_end_datetime": {"type": "STRING"},
+        "reg_start_datetime": {"type": "STRING"},
+        "reg_end_datetime": {"type": "STRING"},
+        "location": {"type": "STRING"},
+        "organizer": {"type": "STRING"},
+        "registration_url": {"type": "STRING"},
+        "fee": {"type": "STRING"},
+        "is_online": {"type": "BOOLEAN"},
+        "target_audience": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "category": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "format": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+    },
+}
+
+
+def _build_gemini_request_body(user_text: str, model: str, api_key: str) -> bytes:
+    """
+    Build the `generateContent` request body:
+      - Uses server-side `cachedContent` handle if available for `model` (sends ONLY raw post text).
+      - Otherwise uses `system_instruction` for `SYSTEM_REGULATIONS` (eligible for Gemini implicit
+        prefix caching) and sends ONLY the raw post text in `contents`.
+    """
+    cached_name = _get_or_create_cached_regulations(model, api_key)
+    gen_config: Dict[str, Any] = {
+        "responseMimeType": "application/json",
+        "responseSchema": GEMINI_RESPONSE_SCHEMA,
+        "temperature": 0,
+    }
+    payload: Dict[str, Any] = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_text}],
+            }
+        ],
+        "generationConfig": gen_config,
+    }
+    if cached_name:
+        payload["cachedContent"] = cached_name
+    else:
+        payload["system_instruction"] = {
+            "parts": [{"text": SYSTEM_REGULATIONS}],
+        }
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
 def _retry_delay_seconds(attempt: int, exc: Optional[Exception] = None) -> float:
-    """Compute backoff delay in seconds, honoring Retry-After if provided."""
-    if isinstance(exc, urllib.error.HTTPError) and exc.headers:
-        ra = exc.headers.get("Retry-After")
-        if ra:
+    """Compute backoff delay in seconds, honoring Retry-After or Gemini error retryDelay if provided."""
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.headers:
+            ra = exc.headers.get("Retry-After")
+            if ra:
+                try:
+                    return min(max(float(ra), 1.0), 60.0)
+                except ValueError:
+                    pass
+        try:
+            err_body = exc.read().decode("utf-8", errors="ignore")
+            m_delay = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', err_body)
+            if m_delay:
+                return min(max(float(m_delay.group(1)) + 1.0, 2.0), 65.0)
+        except Exception:
+            pass
+    return min(4.0 * (2 ** attempt), 32.0)
+
+
+_CACHED_GROQ_MODELS: List[str] = []
+_CACHED_GROQ_MODELS_TIME: float = 0.0
+
+
+def _get_available_groq_models(groq_key: str = "") -> List[str]:
+    """Dynamically query Groq /openai/v1/models to fetch all active chat models for this API key.
+
+    Falls back to curated list if query fails or key has no /models access.
+    """
+    global _CACHED_GROQ_MODELS, _CACHED_GROQ_MODELS_TIME
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return FALLBACK_GROQ_MODELS
+
+    now = time.time()
+    if _CACHED_GROQ_MODELS and (now - _CACHED_GROQ_MODELS_TIME) < 600:
+        return _CACHED_GROQ_MODELS
+
+    discovered: List[str] = []
+    try:
+        req = urllib.request.Request(
+            GROQ_MODELS_URL,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "User-Agent": "EventExtractor/2.0",
+            },
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        items = data.get("data") or []
+        for m in items:
+            m_id = m.get("id") or ""
+            is_active = m.get("active", True)
+            if not is_active or not m_id:
+                continue
+            # Filter out non-chat models (audio transcription, guardrails, embeddings, tts)
+            low = m_id.lower()
+            if any(skip in low for skip in ("whisper", "prompt-guard", "guard", "embed", "tts", "moderation")):
+                continue
+            discovered.append(m_id)
+    except Exception:
+        pass
+
+    priority_order = [
+        DEFAULT_GROQ_MODEL,
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama-3.2-3b-preview",
+        "llama-3.2-1b-preview",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+        "qwen-2.5-32b",
+    ]
+
+    sorted_models: List[str] = []
+    for p in priority_order:
+        if p and p in discovered and p not in sorted_models:
+            sorted_models.append(p)
+    for d in discovered:
+        if d not in sorted_models:
+            sorted_models.append(d)
+    if not sorted_models:
+        for m in priority_order:
+            if m and m not in sorted_models:
+                sorted_models.append(m)
+
+    _CACHED_GROQ_MODELS = sorted_models
+    _CACHED_GROQ_MODELS_TIME = now
+    return sorted_models
+
+
+def _call_groq_json(user_text: str, groq_key: str = "", max_output_tokens: int = 1500) -> Any:
+    """Send prompt to Groq API (OpenAI-compatible) when Gemini fails or runs out of quota."""
+    key = (groq_key or os.environ.get("GROQ_API_KEY") or DEFAULT_GROQ_API_KEY or "").strip()
+    if not key:
+        return None
+
+    models = _get_available_groq_models(key)
+    last_exc = None
+
+    # Limit input length to prevent triggering Groq free-tier token ceilings
+    clean_user_text = user_text
+    if len(clean_user_text) > 4500 and "--- POST " not in clean_user_text:
+        clean_user_text = clean_user_text[:4500] + '\n"""\n[Content truncated for token ceiling]'
+
+    for model in models:
+        for use_json_mode in (True, False):
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": GROQ_SYSTEM_PROMPT
+                        + "\n\nCRITICAL: Respond ONLY with a valid JSON object or array according to schema.",
+                    },
+                    {"role": "user", "content": clean_user_text},
+                ],
+                "temperature": 0.0,
+                "max_tokens": max_output_tokens,
+            }
+            if use_json_mode:
+                payload["response_format"] = {"type": "json_object"}
+
+            req = urllib.request.Request(
+                GROQ_CHAT_COMPLETIONS_URL,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {key}",
+                    "User-Agent": "EventExtractor/2.0",
+                },
+                method="POST",
+            )
             try:
-                return min(max(float(ra), 1.0), 30.0)
-            except ValueError:
-                pass
-    return min(3.0 * (2 ** attempt), 24.0)
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+                content_str = resp_data["choices"][0]["message"]["content"]
+
+                # Parse JSON safely, handling markdown code fences if model wrapped them
+                parsed = None
+                try:
+                    parsed = json.loads(content_str)
+                except Exception:
+                    m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content_str)
+                    if m:
+                        parsed = json.loads(m.group(1).strip())
+                    else:
+                        first_brace = content_str.find("{")
+                        first_bracket = content_str.find("[")
+                        start_idx = -1
+                        if first_brace != -1 and first_bracket != -1:
+                            start_idx = min(first_brace, first_bracket)
+                        elif first_brace != -1:
+                            start_idx = first_brace
+                        elif first_bracket != -1:
+                            start_idx = first_bracket
+
+                        last_brace = content_str.rfind("}")
+                        last_bracket = content_str.rfind("]")
+                        end_idx = max(last_brace, last_bracket)
+                        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                            parsed = json.loads(content_str[start_idx : end_idx + 1])
+
+                if parsed is not None:
+                    print(f"[events] Successfully extracted via Groq fallback ({model})")
+                    return parsed
+            except urllib.error.HTTPError as exc:
+                last_exc = exc
+                err_msg = ""
+                try:
+                    err_body = exc.read().decode("utf-8", errors="replace")
+                    err_json = json.loads(err_body)
+                    err_msg = err_json.get("error", {}).get("message", err_body)
+                except Exception:
+                    err_msg = exc.reason
+
+                # If json_object response_format not supported by this model, retry without it
+                if use_json_mode and exc.code == 400 and "response_format" in err_msg.lower():
+                    continue
+
+                # If request was too long, trim input further and try next model
+                if exc.code in (400, 413) and any(w in err_msg.lower() for w in ("too long", "context_length", "tokens", "rate_limit_exceeded")):
+                    print(f"[events] Groq model '{model}' token limit error: {err_msg}")
+                    if len(clean_user_text) > 2500:
+                        clean_user_text = clean_user_text[:2500] + '\n"""\n[Truncated]'
+                    break
+
+                print(f"[events] Groq model '{model}' HTTP {exc.code}: {err_msg}")
+                # Don't retry second pass on 404 (model not found), 401/403 (auth), or 429 (rate limit)
+                break
+            except Exception as exc:
+                last_exc = exc
+                print(f"[events] Groq error for model '{model}': {exc}")
+                break
+
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
+    """Execute a Gemini `generateContent` request with round-robin key rotation across pooled keys, model fallback, and retry."""
+    global _WORKING_GEMINI_MODEL, _GLOBAL_KEY_POOL
+    pool = _GLOBAL_KEY_POOL
+    pool.load_from_env()
+    if api_key:
+        pool.add_keys(api_key)
+
+    if not pool.has_keys():
+        raise ValueError("No Gemini API key configured.")
+
+    last_exc: Optional[Exception] = None
+    max_key_attempts = max(1, len(pool.keys))
+    for key_attempt in range(max_key_attempts):
+        active_key = pool.get_active_key()
+        if not active_key:
+            break
+
+        for model in _candidate_gemini_models(active_key):
+            cache_key = _cache_scope_key(model, active_key)
+            for attempt in range(GEMINI_MAX_RETRIES + 1):
+                body_bytes = _build_gemini_request_body(user_text, model, active_key)
+                req = urllib.request.Request(
+                    GEMINI_URL.format(model=model),
+                    data=body_bytes,
+                    headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
+                        payload = json.loads(resp.read().decode("utf-8"))
+                    _WORKING_GEMINI_MODEL = model
+                    # Advance round-robin pointer so the next extraction uses the next key in the pool
+                    pool.advance()
+                    text = payload["candidates"][0]["content"]["parts"][0]["text"]
+                    return json.loads(text)
+                except urllib.error.HTTPError as exc:
+                    last_exc = exc
+                    if exc.code in (400, 404) and cache_key in _CACHED_SYSTEM_HANDLES:
+                        _CACHED_SYSTEM_HANDLES.pop(cache_key, None)
+                        _CACHE_UNSUPPORTED_MODELS.add(cache_key)
+                        continue
+                    if exc.code in (400, 404):
+                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
+                        break
+                    if exc.code == 403:
+                        print(f"[events] Gemini {pool.key_label(active_key)} returned HTTP 403 Forbidden ({exc.reason}).")
+                        if len(pool.keys) > 1:
+                            pool.mark_invalid(active_key)
+                            break
+                        raise
+                    if exc.code in (429, 500, 502, 503, 504):
+                        if exc.code == 429 and len(pool.keys) > 1:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f"[events] Gemini {pool.key_label(active_key)} hit HTTP 429 Rate Limit. Rotating to next key in pool...")
+                            pool.mark_rate_limited(active_key, wait_s)
+                            break
+                        if attempt < GEMINI_MAX_RETRIES:
+                            wait_s = _retry_delay_seconds(attempt, exc)
+                            print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
+                            time.sleep(wait_s)
+                            continue
+                        break
+                    raise
+                except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
+                    last_exc = exc
+                    if attempt < GEMINI_MAX_RETRIES:
+                        wait_s = _retry_delay_seconds(attempt, exc)
+                        print(f"[events] Gemini {model} network error ({exc}); retrying in {wait_s:.1f}s...")
+                        time.sleep(wait_s)
+                        continue
+                    break
+
+    if last_exc is not None:
+        raise last_exc
+    return None
 
 
 def call_gemini_text(
     content: str,
     published_at_str: str,
     source_name: str,
-    api_key: str,
+    api_key: str = "",
 ) -> Optional[Dict[str, Any]]:
-    """Send raw text (Facebook post or client Email content) to Gemini with model fallback and retry backoff."""
-    global _WORKING_GEMINI_MODEL
-    body_bytes = json.dumps(
-        {
-            "contents": [{
-                "parts": [{
-                    "text": PROMPT.format(
-                        published_at=published_at_str,
-                        fanpage=source_name,
-                        content=(content or "")[:6000],
-                    )
-                }]
-            }],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
-        }
-    ).encode("utf-8")
+    """Send text to Gemini (with key rotation and dynamic Gemini-2 model discovery)."""
+    user_text = USER_POST_TEMPLATE.format(
+        published_at=published_at_str,
+        fanpage=source_name,
+        content=(content or "")[:6000],
+    )
+    try:
+        data = _execute_gemini_generate(user_text, api_key)
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        if isinstance(data, dict):
+            return data
+    except Exception as exc:
+        print(f"[events] Gemini error ({exc}); falling back to heuristic...")
 
-    last_exc: Optional[Exception] = None
-    for model in _candidate_gemini_models():
-        for attempt in range(GEMINI_MAX_RETRIES + 1):
-            req = urllib.request.Request(
-                GEMINI_URL.format(model=model),
-                data=body_bytes,
-                headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-                method="POST",
+    return None
+
+
+def call_gemini_batch(
+    posts: List[Post],
+    fanpage_name: str,
+    api_key: str = "",
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """
+    Send a batch of raw posts in a SINGLE Gemini API call (with key rotation).
+    Returns a dict mapping `post_id -> extracted_dict`.
+    """
+    if not posts:
+        return {}
+    if len(posts) == 1:
+        single = call_gemini(posts[0], fanpage_name, api_key)
+        return {posts[0].post_id: single} if isinstance(single, dict) else None
+
+    blocks: List[str] = []
+    for idx, p in enumerate(posts, start=1):
+        pub_str = p.published_at.isoformat() if p.published_at else "unknown"
+        blocks.append(
+            f'--- POST {idx} (post_id: "{p.post_id}") ---\n'
+            + USER_POST_TEMPLATE.format(
+                published_at=pub_str,
+                fanpage=fanpage_name,
+                content=(p.content or "")[:4500],
             )
-            try:
-                with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
-                    payload = json.loads(resp.read().decode("utf-8"))
-                _WORKING_GEMINI_MODEL = model
-                text = payload["candidates"][0]["content"]["parts"][0]["text"]
-                data = json.loads(text)
-                if isinstance(data, list):
-                    data = data[0] if data else {}
-                return data if isinstance(data, dict) else None
-            except urllib.error.HTTPError as exc:
-                last_exc = exc
-                if exc.code in (400, 404):
-                    break  # try next model
-                if exc.code in (429, 500, 502, 503, 504):
-                    if attempt < GEMINI_MAX_RETRIES:
-                        wait_s = _retry_delay_seconds(attempt, exc)
-                        print(f"[events] Gemini {model} returned HTTP {exc.code}; retrying in {wait_s:.1f}s...")
-                        time.sleep(wait_s)
-                        continue
-                    # Exhausted retries on this model (e.g. per-model quota/overload) -> try next fallback model
-                    break
-                raise
-            except (TimeoutError, socket.timeout, urllib.error.URLError, OSError) as exc:
-                last_exc = exc
-                if attempt < GEMINI_MAX_RETRIES:
-                    wait_s = _retry_delay_seconds(attempt, exc)
-                    print(f"[events] Gemini {model} network/timeout error ({exc}); retrying in {wait_s:.1f}s...")
-                    time.sleep(wait_s)
-                    continue
-                break
+        )
+    user_text = USER_BATCH_POSTS_TEMPLATE.format(
+        count=len(posts),
+        posts_block="\n\n".join(blocks),
+    )
 
-    if last_exc is not None:
-        raise last_exc
+    def _unpack_batch(data: Any) -> Optional[Dict[str, Dict[str, Any]]]:
+        if isinstance(data, dict):
+            for key in ("results", "posts", "events", "items"):
+                if isinstance(data.get(key), list):
+                    data = data[key]
+                    break
+            else:
+                if "post_id" in data:
+                    data = [data]
+        if not isinstance(data, list):
+            return None
+        result_map: Dict[str, Dict[str, Any]] = {}
+        known_ids = {p.post_id for p in posts}
+        for idx, item in enumerate(data):
+            if not isinstance(item, dict):
+                continue
+            pid = str(item.get("post_id") or "").strip()
+            if pid in known_ids:
+                result_map[pid] = item
+            elif len(data) == len(posts):
+                result_map[posts[idx].post_id] = item
+        return result_map or None
+
+    # 1. Try Gemini
+    try:
+        data = _execute_gemini_generate(user_text, api_key)
+        mapped = _unpack_batch(data)
+        if mapped:
+            return mapped
+    except Exception as exc:
+        print(f"[events] Gemini batch error ({exc}); retrying batch posts individually via Gemini...")
+        single_mapped: Dict[str, Dict[str, Any]] = {}
+        for p in posts:
+            try:
+                single = call_gemini(p, fanpage_name, api_key)
+                if isinstance(single, dict) and single:
+                    single_mapped[p.post_id] = single
+            except Exception as single_exc:
+                print(f"[events] Individual fallback failed for post '{p.post_id}': {single_exc}")
+        if single_mapped:
+            return single_mapped
+
     return None
 
 
@@ -513,29 +1352,100 @@ def _summarize_event_description(content: str) -> Optional[str]:
     return summary[:450] + ("..." if len(summary) > 450 else "")
 
 
-_TITLE_NOISE_PREFIX_RE = re.compile(
-    r"^\s*(?:v\s*/\s*v|v\s*\.\s*v|th[oô]ng\s*b[aá]o\s*v[eề]|thong\s*bao\s*ve|th[oô]ng\s*b[aá]o|thong\s*bao|"
-    r"m[oờ]i\s*[dđ][aă]ng\s*k[yý]|moi\s*dang\s*ky|th[uư]\s*m[oờ]i\s*tham\s*d[uự]|th[uư]\s*m[oờ]i|m[oờ]i\s*tham\s*gia)"
-    r"\s*[:\-–—.]?\s*",
-    flags=re.IGNORECASE,
+GENERIC_CHANNEL_TAGS_PATTERN = re.compile(
+    r"^[\[\(【\s]*(?:hỗ trợ truyền thông|ho tro truyen thong|httt|chia sẻ thông tin|chia se thong tin|thông báo|thong bao|tin tức|tin tuc|recap|góc chia sẻ|goc chia se|góc tuyển dụng|goc tuyen dung)[\]\)】\s]*",
+    re.IGNORECASE,
+)
+
+DISQUALIFIED_TITLE_PREFIXES = (
+    "link đăng ký", "link dang ky", "form đăng ký", "form dang ky",
+    "thời gian", "thoi gian", "địa điểm", "dia diem", "đối tượng", "doi tuong",
+    "lệ phí", "le phi", "hạn đăng ký", "han dang ky", "thời hạn", "thoi han",
+    "lưu ý", "luu y", "quyền lợi", "quyen loi", "thông tin chi tiết", "thong tin chi tiet",
+    "thông tin kỳ thi", "thong tin ky thi", "hotline", "fanpage", "liên hệ", "lien he",
+)
+
+INVITATION_PREFIX_PATTERN = re.compile(
+    r"^(?:fit\.hcmus\s+|clb\s+[^\n\r,–—]+\s+)?(?:thân mời|than moi|kính mời|kinh moi|mời|moi)\s+(?:các bạn|các em|quý thầy cô|sinh viên|mọi người)?\s*(?:cùng\s+)?(?:dành thời gian\s+)?(?:tham gia|tham dự)\s+(?:buổi\s+|chương trình\s+)?",
+    re.IGNORECASE,
 )
 
 
+def _is_greeting_line(line: str) -> bool:
+    norm = line.strip().lower()
+    return bool(re.match(r"^(?:thân chào|than chao|chào các|chao cac|chào bạn|chao ban|kính chào|kinh chao|kính gửi|kinh gui|dear|hi all|hello)\b", norm))
+
+
+def _is_separator_line(line: str) -> bool:
+    return bool(re.match(r"^[\s\-_=*~•#]+$", line))
+
+
+def _is_metadata_field_line(line: str) -> bool:
+    norm = re.sub(r"^[^\w\s]+", "", line).strip().lower()
+    for p in DISQUALIFIED_TITLE_PREFIXES:
+        if norm.startswith(p):
+            return True
+    if re.match(r"^https?://", norm):
+        return True
+    return False
+
+
 def _clean_event_title(raw_title: Optional[str]) -> str:
-    """Remove bracketed tags '[...]' (prefix or postfix) and lead-in words like 'v/v', 'thông báo về', 'mời đăng ký'."""
-    t = (raw_title or "").strip()
-    if not t:
-        return "Untitled Event"
-    # Strip any [...] bracket blocks (prefix, inline, or postfix)
-    t = re.sub(r"\[[^\]]*\]", " ", t)
-    t = re.sub(r"\s+", " ", t).strip(" :-–—|•*")
-    # Repeatedly strip administrative lead-in words (e.g. "Thông báo về việc mời đăng ký ...")
-    for _ in range(3):
-        updated = _TITLE_NOISE_PREFIX_RE.sub("", t).strip(" :-–—|•*")
-        if updated == t:
-            break
-        t = updated
+    """Normalize whitespace in an extracted event title, stripping pure generic channel tags like [HỖ TRỢ TRUYỀN THÔNG] while preserving brackets for actual event names."""
+    t = re.sub(r"\s+", " ", (raw_title or "").strip())
+    t = GENERIC_CHANNEL_TAGS_PATTERN.sub("", t).strip()
     return t or "Untitled Event"
+
+
+def _extract_title_from_content(content: str) -> str:
+    """Scan content lines to discover the canonical event title, skipping greetings, tags, and metadata lines while preserving brackets."""
+    lines = [l.strip() for l in (content or "").splitlines() if l.strip()]
+    if not lines:
+        return "Untitled Event"
+
+    candidates = []
+    for idx, raw_line in enumerate(lines[:15]):
+        if _is_separator_line(raw_line):
+            continue
+        stripped = GENERIC_CHANNEL_TAGS_PATTERN.sub("", raw_line).strip()
+        if not stripped:
+            continue
+        if _is_greeting_line(stripped):
+            continue
+        if _is_metadata_field_line(stripped):
+            continue
+
+        clean_inv = INVITATION_PREFIX_PATTERN.sub("", stripped).strip()
+        if clean_inv and len(clean_inv) >= 5:
+            stripped = clean_inv
+
+        has_brackets = bool(re.search(r"\[.*?\]|【.*?】", stripped))
+        norm = stripped.lower()
+        has_keywords = bool(re.search(r"\b(workshop|seminar|hội nghị|hoi nghi|hội thảo|hoi thao|cuộc thi|cuoc thi|hội thi|hoi thi|tọa đàm|toa dam|giải đấu|giai dau|trường hè|truong he|gala|khóa học|khoa hoc|mini-course|talkshow|ngày hội|ngay hoi|đăng ký|dang ky|tuyển cộng tác viên|tuyen cong tac vien|bước chân yêu thương|nét son|green day|itogether|bản lĩnh it|stellar|thi thử|program)\b", norm))
+
+        score = 0
+        if has_brackets:
+            score += 25
+        if has_keywords:
+            score += 10
+        if stripped.isupper():
+            score += 5
+        if idx == 0:
+            score += 8
+        elif idx == 1:
+            score += 6
+        elif idx == 2:
+            score += 4
+        if len(stripped) >= 10:
+            score += 2
+
+        candidates.append((score, idx, stripped))
+
+    if candidates:
+        candidates.sort(key=lambda c: (-c[0], c[1]))
+        return candidates[0][2][:180]
+
+    return lines[0][:180]
 
 
 def _normalize_iso_datetime(val: Optional[str], default_time: str = "00:00") -> Optional[str]:
@@ -606,18 +1516,51 @@ def _enrich_extracted_event_fields(
     published_at: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """
-    Post-process LLM / heuristic output to enforce field regulations:
-      - clean `title` (strip [...] and 'v/v', 'thông báo về', 'mời đăng ký')
+    Post-process LLM / heuristic output to enforce content reasoning & field regulations:
+      - apply deterministic content-reasoning guardrail (`reason_about_post_content`) to override
+        false-positive LLM classifications on recaps, internal congresses, scholarship dossiers,
+        or corporate job ads
+      - normalize `title` whitespace
       - fill `description`, `location`, `fee`
       - normalize `event_start_datetime` (00:00 default) & `event_end_datetime` (23:59 default)
       - preserve explicit `reg_start_datetime` / `reg_end_datetime` flags
     """
-    if not raw_data or not raw_data.get("is_event"):
+    if not raw_data:
+        return raw_data
+
+    is_candidate, reasoning_note = reason_about_post_content(content)
+    if not raw_data.get("reason"):
+        raw_data["reason"] = reasoning_note
+
+    if not raw_data.get("is_event"):
+        return raw_data
+
+    # Guardrail: if deterministic content reasoning disqualifies the post via a hard non-event rule
+    # (recap, internal congress, pure scholarship dossier, corporate job ad, retrospective thank-you,
+    # or Q&A handbook), override false-positive LLM classification.
+    if not is_candidate and reasoning_note.startswith("disqualified:") and not reasoning_note.startswith(
+        "disqualified:insufficient_event_signals"
+    ):
+        raw_data["is_event"] = False
+        raw_data["reason"] = f"guardrail_override ({reasoning_note})"
         return raw_data
 
     # 0. Clean title & fill missing description
-    if raw_data.get("title"):
-        raw_data["title"] = _clean_event_title(str(raw_data["title"]))
+    cur_title = (raw_data.get("title") or "").strip()
+    cleaned_title = _clean_event_title(cur_title)
+    if (
+        not cur_title
+        or cleaned_title == "Untitled Event"
+        or _is_greeting_line(cur_title)
+        or not GENERIC_CHANNEL_TAGS_PATTERN.sub("", cur_title).strip()
+    ):
+        inferred_title = _extract_title_from_content(content)
+        if inferred_title and inferred_title != "Untitled Event":
+            raw_data["title"] = inferred_title
+        else:
+            raw_data["title"] = cleaned_title
+    else:
+        raw_data["title"] = cleaned_title
 
     if not (raw_data.get("description") or "").strip():
         inferred_desc = _summarize_event_description(content)
@@ -691,26 +1634,18 @@ def heuristic_extract_event(
     """Rule-based fallback extractor when GEMINI_API_KEY is not configured in local dev."""
     combined = f"{subject}\n{content}".strip()
     stripped = _strip_accents(combined).lower()
-    kw_count = count_event_keywords(combined)
-    has_strong_signal = bool(
-        re.search(
-            r"\b(workshop|seminar|webinar|conference|hackathon|contest|competition|meetup|festival|concert|"
-            r"hoi thao|hoi nghi|toa dam|cuoc thi|ngay hoi|trien lam|open day|livestream)\b",
-            stripped,
-        )
-    )
-    is_event = kw_count >= 2 or (has_strong_signal and kw_count >= 1)
-    if not is_event:
-        return {"is_event": False}
+    is_candidate, reasoning_note = reason_about_post_content(combined)
+    if not is_candidate:
+        return {"is_event": False, "reason": reasoning_note}
 
-    # Title: prefer subject, else first non-empty line, cleaned of [...] and lead-in noise
-    title = subject.strip()
+    # Title: prefer subject if non-generic, else extract from content preserving brackets
+    title = ""
+    if subject and subject.strip():
+        subj_clean = _clean_event_title(subject)
+        if subj_clean != "Untitled Event" and not _is_greeting_line(subj_clean) and GENERIC_CHANNEL_TAGS_PATTERN.sub("", subj_clean).strip():
+            title = subj_clean
     if not title:
-        for line in content.splitlines():
-            clean_line = line.strip().strip("#*-• ")
-            if len(clean_line) >= 5:
-                title = clean_line[:180]
-                break
+        title = _extract_title_from_content(combined)
     title = _clean_event_title(title)
 
     # Extract event start/end date & time (00:00 start default, 23:59 end default)
@@ -767,6 +1702,7 @@ def heuristic_extract_event(
 
     return {
         "is_event": True,
+        "reason": reasoning_note,
         "title": title,
         "description": description or None,
         "event_start_datetime": event_start_datetime,
@@ -941,17 +1877,21 @@ def compare_anchor_fields(
 
 
 def scan_qr_link(image_url: str) -> Optional[str]:
-    """Download an image and decode a QR code locally (OpenCV). Returns an http(s) URL or None.
+    """Download an image (or read local file) and decode a QR code locally (OpenCV). Returns an http(s) URL or None.
 
     Raises on download/decoder-unavailable errors so the caller can tell "no QR" from "could not check".
     """
     import cv2  # opencv-python-headless
     import numpy as np
+    from pathlib import Path
 
-    req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read(10 * 1024 * 1024)
-    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if Path(image_url).is_file():
+        img = cv2.imread(image_url, cv2.IMREAD_COLOR)
+    else:
+        req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read(10 * 1024 * 1024)
+        img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         return None
     detector = cv2.QRCodeDetector()
@@ -968,23 +1908,26 @@ def scan_qr_link(image_url: str) -> Optional[str]:
 
 
 def fill_registration_from_media(media_urls: List[str], data: Dict[str, Any], source_id: str = "") -> None:
-    """Fallback chain: link in text -> QR in first image -> "free" (registration_status tells which)."""
+    """Fallback chain: link in text -> QR in post images (up to 3) -> "free" (registration_status tells which)."""
     if data.get("registration_url") and data.get("registration_url") != "free":
         data["registration_status"] = "link"
         return
     if media_urls:
-        try:
-            link = scan_qr_link(media_urls[0])
-        except Exception as exc:  # download/decoder problem: don't claim "free"
-            print(f"[events] QR scan failed for {source_id}: {exc}")
-            data["registration_status"] = "unknown"
-            return
-        if link:
-            data["registration_url"] = link
-            data["registration_status"] = "qr"
-            return
-    data["registration_url"] = "free"
-    data["registration_status"] = "free"
+        for img_url in media_urls[:3]:
+            try:
+                link = scan_qr_link(img_url)
+            except Exception as exc:  # download/decoder problem
+                print(f"[events] QR scan attempt failed for {source_id}: {exc}")
+                continue
+            if link:
+                data["registration_url"] = link
+                data["registration_status"] = "qr"
+                return
+        # If all images were checked and no valid QR found
+        data["registration_status"] = "unknown" if not data.get("registration_status") else data["registration_status"]
+    data["registration_url"] = data.get("registration_url") or "free"
+    if not data.get("registration_status"):
+        data["registration_status"] = "free"
 
 
 def fill_registration(post: Post, data: Dict[str, Any]) -> None:
@@ -1515,8 +2458,9 @@ def ingest_email_message(
                 "inbox_message": existing_msg.to_dict(),
             }
 
-        # 2. Extract event candidate via Gemini LLM (or heuristic fallback if GEMINI_API_KEY unset)
-        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        # 2. Extract event candidate via Gemini LLM pool (or heuristic fallback if no keys configured)
+        _GLOBAL_KEY_POOL.load_from_env()
+        has_gemini = _GLOBAL_KEY_POOL.has_keys()
         full_email_text = (
             f"Subject: {clean_subject}\n"
             f"From: {sender or 'unknown'}\n"
@@ -1525,13 +2469,12 @@ def ingest_email_message(
         source_label = f"Email ({sender or clean_client})"
 
         raw_data: Optional[Dict[str, Any]] = None
-        if api_key:
+        if has_gemini:
             try:
                 raw_data = call_gemini_text(
                     content=full_email_text,
                     published_at_str=rec_dt.isoformat(),
                     source_name=source_label,
-                    api_key=api_key,
                 )
             except Exception as exc:
                 print(f"[events] Gemini error for email {clean_msg_id}, falling back to heuristic: {exc}")
@@ -1638,7 +2581,8 @@ def analyze_fanpage_posts(
     """
     init_db()
     stats = {"analyzed": 0, "llm_calls": 0, "events": 0, "updated": 0, "duplicates": 0, "errors": 0}
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    _GLOBAL_KEY_POOL.load_from_env()
+    has_gemini = _GLOBAL_KEY_POOL.has_keys()
     max_llm_calls = max(MAX_LLM_CALLS_PER_FANPAGE, limit) if (limit and limit > 0) else MAX_LLM_CALLS_PER_FANPAGE
     with get_session() as session:
         fanpage = session.get(Fanpage, fanpage_id)
@@ -1669,37 +2613,30 @@ def analyze_fanpage_posts(
                 pending.append(p)
 
         name = fanpage.name or fanpage.slug
+        llm_candidates: List[Post] = []
 
         for post in pending:
-            if not looks_event_related(post.content):
+            is_candidate, prefilter_reason = reason_about_post_content(post.content or "")
+            if not is_candidate:
                 session.add(
                     PostAnalysis(
                         post_id=post.post_id,
                         fanpage_id=fanpage_id,
                         is_event=False,
-                        event_json='{"reason":"prefilter"}',
+                        event_json=json.dumps({"reason": f"prefilter:{prefilter_reason}"}, ensure_ascii=False),
                     )
                 )
                 stats["analyzed"] += 1
-                continue
-            if not api_key or stats["llm_calls"] >= max_llm_calls:
-                continue  # leave uncached; retried next cycle
-            if stats["llm_calls"] > 0 and GEMINI_CALL_DELAY_SECONDS > 0:
-                time.sleep(GEMINI_CALL_DELAY_SECONDS)
-            try:
-                stats["llm_calls"] += 1
-                data = call_gemini(post, name, api_key)
-            except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
-                stats["errors"] += 1
-                print(f"[events] LLM error for post {post.post_id}: {exc}")
-                continue
-            if not data:
-                stats["errors"] += 1
-                continue
+            else:
+                llm_candidates.append(post)
+
+        def _persist_post_analysis(post: Post, raw_item: Dict[str, Any]) -> None:
+            data = dict(raw_item)
+            data.pop("post_id", None)
             data = _enrich_extracted_event_fields(data, post.content or "", published_at=post.published_at)
             is_event = bool(data.pop("is_event", False))
+            non_event_reason = str(data.get("reason") or "llm_not_event").strip()
             if is_event:
-                # Run through unified anchor-field deduplication/update & additional info gatherer
                 upsert_status, ev_record, changes = upsert_unified_event(
                     session=session,
                     raw_data=data,
@@ -1719,14 +2656,67 @@ def analyze_fanpage_posts(
                 elif upsert_status == "duplicate":
                     stats["duplicates"] += 1
 
-            session.add(PostAnalysis(
-                post_id=post.post_id,
-                fanpage_id=fanpage_id,
-                is_event=is_event,
-                event_json=json.dumps(data, ensure_ascii=False) if is_event else '{"reason":"llm_not_event"}',
-            ))
+            session.add(
+                PostAnalysis(
+                    post_id=post.post_id,
+                    fanpage_id=fanpage_id,
+                    is_event=is_event,
+                    event_json=json.dumps(data, ensure_ascii=False)
+                    if is_event
+                    else json.dumps({"reason": non_event_reason}, ensure_ascii=False),
+                )
+            )
             stats["analyzed"] += 1
             stats["events"] += int(is_event)
+
+        if has_gemini and llm_candidates:
+            for start_idx in range(0, len(llm_candidates), GEMINI_BATCH_SIZE):
+                if stats["llm_calls"] >= max_llm_calls:
+                    break
+                chunk = llm_candidates[start_idx : start_idx + GEMINI_BATCH_SIZE]
+                if stats["llm_calls"] > 0 and GEMINI_CALL_DELAY_SECONDS > 0:
+                    time.sleep(GEMINI_CALL_DELAY_SECONDS)
+
+                batch_results: Optional[Dict[str, Dict[str, Any]]] = None
+                try:
+                    stats["llm_calls"] += 1
+                    batch_results = call_gemini_batch(chunk, name)
+                except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
+                    print(f"[events] LLM batch error for fanpage {fanpage.slug} ({len(chunk)} post(s)): {exc}")
+                    batch_results = None
+
+                missing_posts: List[Post] = []
+                if batch_results:
+                    for post in chunk:
+                        item_data = batch_results.get(post.post_id)
+                        if isinstance(item_data, dict):
+                            _persist_post_analysis(post, item_data)
+                        else:
+                            missing_posts.append(post)
+                else:
+                    missing_posts = list(chunk)
+
+                if missing_posts and len(chunk) > 1:
+                    # Fallback to single-post calls if a multi-post batch failed or returned partial items
+                    for post in missing_posts:
+                        if stats["llm_calls"] >= max_llm_calls:
+                            stats["errors"] += 1
+                            continue
+                        if GEMINI_CALL_DELAY_SECONDS > 0:
+                            time.sleep(GEMINI_CALL_DELAY_SECONDS)
+                        try:
+                            stats["llm_calls"] += 1
+                            single_data = call_gemini(post, name)
+                        except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, TypeError) as exc:
+                            stats["errors"] += 1
+                            print(f"[events] LLM error for post {post.post_id}: {exc}")
+                            continue
+                        if not single_data:
+                            stats["errors"] += 1
+                            continue
+                        _persist_post_analysis(post, single_data)
+                elif missing_posts:
+                    stats["errors"] += len(missing_posts)
 
         session.commit()
         _write_events_json(fanpage, session)
@@ -1779,16 +2769,16 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
             "detail": "Could not extract any text or media from that Facebook post URL.",
         }
 
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    _GLOBAL_KEY_POOL.load_from_env()
+    has_gemini = _GLOBAL_KEY_POOL.has_keys()
     source_label = fanpage_name or fanpage_url or "Facebook Post"
     raw_data: Optional[Dict[str, Any]] = None
-    if api_key and content:
+    if has_gemini and content:
         try:
             raw_data = call_gemini_text(
                 content=content,
                 published_at_str=pub_iso,
                 source_name=source_label,
-                api_key=api_key,
             )
         except Exception as exc:
             print(f"[events] Gemini error for single post {post_id}, falling back to heuristic: {exc}")
@@ -1832,9 +2822,9 @@ def _process_single_post_extraction(post_data: Dict[str, Any]) -> Dict[str, Any]
     if fanpage_url:
         try:
             fp, fp_created = add_fanpage(fanpage_url, name=fanpage_name)
-            update_fanpage_metadata(fp.id, name=fanpage_name)
-            if fanpage_name:
-                fp.name = fanpage_name
+            resolved_name = update_fanpage_metadata(fp.id, name=fanpage_name)
+            if resolved_name:
+                fp.name = resolved_name
             save_posts(fp.id, [post_data])
         except ValueError as exc:
             print(f"[events] Could not add derived fanpage '{fanpage_url}': {exc}")

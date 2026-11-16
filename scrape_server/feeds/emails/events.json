@@ -1,31 +1,35 @@
 {
   "folder": "emails",
   "description": "Events extracted from client email submissions",
-  "updated_at": "2026-11-11T14:26:32.177866+07:00",
+  "updated_at": "2026-11-15T21:48:37.238667+07:00",
   "count": 2,
   "events": [
     {
       "event_id": 2,
       "title": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
-      "online_mode": null,
-      "is_online": null,
+      "online_mode": "offline",
+      "is_online": false,
       "date": "2026-11-20",
       "time": "14:00",
       "start_datetime": "2026-11-20T14:00:00+07:00",
-      "end_datetime": null,
-      "location": null,
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T14:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).",
       "source_type": "email",
       "source_id": "email_dcc51d42aa11b354b3cd",
       "fanpage_id": null,
       "client_id": "anonymous",
-      "version": 1,
+      "version": 2,
       "created_at": "2026-11-11T13:34:53.183204+07:00",
-      "updated_at": "2026-11-11T13:34:53.183204+07:00",
-      "description": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳 🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật ...",
-      "organizer": null,
+      "updated_at": "2026-11-15T21:48:14.132400+07:00",
+      "description": "Đến với NÉT SON, bạn sẽ có cơ hội. Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt. Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa...",
+      "organizer": "BEE Club",
       "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
       "registration_status": "link",
-      "fee": null,
+      "fee": "25.000 VNĐ/sinh viên",
       "target_audience": [
         "sinh viên"
       ],
@@ -33,7 +37,9 @@
         "workshop",
         "tọa đàm"
       ],
-      "format": [],
+      "format": [
+        "offline"
+      ],
       "post_url": null,
       "posted_at": "2026-11-11T13:34:52.858441+07:00",
       "sources": [
@@ -45,12 +51,56 @@
           "post_url": null,
           "posted_at": "2026-11-11T13:34:52.858441+07:00",
           "seen_at": "2026-11-11T13:34:53.183204+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1682172040361742",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02xELytqgy1vTdoXiKYMZM1a5zxEFQA1Dytd9y1JQkbigGMcUnTzteVuNVNiSd2CVKl",
+          "posted_at": "2026-11-10T20:30:12+07:00",
+          "seen_at": "2026-11-15T21:48:14.132400+07:00"
         }
       ],
-      "update_history": []
+      "update_history": [
+        {
+          "updated_at": "2026-11-15T21:48:14.132400+07:00",
+          "source_type": "facebook",
+          "source_id": "1682172040361742",
+          "client_id": null,
+          "changes": {
+            "format": {
+              "old": [],
+              "new": [
+                "offline"
+              ]
+            },
+            "location": {
+              "old": null,
+              "new": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau)."
+            },
+            "event_start_datetime": {
+              "old": null,
+              "new": "2026-11-20T14:00:00+07:00"
+            },
+            "event_end_datetime": {
+              "old": null,
+              "new": "2026-11-20T23:59:00+07:00"
+            },
+            "organizer": {
+              "old": null,
+              "new": "BEE Club"
+            },
+            "fee": {
+              "old": null,
+              "new": "25.000 VNĐ/sinh viên"
+            }
+          }
+        }
+      ]
     },
     {
-      "event_id": 1,
+      "event_id": 3,
       "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
       "online_mode": "offline",
       "is_online": false,
@@ -58,6 +108,10 @@
       "time": null,
       "start_datetime": "2026-11-09T00:00:00+07:00",
       "end_datetime": null,
+      "event_start_datetime": "2026-11-09T00:00:00+07:00",
+      "event_end_datetime": null,
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
       "location": null,
       "source_type": "email",
       "source_id": "email_2679fc9d470058c84a17",

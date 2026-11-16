@@ -1,0 +1,46 @@
+{
+  "fanpage": {
+    "name": "Test Batch Page",
+    "url": "https://www.facebook.com/test.batch.page",
+    "slug": "test.batch.page"
+  },
+  "updated_at": "2026-11-13T22:22:15.524804+07:00",
+  "count": 2,
+  "events": [
+    {
+      "post_id": "p_1",
+      "post_url": "https://www.facebook.com/test.batch.page/posts/p_1",
+      "posted_at": "2026-11-13T22:22:15.494174",
+      "title": "Hội thảo 1",
+      "summary": "S1",
+      "description": "Hội thảo khoa học sinh viên ngày 20/11 đăng ký tại link form tham gia ngay sự kiện.",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-13T22:22:15.494174",
+      "reg_end_datetime": "2026-11-20T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "free",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "p_2",
+      "post_url": "https://www.facebook.com/test.batch.page/posts/p_2",
+      "posted_at": "2026-11-13T22:22:15.494174",
+      "title": "Cuộc thi 2",
+      "summary": "S2",
+      "description": "Cuộc thi học thuật Hackathon mùa thu 2026 mở đơn đăng ký tham gia tại hội trường.",
+      "location": "hội trường",
+      "event_start_datetime": null,
+      "event_end_datetime": null,
+      "start_datetime": null,
+      "end_datetime": null,
+      "reg_start_datetime": "2026-11-13T22:22:15.494174",
+      "reg_end_datetime": null,
+      "registration_url": "free",
+      "registration_status": "free",
+      "dedup_status": "created"
+    }
+  ]
+}

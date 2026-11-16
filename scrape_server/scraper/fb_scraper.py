@@ -1,19 +1,23 @@
 import asyncio
+import hashlib
 import json
 import re
+from collections import Counter
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse, parse_qs
 
-from playwright.async_api import async_playwright, Page, Response
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Response
 
 from config import (
     LOCAL_TIMEZONE,
     PAGE_TIMEOUT_MS,
+    SCRAPE_TIMEZONE,
     SCROLL_COUNT,
     SCROLL_DELAY_MS,
     USER_AGENT,
 )
+from database import clean_fanpage_name, is_valid_fanpage_name
 
 # Keys in Facebook Relay/GraphQL JSON that represent comments, shares, or unrelated widgets
 SKIP_JSON_KEYS = {
@@ -446,34 +450,120 @@ def _walk_graphql_for_posts(
             _walk_graphql_for_posts(item, page_url, page_slug, collected)
 
 
-async def _dismiss_login_popup(page: Page) -> None:
-    """Close Facebook's unauthenticated login modal/banner if it appears."""
-    try:
-        await page.keyboard.press("Escape")
-    except Exception:
-        pass
+_STEALTH_INIT_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+"""
 
-    close_selectors = [
-        'div[role="dialog"] div[aria-label="Close"]',
-        'div[role="dialog"] div[aria-label="Đóng"]',
-        'div[role="dialog"] [aria-label="Close"]',
-        '[aria-label="Close"][role="button"]',
-    ]
-    for selector in close_selectors:
+
+async def _launch_browser(p: Any) -> Browser:
+    return await p.chromium.launch(
+        headless=True,
+        args=[
+            "--disable-blink-features=AutomationControlled",
+            "--disable-notifications",
+            "--no-sandbox",
+        ],
+    )
+
+
+async def _new_stealth_context(browser: Browser) -> BrowserContext:
+    tz_id = getattr(SCRAPE_TIMEZONE, "key", None) or (
+        SCRAPE_TIMEZONE if isinstance(SCRAPE_TIMEZONE, str) else "Asia/Ho_Chi_Minh"
+    )
+    context = await browser.new_context(
+        user_agent=USER_AGENT,
+        viewport={"width": 1280, "height": 900},
+        locale="en-US",
+        timezone_id=tz_id,
+        extra_http_headers={"Accept-Language": "en-US,en;q=0.9,vi;q=0.8"},
+    )
+    await context.add_init_script(_STEALTH_INIT_SCRIPT)
+    return context
+
+
+def _attach_graphql_listener(
+    page: Page,
+    get_page_url: Any,
+    page_slug: str,
+    collected_posts: Dict[str, Dict],
+) -> None:
+    async def handle_response(response: Response) -> None:
+        if "/api/graphql" in response.url and response.status == 200:
+            try:
+                text = await response.text()
+                base_url = get_page_url()
+                for line in text.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        _walk_graphql_for_posts(data, base_url, page_slug, collected_posts)
+                    except json.JSONDecodeError:
+                        continue
+            except Exception:
+                pass
+
+    page.on("response", handle_response)
+
+
+async def _parse_embedded_scripts(
+    page: Page,
+    page_url: str,
+    page_slug: str,
+    collected_posts: Dict[str, Dict],
+) -> None:
+    """Parse embedded <script type="application/json"> Relay payloads from initial HTML."""
+    scripts_json = await page.evaluate(
+        """() => {
+            return Array.from(document.querySelectorAll('script[type="application/json"]'))
+                .map(s => s.textContent)
+                .filter(Boolean);
+        }"""
+    )
+    for raw_script in scripts_json:
         try:
-            btn = page.locator(selector).first
-            if await btn.is_visible(timeout=500):
-                await btn.click(timeout=1000)
-                await page.wait_for_timeout(300)
-                break
+            data = json.loads(raw_script)
+            _walk_graphql_for_posts(data, page_url, page_slug, collected_posts)
         except Exception:
             continue
+
+
+async def _dismiss_login_popup(page: Page) -> None:
+    """Close Facebook's unauthenticated login modal/banner and restore page scrollability."""
+    try:
+        has_dialog = await page.evaluate(
+            "() => document.querySelectorAll('div[role=\"dialog\"]').length > 0"
+        )
+    except Exception:
+        has_dialog = False
+
+    if has_dialog:
+        try:
+            await page.keyboard.press("Escape")
+        except Exception:
+            pass
+
+        close_selectors = [
+            'div[role="dialog"] [aria-label="Close"]',
+            'div[role="dialog"] [aria-label="Đóng"]',
+            '[aria-label="Close"][role="button"]',
+        ]
+        for selector in close_selectors:
+            try:
+                btn = page.locator(selector).first
+                if await btn.is_visible(timeout=250):
+                    await btn.click(timeout=800)
+                    await page.wait_for_timeout(200)
+                    break
+            except Exception:
+                continue
 
     try:
         await page.evaluate(
             """() => {
-                const dialogs = document.querySelectorAll('div[role="dialog"]');
-                dialogs.forEach(d => d.remove());
+                document.querySelectorAll('div[role="dialog"]').forEach(d => d.remove());
+                document.documentElement.style.overflow = 'auto';
                 if (document.body) {
                     document.body.style.overflow = 'auto';
                 }
@@ -483,92 +573,230 @@ async def _dismiss_login_popup(page: Page) -> None:
         pass
 
 
+async def _extract_page_metadata(page: Page) -> Dict[str, Any]:
+    """Capture document title, URL, og:title, heading candidates, and block-wall signals."""
+    try:
+        return await page.evaluate(
+            """() => {
+                const ogTitleEl = document.querySelector('meta[property="og:title"], meta[name="og:title"]');
+                const h1Texts = Array.from(document.querySelectorAll('h1'))
+                    .map(el => (el.innerText || '').trim())
+                    .filter(Boolean);
+                return {
+                    title: (document.title || '').trim(),
+                    url: window.location.href || '',
+                    og_title: ogTitleEl ? (ogTitleEl.getAttribute('content') || '').trim() : '',
+                    h1_texts: h1Texts,
+                    has_login_form: Boolean(
+                        document.querySelector('form[action*="login"], input[name="pass"][type="password"]')
+                    ),
+                    article_count: document.querySelectorAll('div[role="article"]').length,
+                };
+            }"""
+        )
+    except Exception:
+        return {
+            "title": "",
+            "url": page.url or "",
+            "og_title": "",
+            "h1_texts": [],
+            "has_login_form": False,
+            "article_count": 0,
+        }
+
+
+def _resolve_fanpage_title(
+    collected_posts: Dict[str, Dict],
+    meta: Dict[str, Any],
+) -> Optional[str]:
+    """Select the cleanest genuine fanpage name, rejecting Facebook/login/error titles."""
+    author_counts = Counter(
+        cleaned
+        for post in collected_posts.values()
+        if (cleaned := clean_fanpage_name(post.get("author_name"))) is not None
+    )
+    if author_counts:
+        return author_counts.most_common(1)[0][0]
+
+    candidates = [
+        *(meta.get("h1_texts") or []),
+        meta.get("og_title"),
+        meta.get("title"),
+    ]
+    for raw in candidates:
+        cleaned = clean_fanpage_name(raw)
+        if cleaned:
+            return cleaned
+    return None
+
+
+def _is_blocked_shell(meta: Dict[str, Any], collected_posts: Dict[str, Dict]) -> bool:
+    """Return True when Facebook returned a login wall, checkpoint, or unhydrated shell with 0 posts."""
+    if collected_posts:
+        return False
+    url_lower = (meta.get("url") or "").lower()
+    if any(token in url_lower for token in ("/login", "/checkpoint", "/recover/")):
+        return True
+    if meta.get("article_count", 0) == 0:
+        if meta.get("has_login_form") or clean_fanpage_name(meta.get("title")) is None:
+            return True
+    return False
+
+
+async def _extract_dom_fallback_posts(
+    page: Page,
+    page_url: str,
+    collected_posts: Dict[str, Dict],
+) -> None:
+    """Extract posts directly from top-level DOM role='article' nodes when GraphQL missed them."""
+    try:
+        dom_articles = await page.evaluate(
+            """() => {
+                const topArticles = Array.from(document.querySelectorAll('div[role="article"]'))
+                    .filter(el => !el.parentElement || !el.parentElement.closest('div[role="article"]'));
+                return topArticles.slice(0, 10).map(article => {
+                    const msgEls = Array.from(
+                        article.querySelectorAll('div[data-ad-preview="message"], div[data-ad-comet-preview="message"]')
+                    );
+                    const msgText = msgEls.length
+                        ? msgEls.map(m => (m.innerText || '').trim()).filter(Boolean).join('\\n')
+                        : Array.from(article.querySelectorAll('div[dir="auto"]'))
+                              .map(d => (d.innerText || '').trim())
+                              .filter(t => t.length > 20)
+                              .slice(0, 4)
+                              .join('\\n');
+                    const linkEl = article.querySelector(
+                        'a[href*="/posts/"], a[href*="permalink.php"], a[href*="story.php"], a[href*="/reel/"], a[href*="/videos/"], a[href*="/photo"]'
+                    );
+                    const authorEl = article.querySelector('h2 a, h3 a, h4 a, strong a');
+                    const imgs = Array.from(article.querySelectorAll('img[src]'))
+                        .filter(img => {
+                            const src = img.getAttribute('src') || '';
+                            if (!src.includes('scontent') && !src.includes('fbcdn')) return false;
+                            if (src.includes('emoji.php')) return false;
+                            return (img.naturalWidth || img.width || 200) >= 120;
+                        })
+                        .map(img => img.getAttribute('src'));
+                    return {
+                        href: linkEl ? (linkEl.getAttribute('href') || '').trim() : '',
+                        content: (msgText || '').trim(),
+                        author_name: authorEl ? (authorEl.innerText || '').trim() : '',
+                        author_url: authorEl ? (authorEl.getAttribute('href') || '').trim() : '',
+                        media_urls: Array.from(new Set(imgs)).slice(0, 6),
+                    };
+                });
+            }"""
+        )
+    except Exception:
+        return
+
+    now_local = datetime.now(LOCAL_TIMEZONE)
+    for item in dom_articles or []:
+        href = item.get("href") or ""
+        post_id = _extract_post_id_from_url(href)
+        content = (item.get("content") or "").strip()
+        media_urls = item.get("media_urls") or []
+        if not post_id or (len(content) < 10 and not media_urls):
+            continue
+        if post_id in collected_posts:
+            continue
+        collected_posts[post_id] = {
+            "post_id": post_id,
+            "post_url": _clean_post_url(href, page_url),
+            "content": content,
+            "media_urls": media_urls,
+            "published_at": now_local,
+            "author_name": clean_fanpage_name(item.get("author_name")),
+            "author_url": item.get("author_url") or None,
+        }
+
+
+def _build_fanpage_candidate_urls(page_url: str) -> List[str]:
+    """Return primary fanpage URL followed by /posts fallback URL when applicable."""
+    candidates = [page_url]
+    parsed = urlparse(page_url)
+    path = parsed.path.strip("/")
+    if path.lower() == "profile.php":
+        if "sk=posts" not in parsed.query.lower():
+            sep = "&" if parsed.query else "?"
+            candidates.append(f"{page_url}{sep}sk=posts")
+    elif not path.lower().endswith("/posts"):
+        candidates.append(f"{page_url.rstrip('/')}/posts")
+    return candidates
+
+
 async def scrape_fanpage(page_url: str, scroll_count: int = SCROLL_COUNT) -> Tuple[Optional[str], List[Dict]]:
     """
     Scrape a public Facebook fanpage without logging in.
     Extracts only the fanpage's own posts (excluding comments and shared media from other pages).
-    Returns (page_title, list_of_post_dicts).
+    Returns (cleaned_page_title, list_of_post_dicts).
+    Raises RuntimeError when Facebook blocks access with a login/checkpoint wall and 0 posts.
     """
     collected_posts: Dict[str, Dict] = {}
-    page_title: Optional[str] = None
     page_slug = _extract_page_slug(page_url)
+    last_meta: Dict[str, Any] = {}
+    resolved_title: Optional[str] = None
+    candidate_urls = _build_fanpage_candidate_urls(page_url)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--disable-notifications",
-                "--no-sandbox",
-            ],
-        )
-        context = await browser.new_context(
-            user_agent=USER_AGENT,
-            viewport={"width": 1280, "height": 900},
-            locale="en-US",
-        )
-        page = await context.new_page()
-
-        async def handle_response(response: Response) -> None:
-            if "/api/graphql" in response.url and response.status == 200:
-                try:
-                    text = await response.text()
-                    for line in text.splitlines():
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            data = json.loads(line)
-                            _walk_graphql_for_posts(data, page_url, page_slug, collected_posts)
-                        except json.JSONDecodeError:
-                            continue
-                except Exception:
-                    pass
-
-        page.on("response", handle_response)
-
+        browser = await _launch_browser(p)
         try:
-            await page.goto(page_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
-            await page.wait_for_timeout(2500)
+            for attempt_idx, target_url in enumerate(candidate_urls):
+                context = await _new_stealth_context(browser)
+                page = await context.new_page()
+                _attach_graphql_listener(page, lambda u=target_url: u, page_slug, collected_posts)
 
-            raw_title = await page.title()
-            if raw_title:
-                page_title = re.sub(r"\s*\|\s*Facebook.*$", "", raw_title, flags=re.IGNORECASE).strip()
-                page_title = re.sub(r"^\(\d+\)\s*", "", page_title).strip()
-
-            await _dismiss_login_popup(page)
-
-            # Parse embedded <script type="application/json"> Relay payloads from initial HTML
-            scripts_json = await page.evaluate(
-                """() => {
-                    return Array.from(document.querySelectorAll('script[type="application/json"]'))
-                        .map(s => s.textContent)
-                        .filter(Boolean);
-                }"""
-            )
-            for raw_script in scripts_json:
                 try:
-                    data = json.loads(raw_script)
-                    _walk_graphql_for_posts(data, page_url, page_slug, collected_posts)
-                except Exception:
-                    continue
+                    await page.goto(target_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
+                    try:
+                        await page.wait_for_selector('div[role="article"]', timeout=4500)
+                        await page.wait_for_timeout(1000)
+                    except Exception:
+                        await page.wait_for_timeout(2500)
 
-            # Scroll down to trigger lazy loading of timeline posts
-            for _ in range(scroll_count):
-                await _dismiss_login_popup(page)
-                await page.evaluate("window.scrollBy(0, window.innerHeight * 1.6)")
-                await page.wait_for_timeout(SCROLL_DELAY_MS)
+                    await _dismiss_login_popup(page)
+                    await _parse_embedded_scripts(page, target_url, page_slug, collected_posts)
 
+                    # Scroll down to trigger lazy loading of timeline posts
+                    for _ in range(scroll_count):
+                        await _dismiss_login_popup(page)
+                        prev_y = await page.evaluate("() => window.scrollY")
+                        await page.evaluate("window.scrollBy(0, window.innerHeight * 1.6)")
+                        await page.wait_for_timeout(SCROLL_DELAY_MS)
+                        new_y = await page.evaluate("() => window.scrollY")
+                        if new_y == prev_y:
+                            await _dismiss_login_popup(page)
+                            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                            await page.wait_for_timeout(1200)
+
+                    last_meta = await _extract_page_metadata(page)
+                    if not collected_posts and last_meta.get("article_count", 0) > 0:
+                        await _extract_dom_fallback_posts(page, target_url, collected_posts)
+
+                    candidate_title = _resolve_fanpage_title(collected_posts, last_meta)
+                    if candidate_title:
+                        resolved_title = candidate_title
+
+                    if collected_posts:
+                        break
+                    if attempt_idx == len(candidate_urls) - 1:
+                        break
+                finally:
+                    await context.close()
         finally:
-            await context.close()
             await browser.close()
+
+    if not collected_posts and _is_blocked_shell(last_meta, collected_posts):
+        raise RuntimeError(
+            f"Blocked by Facebook login/checkpoint wall (title={last_meta.get('title')!r}, url={last_meta.get('url')!r})"
+        )
 
     posts_list = sorted(
         collected_posts.values(),
         key=lambda x: x.get("published_at", datetime.now(LOCAL_TIMEZONE)),
         reverse=True,
     )
-    return page_title, posts_list
+    return resolved_title, posts_list
 
 
 async def scrape_multiple_fanpages(
@@ -663,38 +891,10 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
     dom_fallback: Dict[str, Any] = {}
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--disable-notifications",
-                "--no-sandbox",
-            ],
-        )
-        context = await browser.new_context(
-            user_agent=USER_AGENT,
-            viewport={"width": 1280, "height": 900},
-            locale="en-US",
-        )
+        browser = await _launch_browser(p)
+        context = await _new_stealth_context(browser)
         page = await context.new_page()
-
-        async def handle_response(response: Response) -> None:
-            if "/api/graphql" in response.url and response.status == 200:
-                try:
-                    text = await response.text()
-                    for line in text.splitlines():
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            data = json.loads(line)
-                            _walk_graphql_for_posts(data, final_url, "", collected_posts)
-                        except json.JSONDecodeError:
-                            continue
-                except Exception:
-                    pass
-
-        page.on("response", handle_response)
+        _attach_graphql_listener(page, lambda: final_url, "", collected_posts)
 
         try:
             await page.goto(target_url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
@@ -702,25 +902,10 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
             final_url = page.url or target_url
 
             raw_title = await page.title()
-            if raw_title:
-                page_title = re.sub(r"\s*\|\s*Facebook.*$", "", raw_title, flags=re.IGNORECASE).strip()
-                page_title = re.sub(r"^\(\d+\)\s*", "", page_title).strip()
+            page_title = clean_fanpage_name(raw_title)
 
             await _dismiss_login_popup(page)
-
-            scripts_json = await page.evaluate(
-                """() => {
-                    return Array.from(document.querySelectorAll('script[type="application/json"]'))
-                        .map(s => s.textContent)
-                        .filter(Boolean);
-                }"""
-            )
-            for raw_script in scripts_json:
-                try:
-                    data = json.loads(raw_script)
-                    _walk_graphql_for_posts(data, final_url, "", collected_posts)
-                except Exception:
-                    continue
+            await _parse_embedded_scripts(page, final_url, "", collected_posts)
 
             if not collected_posts:
                 await page.evaluate("window.scrollBy(0, 600)")
@@ -736,6 +921,9 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
                     const articleEl = document.querySelector('div[role="article"]');
                     const authorLink = articleEl ? articleEl.querySelector('h2 a[href*="facebook.com"], h3 a[href*="facebook.com"], strong a[href*="facebook.com"]') : null;
                     const canonicalEl = document.querySelector('link[rel="canonical"]');
+                    const h1Texts = Array.from(document.querySelectorAll('h1'))
+                        .map(el => (el.innerText || '').trim())
+                        .filter(Boolean);
                     return {
                         og_title: meta('og:title'),
                         og_description: meta('og:description'),
@@ -745,6 +933,7 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
                         article_text: articleEl ? (articleEl.innerText || '').trim() : '',
                         author_href: authorLink ? (authorLink.getAttribute('href') || '').trim() : '',
                         author_text: authorLink ? (authorLink.innerText || '').trim() : '',
+                        h1_texts: h1Texts,
                     };
                 }"""
             )
@@ -796,15 +985,22 @@ async def scrape_single_post(post_url: str) -> Dict[str, Any]:
         or _derive_fanpage_url_from_url(dom_fallback.get("canonical"))
         or _derive_fanpage_url_from_url(final_url)
     )
-    fanpage_name = (
-        chosen.get("author_name")
-        or dom_fallback.get("author_text")
-        or dom_fallback.get("og_title")
-        or page_title
-    )
-    if fanpage_name and "|" in fanpage_name:
-        fanpage_name = fanpage_name.split("|")[0].strip()
+    fanpage_name: Optional[str] = None
+    og_title_candidate = dom_fallback.get("og_title") or ""
+    if "|" in og_title_candidate:
+        og_title_candidate = og_title_candidate.split("|")[0].strip()
+    for raw_name in (
+        chosen.get("author_name"),
+        dom_fallback.get("author_text"),
+        *(dom_fallback.get("h1_texts") or []),
+        og_title_candidate,
+        page_title,
+    ):
+        cleaned = clean_fanpage_name(raw_name)
+        if cleaned:
+            fanpage_name = cleaned
+            break
 
     chosen["fanpage_url"] = fanpage_url
-    chosen["fanpage_name"] = fanpage_name or None
+    chosen["fanpage_name"] = fanpage_name
     return chosen

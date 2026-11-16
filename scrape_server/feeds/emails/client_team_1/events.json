@@ -1,11 +1,11 @@
 {
   "folder": "emails/client_team_1",
   "client_id": "client_team_1",
-  "updated_at": "2026-11-11T14:26:32.177866+07:00",
+  "updated_at": "2026-11-15T21:48:37.238667+07:00",
   "count": 1,
   "events": [
     {
-      "event_id": 1,
+      "event_id": 3,
       "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
       "online_mode": "offline",
       "is_online": false,
@@ -13,6 +13,10 @@
       "time": null,
       "start_datetime": "2026-11-09T00:00:00+07:00",
       "end_datetime": null,
+      "event_start_datetime": "2026-11-09T00:00:00+07:00",
+      "event_end_datetime": null,
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
       "location": null,
       "source_type": "email",
       "source_id": "email_2679fc9d470058c84a17",

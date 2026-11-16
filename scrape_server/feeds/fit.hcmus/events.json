@@ -1,0 +1,49 @@
+{
+  "fanpage": {
+    "name": "Information Technology - HCMUS",
+    "url": "https://www.facebook.com/fit.hcmus",
+    "slug": "fit.hcmus"
+  },
+  "updated_at": "2026-11-15T21:48:37.293311+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "1431439515685840",
+      "post_url": "https://www.facebook.com/fit.hcmus/posts/pfbid051qCWjSNdki2Xity9r1PSYDRAiq6QLHXYwsd37EmXtLSKzwsvfoHLbpeXyC8tYVRl",
+      "posted_at": "2026-07-16T16:58:39+07:00",
+      "is_event": true,
+      "title": "📣📣📣 Đăng ký tham gia Trường hè \"FIT@HCMUS Summer School on Intelligent Agents and Agentic AI\" năm 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-07-27",
+      "time": "15:00",
+      "start_datetime": "2026-07-27T15:00:00+07:00",
+      "end_datetime": "2026-07-31T23:59:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": "2026-07-23T15:00:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở 227 Nguyễn Văn Cừ, Phường Chợ Quán, TP.HCM (Phòng cụ thể sẽ thông báo sau)",
+      "description": "Năm 2026, Khoa Công nghệ Thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM tổ chức chương trình Trường hè “FIT@HCMUS Summer School on Intelligent Agents and Agentic AI”, quy tụ các chuyên gia nhằm cập nhật những tiến bộ mới nhất về Agentic AI. Chương trình mang đến các chuyên đề từ nền tảng lý thuyết đến ứng dụng thực tiễn, đồng thời tạo cơ hội kết nối, học hỏi và truyền cảm hứng cho sinh viên, học viên cao học, nghiên cứu sinh và các kỹ sư q...",
+      "organizer": "Information Technology - HCMUS",
+      "registration_url": "https://link.hcmus.edu.vn/SummerSchool_FITHCMUS_Schedule2026",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "hội nghị"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/share/p/1F6JqQEhUf/",
+      "fanpage_name": "Information Technology - HCMUS",
+      "fanpage_url": "https://www.facebook.com/fit.hcmus",
+      "media_urls": [
+        "https://scontent.fsgn2-3.fna.fbcdn.net/v/t39.30808-6/756340594_1438310441665414_1228347336789447971_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x1079&ctp=s960x960&_nc_cat=103&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=S5vcxjVQMhMQ7kNvwGYc8WS&_nc_oc=AdrCLYvffOzdXkQj5C66-Ad3oFy-2mzbwnGojvd3tpCeKchNhHxRrel9bPidnkwzFh2aS3ZHiZNek6huLbrProd8&_nc_zt=23&_nc_ht=scontent.fsgn2-3.fna&_nc_gid=b5GII40fZTrWK3UFQIQjig&_nc_ss=78289&oh=00_AQSjS9vHPq_6mOM8MRlc3Ekw0JUj7EzZ5ewBMGfAR-8N_g&oe=6AFA3050"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T19:41:21.677066+07:00"
+    }
+  ]
+}

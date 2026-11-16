@@ -1,0 +1,88 @@
+{
+  "fanpage": {
+    "name": "BEE Club",
+    "url": "https://www.facebook.com/beeclub.khtn",
+    "slug": "beeclub.khtn"
+  },
+  "updated_at": "2026-11-15T21:48:37.282205+07:00",
+  "count": 2,
+  "events": [
+    {
+      "post_id": "1682172040361742",
+      "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02xELytqgy1vTdoXiKYMZM1a5zxEFQA1Dytd9y1JQkbigGMcUnTzteVuNVNiSd2CVKl",
+      "posted_at": "2026-11-10T20:30:12+07:00",
+      "is_event": true,
+      "title": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-20",
+      "time": "14:00",
+      "start_datetime": "2026-11-20T14:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).",
+      "description": "Đến với NÉT SON, bạn sẽ có cơ hội. Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt. Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa...",
+      "organizer": "BEE Club",
+      "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
+      "registration_status": "link",
+      "fee": "25.000 VNĐ/sinh viên",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/share/p/1CFmEZJzbY/",
+      "fanpage_name": "BEE Club",
+      "fanpage_url": "https://www.facebook.com/beeclub.khtn",
+      "media_urls": [
+        "https://scontent.fsgn2-7.fna.fbcdn.net/v/t39.30808-6/894645054_1682168653695414_4188524239662458154_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x1717&ctp=s600x600&_nc_cat=101&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=9eEC1UukXy0Q7kNvwGzbOEF&_nc_oc=AdrgCqvG6GzctQVSf0H349B0r6HKJv90cvLSw-Q-01H2K8V_G6XPOTpXq5shL4YDTBTVboCjBI2uKLriAhWIFlsX&_nc_zt=23&_nc_ht=scontent.fsgn2-7.fna&_nc_gid=Paal79x_fSRskyuq5bUHWw&_nc_ss=78289&oh=00_AQTU6Hz-ume9Z4wmW1Ti3ifr7p7qrVaMS8B4CKi-qzMlKQ&oe=6AFA3742"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T19:39:29.168683+07:00"
+    },
+    {
+      "post_id": "1371604478085168",
+      "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02KZb3A5yswpw7nZZM9tRJXBWC4GPBe47eiyZM746t1GqAAvX4DKoYEmyVaGSGtquMl",
+      "posted_at": "2025-11-11T20:49:33+07:00",
+      "is_event": true,
+      "title": "🌏 THI THỬ TOEIC - 2 KỸ NĂNG NGHE VÀ ĐỌC 🌏",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2025-11-22",
+      "time": "13:15",
+      "start_datetime": "2025-11-22T13:15:00+07:00",
+      "end_datetime": "2025-11-22T16:30:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": "2025-11-19T23:59:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM cơ sở 2 (Khu đô thị ĐHQG-HCM).",
+      "description": "Đã có CLB Sinh viên 5 Tốt, CLB Kỹ Năng cùng CLB Anh Văn BEE đồng hành với Trung tâm Anh ngữ Ehouse tổ chức. ''THI THỬ TOEIC - 2 KỸ NĂNG NGHE VÀ ĐỌC\"🎉. Lợi ích khi tham gia. Nhận Giấy Chứng Nhận (từ 450/990 điểm) để xét tiêu chí \"Hội nhập tốt\".",
+      "organizer": "BEE Club",
+      "registration_url": "https://forms.gle/F7c4CXvzdF4oBX3z7",
+      "registration_status": "link",
+      "fee": "25.000 VNĐ/thí sinh",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "offline"
+      ],
+      "input_url": "https://www.facebook.com/share/p/1ELDTfrhRN/",
+      "fanpage_name": "BEE Club",
+      "fanpage_url": "https://www.facebook.com/beeclub.khtn",
+      "media_urls": [
+        "https://scontent.fsgn2-5.fna.fbcdn.net/v/t39.30808-6/577022262_1371701488075467_3661071116354499178_n.jpg?stp=dst-jpg_tt6&cstp=mx1638x2048&ctp=s640x640&_nc_cat=103&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=_YD96KECsXkQ7kNvwFwQDZC&_nc_oc=AdpAwnog-lFZn8yjD3sV_RSv3WFtpE_NxuvbmqT2m6opFMIhyT_ZgeRcs0Zk0RgnPAvmvY1wPVml1fFs12i-nPyy&_nc_zt=23&_nc_ht=scontent.fsgn2-5.fna&_nc_gid=fnTYUepPdkkHAXRH49-kBA&_nc_ss=78289&oh=00_AQSwFQlAIiORpoq7f2VCuFNR6QZW6el18ZatIYsSnE7b9g&oe=6AFA4474"
+      ],
+      "extraction_method": "heuristic",
+      "scraped_at": "2026-11-11T19:35:43.508470+07:00"
+    }
+  ]
+}
