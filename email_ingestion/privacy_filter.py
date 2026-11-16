@@ -383,15 +383,27 @@ def sync_filter_config_from_server(config_path=CONFIG_PATH, timeout=5):
         user_excl = local_cfg.get("user_excluded_keywords", [])
         final_excl = _merge_ordered_unique(BASELINE_EXCLUDED_KEYWORDS, remote_excl, user_excl)
 
-        # Merge empirical non-event disqualifiers and active-registration override cues
+        # Merge empirical non-event disqualifiers and active-registration override cues.
+        # Unlike hard privacy excluded_keywords, baselines are fallback-only when neither
+        # server nor local config defines them, so admins can remove/tune terms via config.
         remote_non_event = data.get("non_event_keywords")
-        base_non_event = remote_non_event if remote_non_event is not None else local_cfg.get("non_event_keywords", [])
+        if remote_non_event is not None:
+            base_non_event = remote_non_event
+        elif "non_event_keywords" in local_cfg:
+            base_non_event = local_cfg["non_event_keywords"]
+        else:
+            base_non_event = BASELINE_NON_EVENT_KEYWORDS
         user_non_event = local_cfg.get("user_excluded_non_event_keywords", [])
-        final_non_event = _merge_ordered_unique(BASELINE_NON_EVENT_KEYWORDS, base_non_event, user_non_event)
+        final_non_event = _merge_ordered_unique(base_non_event, user_non_event)
 
         remote_cues = data.get("active_registration_cues")
-        base_cues = remote_cues if remote_cues is not None else local_cfg.get("active_registration_cues", [])
-        final_cues = _merge_ordered_unique(BASELINE_ACTIVE_REGISTRATION_CUES, base_cues)
+        if remote_cues is not None:
+            base_cues = remote_cues
+        elif "active_registration_cues" in local_cfg:
+            base_cues = local_cfg["active_registration_cues"]
+        else:
+            base_cues = BASELINE_ACTIVE_REGISTRATION_CUES
+        final_cues = _merge_ordered_unique(base_cues)
 
         # Update local config structure
         local_cfg["version"] = data.get("version", current_ver + 1)
