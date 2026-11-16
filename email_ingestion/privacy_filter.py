@@ -12,14 +12,21 @@ CONFIG_PATH = os.path.join(BASE_DIR, "filter_config.json")
 
 
 def load_filter_config(config_path=CONFIG_PATH):
-    """Load allowed senders, positive DRL keywords, and privacy exclusion keywords."""
+    """Load allowed senders, positive DRL/event keywords, and privacy/non-event exclusions."""
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {
         "allowed_senders": ["hcmus.edu.vn", "fit.hcmus.edu.vn", "clc.hcmus.edu.vn"],
-        "keywords": ["điểm rèn luyện", "ĐRL", "workshop", "hội thảo", "tình nguyện"],
-        "excluded_keywords": ["mật khẩu", "password", "otp", "học phí", "bảng điểm cá nhân"],
+        "keywords": [
+            "địa điểm", "đăng ký tham gia", "link đăng ký", "cuộc thi",
+            "giao lưu", "điểm rèn luyện", "ĐRL", "hạn đăng ký",
+            "workshop", "ngày hội", "diễn giả", "chính thức mở",
+            "hội thảo", "seminar", "talkshow", "tình nguyện", "chiến dịch",
+        ],
+        "excluded_keywords": list(BASELINE_EXCLUDED_KEYWORDS),
+        "non_event_keywords": list(BASELINE_NON_EVENT_KEYWORDS),
+        "active_registration_cues": list(BASELINE_ACTIVE_REGISTRATION_CUES),
         "newer_than_days": 14,
         "max_results": 20,
         "ingest_endpoint": "http://localhost:8000/api/events/ingest-email",
@@ -141,10 +148,14 @@ def find_matched_keywords(text, keywords):
 
 def passes_privacy_and_keyword_gate(from_addr, subject, body_text, config=None):
     """
-    3-Stage Local Privacy Gate before sending an email to the server:
+    4-Step Local Privacy & Empirical Relevance Gate before sending an email to the server:
       1. Sender must match `allowed_senders`.
-      2. Subject + Body must NOT contain any `excluded_keywords` (e.g. OTP, password, tuition, personal grades).
-      3. Subject + Body MUST contain at least one positive event/ĐRL keyword from `keywords`.
+      2a. Hard Privacy Exclusion (NEVER overridden): Subject + Body must NOT contain `excluded_keywords`
+          (OTP, password, tuition bills, personal grades, academic warnings).
+      2b. Empirical Non-Event Disqualifier (with Active-Registration Override): Rejects recaps,
+          congratulations, honor rolls, and internal admin/dorm notices UNLESS an active
+          registration CTA (`active_registration_cues`) is also present.
+      3. Positive Relevance: Subject + Body MUST match at least one `keywords` term.
 
     Returns: (passed: bool, reason: str, matched_keywords: list[str])
     """
@@ -154,6 +165,8 @@ def passes_privacy_and_keyword_gate(from_addr, subject, body_text, config=None):
     allowed_senders = config.get("allowed_senders", [])
     keywords = config.get("keywords", [])
     excluded_keywords = config.get("excluded_keywords", [])
+    non_event_keywords = config.get("non_event_keywords", BASELINE_NON_EVENT_KEYWORDS)
+    active_cues = config.get("active_registration_cues", BASELINE_ACTIVE_REGISTRATION_CUES)
 
     # Stage 1: Sender check
     if not is_sender_allowed(from_addr, allowed_senders):
@@ -161,10 +174,18 @@ def passes_privacy_and_keyword_gate(from_addr, subject, body_text, config=None):
 
     combined_text = f"{subject or ''}\n{body_text or ''}"
 
-    # Stage 2: Sensitive personal email exclusion check
+    # Stage 2a: Hard privacy exclusion check (never overridden)
     excluded_hits = find_matched_keywords(combined_text, excluded_keywords)
     if excluded_hits:
         return False, f"excluded_private_keyword:{excluded_hits[0]}", []
+
+    # Stage 2b: Empirical non-event check (overridden only if active registration CTA is present)
+    if non_event_keywords:
+        non_event_hits = find_matched_keywords(combined_text, non_event_keywords)
+        if non_event_hits:
+            override_hits = find_matched_keywords(combined_text, active_cues) if active_cues else []
+            if not override_hits:
+                return False, f"excluded_non_event_signal:{non_event_hits[0]}", []
 
     # Stage 3: Positive DRL / Event keyword check
     matched_kw = find_matched_keywords(combined_text, keywords)
@@ -234,13 +255,64 @@ BASELINE_EXCLUDED_KEYWORDS = [
     "password",
     "otp",
     "mã xác nhận",
-    "học phí",
+    "đóng học phí",
+    "nợ học phí",
+    "thanh toán học phí",
+    "tiền học phí",
+    "thông báo học phí",
+    "học phí học kỳ",
+    "miễn giảm học phí",
     "biên lai",
     "bảng điểm cá nhân",
     "kết quả học tập",
     "cảnh báo học vụ",
     "kỷ luật",
 ]
+
+BASELINE_NON_EVENT_KEYWORDS = [
+    "xin chúc mừng",
+    "chúc mừng",
+    "recap",
+    "tổng kết",
+    "vinh danh",
+    "tri ân ban chấp hành",
+    "đã chính thức khép lại",
+    "hành trình khép lại",
+    "gửi lời cảm ơn",
+    "hội nghị mở rộng",
+    "đăng ký ở ký túc xá",
+    "lễ trao bằng tốt nghiệp",
+    "kết quả tuyển dụng",
+    "diễn ra thành công",
+    "các diễn giả đã mang đến",
+]
+
+BASELINE_ACTIVE_REGISTRATION_CUES = [
+    "mở đơn",
+    "link đăng ký",
+    "form đăng ký",
+    "đăng ký tham gia",
+    "đăng ký tham dự",
+    "mở cổng đăng ký",
+    "forms.gle",
+    "chính thức mở",
+]
+
+
+def _merge_ordered_unique(*lists):
+    """Deduplicate strings while preserving priority order (critical for Outlook's top-12 slice)."""
+    seen = set()
+    merged = []
+    for seq in lists:
+        for item in seq or []:
+            val = str(item).strip()
+            if not val:
+                continue
+            key = _normalize_nfc(val).lower()
+            if key not in seen:
+                seen.add(key)
+                merged.append(val)
+    return merged
 
 
 def sync_filter_config_from_server(config_path=CONFIG_PATH, timeout=5):
@@ -301,15 +373,25 @@ def sync_filter_config_from_server(config_path=CONFIG_PATH, timeout=5):
         user_senders = [s.strip().lower() for s in local_cfg.get("user_added_senders", []) if s.strip()]
         final_senders = sorted(set(valid_senders + user_senders))
 
-        # Merge keywords
+        # Merge keywords preserving priority order (Outlook $search uses keywords[:12])
         remote_kws = data.get("keywords", [])
         user_kws = local_cfg.get("user_added_keywords", [])
-        final_kws = sorted(set(remote_kws + user_kws))
+        final_kws = _merge_ordered_unique(remote_kws, user_kws)
 
-        # Enforce baseline floor for excluded_keywords
+        # Enforce baseline floor for hard privacy excluded_keywords
         remote_excl = data.get("excluded_keywords", [])
         user_excl = local_cfg.get("user_excluded_keywords", [])
-        final_excl = sorted(set(BASELINE_EXCLUDED_KEYWORDS + remote_excl + user_excl))
+        final_excl = _merge_ordered_unique(BASELINE_EXCLUDED_KEYWORDS, remote_excl, user_excl)
+
+        # Merge empirical non-event disqualifiers and active-registration override cues
+        remote_non_event = data.get("non_event_keywords")
+        base_non_event = remote_non_event if remote_non_event is not None else local_cfg.get("non_event_keywords", [])
+        user_non_event = local_cfg.get("user_excluded_non_event_keywords", [])
+        final_non_event = _merge_ordered_unique(BASELINE_NON_EVENT_KEYWORDS, base_non_event, user_non_event)
+
+        remote_cues = data.get("active_registration_cues")
+        base_cues = remote_cues if remote_cues is not None else local_cfg.get("active_registration_cues", [])
+        final_cues = _merge_ordered_unique(BASELINE_ACTIVE_REGISTRATION_CUES, base_cues)
 
         # Update local config structure
         local_cfg["version"] = data.get("version", current_ver + 1)
@@ -317,6 +399,8 @@ def sync_filter_config_from_server(config_path=CONFIG_PATH, timeout=5):
         local_cfg["allowed_senders"] = final_senders
         local_cfg["keywords"] = final_kws
         local_cfg["excluded_keywords"] = final_excl
+        local_cfg["non_event_keywords"] = final_non_event
+        local_cfg["active_registration_cues"] = final_cues
         if "newer_than_days" in data:
             local_cfg["newer_than_days"] = data["newer_than_days"]
         if "max_results" in data:
