@@ -92,6 +92,7 @@ class MailProvider(ABC):
                     date_str=mail.get("date", ""),
                     body_text=mail.get("text", ""),
                     matched_keywords=matched_kw,
+                    media_urls=mail.get("media_urls", []),
                 )
             )
         return verified

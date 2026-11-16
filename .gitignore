@@ -9,6 +9,7 @@ env/
 .idea/
 .DS_Store
 *.DS_Store
+mds/
 
 # OAuth tokens, keys & client credentials
 credentials.json

@@ -2,6 +2,7 @@ import os
 import re
 import json
 import hashlib
+import unicodedata
 from html import unescape
 from datetime import datetime
 from email.utils import parseaddr, parsedate_to_datetime
@@ -25,9 +26,26 @@ def load_filter_config(config_path=CONFIG_PATH):
     }
 
 
+def _replace_anchor(match):
+    url = unescape(match.group(2)).strip()
+    label = unescape(re.sub(r"<[^>]+>", " ", match.group(3) or "")).strip()
+    label = re.sub(r"\s+", " ", label)
+    if not label:
+        return url
+    if url.lower().rstrip("/") in label.lower().rstrip("/"):
+        return label
+    return f"{label} ({url})"
+
+
 def strip_html(html_text):
-    """Convert HTML email body into clean plain text for keyword inspection and transmission."""
+    """Convert HTML email body into clean plain text, preserving hyperlinks (<a href>)."""
     text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html_text or "", flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(
+        r'<a\b[^>]*?\bhref\s*=\s*(["\'])(https?://[^"\'>\s]+)\1[^>]*>(.*?)</a>',
+        _replace_anchor,
+        text,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"</p>|</div>|</li>|</tr>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
@@ -35,6 +53,36 @@ def strip_html(html_text):
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n\s*\n+", "\n\n", text)
     return text.strip()
+
+
+def extract_html_media_urls(html_text):
+    """Extract candidate poster/attachment image URLs (<img src="https://...">) from HTML email body."""
+    if not html_text:
+        return []
+    cleaned = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html_text, flags=re.DOTALL | re.IGNORECASE)
+    urls = []
+    seen = set()
+    for match in re.finditer(
+        r'<img\b[^>]*?\bsrc\s*=\s*(["\'])(https?://[^"\'>\s]+)\1[^>]*>',
+        cleaned,
+        flags=re.DOTALL | re.IGNORECASE,
+    ):
+        tag = match.group(0)
+        url = unescape(match.group(2)).strip()
+        if not url or url in seen:
+            continue
+        # Skip 0px/1px tracking pixels
+        if re.search(r'\b(?:width|height)\s*=\s*["\']?[01](?:px)?["\']?(?:\s|>|/)', tag, flags=re.IGNORECASE):
+            continue
+        lower_url = url.lower()
+        if any(
+            noise in lower_url
+            for noise in ("pixel", "beacon", "spacer", "1x1", "emoji", "rsrc.php", ".gif", ".svg", ".ico")
+        ):
+            continue
+        seen.add(url)
+        urls.append(url)
+    return urls
 
 
 def extract_email_address(from_header_or_addr):
@@ -68,12 +116,27 @@ def is_sender_allowed(from_header_or_addr, allowed_senders):
     return False
 
 
+def _normalize_nfc(text):
+    """Normalize text to Unicode NFC so decomposed (NFD) and precomposed (NFC) Vietnamese match."""
+    return unicodedata.normalize("NFC", text or "")
+
+
 def find_matched_keywords(text, keywords):
-    """Return list of keywords found in text (case-insensitive)."""
-    if not keywords:
+    """Return list of keywords found in text (case-insensitive, NFC-normalized, word-boundary matched)."""
+    if not keywords or not text:
         return []
-    lowered = (text or "").lower()
-    return [kw for kw in keywords if kw.lower() in lowered]
+    norm_text = _normalize_nfc(text).lower()
+    matched = []
+    for kw in keywords:
+        if not kw or not str(kw).strip():
+            continue
+        kw_norm = _normalize_nfc(str(kw)).strip().lower()
+        if not kw_norm:
+            continue
+        pattern = r"(?<!\w)" + re.escape(kw_norm) + r"(?!\w)"
+        if re.search(pattern, norm_text, flags=re.UNICODE):
+            matched.append(kw)
+    return matched
 
 
 def passes_privacy_and_keyword_gate(from_addr, subject, body_text, config=None):
@@ -119,7 +182,7 @@ def compute_content_hash(from_addr, subject, body_text, word_limit=30):
     if the event has already been recorded BEFORE invoking the LLM / QR decoder.
     """
     email_addr = extract_email_address(from_addr)
-    combined = f"{subject or ''} {body_text or ''}"
+    combined = _normalize_nfc(f"{subject or ''} {body_text or ''}")
     words = re.findall(r"\S+", combined.lower())
     first_words = " ".join(words[:word_limit])
     raw_key = f"{email_addr}|{first_words}"
@@ -143,7 +206,7 @@ def normalize_date_to_iso(date_str):
         return raw
 
 
-def format_for_server(source, msg_id, from_str, subject, date_str, body_text, matched_keywords):
+def format_for_server(source, msg_id, from_str, subject, date_str, body_text, matched_keywords, media_urls=None):
     """Package a verified email into the standard payload for POST /api/inbox/batch."""
     content_hash, hash_source = compute_content_hash(from_str, subject, body_text, word_limit=30)
     return {
@@ -156,6 +219,7 @@ def format_for_server(source, msg_id, from_str, subject, date_str, body_text, ma
         "date": normalize_date_to_iso(date_str),
         "matched_keywords": matched_keywords,
         "text": body_text or "",
+        "media_urls": list(media_urls or []),
     }
 
 

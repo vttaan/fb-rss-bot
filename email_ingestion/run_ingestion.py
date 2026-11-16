@@ -30,7 +30,7 @@ def to_server_schema(email_item, client_id="anonymous"):
         "sender": email_item.get("from", ""),
         "received_at": email_item.get("date", ""),
         "content": email_item.get("text", ""),
-        "media_urls": [],
+        "media_urls": list(email_item.get("media_urls") or []),
     }
 
 

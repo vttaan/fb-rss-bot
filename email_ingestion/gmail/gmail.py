@@ -12,7 +12,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from mail_provider import MailProvider, DEFAULT_FILTER_FIELDS
-from privacy_filter import load_filter_config, strip_html
+from privacy_filter import extract_html_media_urls, load_filter_config, strip_html
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 TOKEN_PATH = os.path.join(BASE_DIR, "token.json")
@@ -43,20 +43,34 @@ def build_gmail_query(allowed_senders=None, keywords=None, excluded_keywords=Non
 
 
 def get_body(payload):
-    """Pull plain text out of a Gmail message payload (with HTML fallback)."""
+    """Pull plain text out of a Gmail message payload, preferring HTML when plain text omits href links."""
     mime_type = payload.get("mimeType", "")
     body_data = payload.get("body", {}).get("data")
 
     if mime_type == "text/plain" and body_data:
         return base64.urlsafe_b64decode(body_data).decode("utf-8", "ignore")
 
-    parts = payload.get("parts", [])
-    for part in parts:
-        if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
-            return base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", "ignore")
-
     if mime_type == "text/html" and body_data:
         raw_html = base64.urlsafe_b64decode(body_data).decode("utf-8", "ignore")
+        return strip_html(raw_html)
+
+    parts = payload.get("parts", [])
+    plain_text = ""
+    raw_html = ""
+    for part in parts:
+        p_mime = part.get("mimeType", "")
+        p_data = part.get("body", {}).get("data")
+        if p_mime == "text/plain" and p_data and not plain_text:
+            plain_text = base64.urlsafe_b64decode(p_data).decode("utf-8", "ignore")
+        elif p_mime == "text/html" and p_data and not raw_html:
+            raw_html = base64.urlsafe_b64decode(p_data).decode("utf-8", "ignore")
+
+    if plain_text:
+        if "http" not in plain_text.lower() and raw_html and "href" in raw_html.lower():
+            return strip_html(raw_html)
+        return plain_text
+
+    if raw_html:
         return strip_html(raw_html)
 
     for part in parts:
@@ -64,6 +78,23 @@ def get_body(payload):
         if text:
             return text
     return ""
+
+
+def get_media_urls(payload):
+    """Recursively extract poster/attachment image URLs from HTML MIME parts."""
+    urls = []
+    mime_type = payload.get("mimeType", "")
+    body_data = payload.get("body", {}).get("data")
+    if mime_type == "text/html" and body_data:
+        raw_html = base64.urlsafe_b64decode(body_data).decode("utf-8", "ignore")
+        for u in extract_html_media_urls(raw_html):
+            if u not in urls:
+                urls.append(u)
+    for part in payload.get("parts", []):
+        for u in get_media_urls(part):
+            if u not in urls:
+                urls.append(u)
+    return urls
 
 
 class GmailProvider(MailProvider):
@@ -107,13 +138,15 @@ class GmailProvider(MailProvider):
             msg = connection.users().messages().get(
                 userId="me", id=m["id"], format="full"
             ).execute()
-            headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            payload = msg.get("payload", {})
+            headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
             raw_emails.append({
                 "id": msg["id"],
                 "from": headers.get("from", ""),
                 "subject": headers.get("subject", ""),
                 "date": headers.get("date", ""),
-                "text": get_body(msg.get("payload", {})) or msg.get("snippet", ""),
+                "text": get_body(payload) or msg.get("snippet", ""),
+                "media_urls": get_media_urls(payload),
             })
         return raw_emails
 
