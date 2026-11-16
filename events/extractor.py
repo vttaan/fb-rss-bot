@@ -2552,13 +2552,21 @@ def analyze_fanpage_posts(
     fanpage_id: int,
     limit: Optional[int] = None,
     force_recheck: bool = False,
-) -> Dict[str, int]:
+) -> Dict[str, Any]:
     """
     Analyze remaining/unanalyzed posts of a fanpage (optionally scoped to the `limit` latest posts)
     and refresh its events.json. Blocking (run in a thread).
     """
     init_db()
-    stats = {"analyzed": 0, "llm_calls": 0, "events": 0, "updated": 0, "duplicates": 0, "errors": 0}
+    stats: Dict[str, Any] = {
+        "analyzed": 0,
+        "llm_calls": 0,
+        "events": 0,
+        "updated": 0,
+        "duplicates": 0,
+        "errors": 0,
+        "updated_events": [],
+    }
     _GLOBAL_KEY_POOL.load_from_env()
     has_gemini = _GLOBAL_KEY_POOL.has_keys()
     max_llm_calls = max(MAX_LLM_CALLS_PER_FANPAGE, limit) if (limit and limit > 0) else MAX_LLM_CALLS_PER_FANPAGE
@@ -2631,6 +2639,9 @@ def analyze_fanpage_posts(
                     data["updated_changes"] = changes
                 if upsert_status == "updated":
                     stats["updated"] += 1
+                    stats["updated_events"].append(
+                        {"event": ev_record.to_dict(), "changes": changes}
+                    )
                 elif upsert_status == "duplicate":
                     stats["duplicates"] += 1
 

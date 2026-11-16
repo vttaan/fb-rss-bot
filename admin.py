@@ -104,12 +104,17 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
     rows = list_fanpages(active_only=True)
     target = (body.fanpage or "all").strip()
     if target and target.lower() != "all":
-        rows = [
+        exact_rows = [
             (fp, cnt)
             for fp, cnt in rows
             if str(fp.id) == target
             or fp.slug.lower() == target.lower()
-            or target.lower() in fp.url.lower()
+            or fp.url.lower().rstrip("/") == target.lower().rstrip("/")
+        ]
+        rows = exact_rows or [
+            (fp, cnt)
+            for fp, cnt in rows
+            if not target.isdigit() and target.lower() in fp.url.lower()
         ]
     if not rows:
         raise HTTPException(status_code=404, detail=f"No active fanpage matching '{target}'.")
@@ -121,6 +126,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
     total_llm = 0
     total_updated = 0
     total_errors = 0
+    error_details: List[str] = []
 
     async with manager.scrape_lock:
         await manager.broadcast_to_all(
@@ -152,12 +158,18 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
                 total_events += int(ev_stats.get("events", 0))
                 total_llm += int(ev_stats.get("llm_calls", 0))
                 total_updated += int(ev_stats.get("updated", 0))
-                total_errors += int(ev_stats.get("errors", 0))
+                ev_err_count = int(ev_stats.get("errors", 0))
+                total_errors += ev_err_count
+                if ev_err_count > 0:
+                    error_details.append(f"{fp.slug}: {ev_err_count} LLM/extraction error(s)")
 
                 if new_posts:
                     await manager.on_new_posts_scraped(fp, new_posts)
+                if ev_stats.get("updated_events"):
+                    await manager.on_events_updated(fp, ev_stats["updated_events"])
             except Exception as exc:
                 total_errors += 1
+                error_details.append(f"{fp.slug}: {exc}")
                 print(f"[admin] Error refetching {fp.url}: {exc}")
 
             if idx < len(rows) - 1:
@@ -172,6 +184,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
         + (f", {total_updated} updated" if total_updated else "")
         + (f", {total_errors} error(s)" if total_errors else "")
         + "."
+        + (f" Details: {' | '.join(error_details)}" if error_details else "")
     )
     await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
     asyncio.create_task(asyncio.to_thread(backup_state_to_git, "admin refetch & extract"))
@@ -185,6 +198,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
         "events_found": total_events,
         "updated": total_updated,
         "errors": total_errors,
+        "error_details": error_details,
         "message": msg,
     }
 
@@ -245,6 +259,8 @@ async def admin_import_crawl(body: ImportCrawlRequest):
 
         if new_posts:
             await manager.on_new_posts_scraped(fp, new_posts)
+        if ev_stats.get("updated_events"):
+            await manager.on_events_updated(fp, ev_stats["updated_events"])
 
     generate_all_rss()
     await asyncio.to_thread(sync_all_event_folders)

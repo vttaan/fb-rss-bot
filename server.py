@@ -114,6 +114,32 @@ class ConnectionManager:
                 generate_user_rss_xml(client_id)
                 await self.send_to_user(client_id, payload)
 
+    async def broadcast_event_updated(
+        self,
+        event_data: Dict[str, Any],
+        changes: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Broadcast an updated event's JSON payload to all connected WebSocket clients."""
+        payload = {
+            "event": "event_updated",
+            "event_id": event_data.get("event_id"),
+            "event_data": event_data,
+            "changes": changes or {},
+            "refresh_tree": True,
+        }
+        await self.broadcast_to_all(payload)
+
+    async def on_events_updated(
+        self,
+        fanpage: Fanpage,
+        updated_events: List[Dict[str, Any]],
+    ) -> None:
+        """Callback invoked when fanpage post analysis updates existing EventRecord entries."""
+        for item in updated_events:
+            ev_data = item.get("event")
+            if ev_data:
+                await self.broadcast_event_updated(ev_data, item.get("changes"))
+
 
 manager = ConnectionManager()
 scheduler = AsyncIOScheduler(timezone=SCRAPE_TIMEZONE)
@@ -128,7 +154,10 @@ async def scheduled_scrape_task() -> None:
         return
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Running scheduled fanpage scrape & extractor..."})
-        new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(
+            on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
+        )
         await asyncio.to_thread(backup_state_to_git, "scheduled VM crawl")
         await manager.broadcast_to_all(
             {
@@ -147,6 +176,7 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
         new_count = await run_scrape_cycle(
             target_slug_or_id=target_slug_or_id,
             on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
         )
         await asyncio.to_thread(backup_state_to_git, "manual VM crawl")
         await manager.broadcast_to_all(
@@ -425,6 +455,8 @@ async def api_ingest_email(body: EmailIngestRequest):
             "refresh_tree": True,
         }
     )
+    if result.get("is_updated") and result.get("event"):
+        await manager.broadcast_event_updated(result["event"], result.get("changes"))
     return result
 
 
@@ -449,6 +481,9 @@ async def api_ingest_email_batch(body: BatchEmailIngestRequest):
         results.append(res)
 
     await manager.broadcast_to_all({"event": "inbox_updated", "refresh_tree": True})
+    for res in results:
+        if res.get("is_updated") and res.get("event"):
+            await manager.broadcast_event_updated(res["event"], res.get("changes"))
     return {
         "processed": len(results),
         "created": sum(1 for r in results if r["status"] == "created"),
@@ -517,7 +552,11 @@ async def api_run_scrape_now(target: Optional[str] = Query(None, description="Op
 
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
-        new_count = await run_scrape_cycle(target_slug_or_id=target, on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(
+            target_slug_or_id=target,
+            on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
+        )
         await asyncio.to_thread(backup_state_to_git, "API VM crawl")
         await manager.broadcast_to_all(
             {
@@ -553,6 +592,8 @@ async def process_single_post_url(url: str) -> Dict[str, Any]:
             msg = f"Event found: '{ev_title}' (fanpage link could not be resolved)."
 
         await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
+        if result.get("status") == "updated" and result.get("event"):
+            await manager.broadcast_event_updated(result["event"], result.get("changes"))
         if result.get("post") and fp:
             await manager.send_to_user(
                 "__public__",
@@ -1459,6 +1500,11 @@ ngrok-skip-browser-warning: true
           loadFanpages();
           loadDirectoryTree();
         } else if (msg.event === 'inbox_updated') {
+          loadInboxMessages();
+          loadDirectoryTree();
+        } else if (msg.event === 'event_updated') {
+          const title = (msg.event_data && msg.event_data.title) || `Event #${msg.event_id || ''}`;
+          document.getElementById('status').textContent = `Event updated: ${title}`;
           loadInboxMessages();
           loadDirectoryTree();
         } else if (msg.event === 'status' || msg.event === 'error') {
