@@ -456,9 +456,9 @@ Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
 """
 
 
-def _build_playwright_proxy() -> Optional[Dict[str, str]]:
-    """Build Playwright proxy dict from FB_PROXY_URL (e.g. http://user:pass@host:port or socks5://host:port)."""
-    raw = os.environ.get("FB_PROXY_URL", "").strip()
+def _build_playwright_proxy(proxy_url_override: Optional[str] = None) -> Optional[Dict[str, str]]:
+    """Build Playwright proxy dict from FB_PROXY_URL or override (e.g. http://user:pass@host:port or socks5://host:port)."""
+    raw = (proxy_url_override or os.environ.get("FB_PROXY_URL", "")).strip()
     if not raw:
         return None
     if "://" not in raw:
@@ -477,7 +477,7 @@ def _build_playwright_proxy() -> Optional[Dict[str, str]]:
     return proxy
 
 
-async def _launch_browser(p: Any) -> Browser:
+async def _launch_browser(p: Any, proxy_url_override: Optional[str] = None) -> Browser:
     launch_kwargs: Dict[str, Any] = {
         "headless": True,
         "args": [
@@ -486,10 +486,74 @@ async def _launch_browser(p: Any) -> Browser:
             "--no-sandbox",
         ],
     }
-    proxy_cfg = _build_playwright_proxy()
+    proxy_cfg = _build_playwright_proxy(proxy_url_override=proxy_url_override)
     if proxy_cfg:
+        has_auth = "yes" if proxy_cfg.get("username") else "no"
+        print(f"[scraper] Playwright proxy enabled: {proxy_cfg.get('server')} (auth: {has_auth})")
         launch_kwargs["proxy"] = proxy_cfg
     return await p.chromium.launch(**launch_kwargs)
+
+
+async def test_facebook_proxy(proxy_url: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Test residential proxy connectivity:
+    1. Checks public outbound IP via https://api.ipify.org
+    2. Opens https://www.facebook.com to check accessibility
+    Returns dict with test status, outbound IP, latency, and any error message.
+    """
+    import time
+
+    proxy_cfg = _build_playwright_proxy(proxy_url)
+    if not proxy_cfg and not proxy_url:
+        return {
+            "success": False,
+            "error": "No proxy configured. Please set FB_PROXY_URL in .env or provide a proxy URL.",
+            "public_ip": None,
+            "latency_ms": None,
+        }
+
+    start_time = time.time()
+    try:
+        async with async_playwright() as p:
+            browser = await _launch_browser(p, proxy_url_override=proxy_url)
+            try:
+                context = await _new_stealth_context(browser)
+                page = await context.new_page()
+
+                # 1. Fetch public IP
+                public_ip = "Unknown"
+                try:
+                    res = await page.goto("https://api.ipify.org?format=json", timeout=15000)
+                    if res and res.status == 200:
+                        body = json.loads(await res.text())
+                        public_ip = body.get("ip", "Unknown")
+                except Exception as ip_err:
+                    public_ip = f"Failed to query IP: {ip_err}"
+
+                # 2. Check Facebook accessibility
+                fb_res = await page.goto("https://www.facebook.com", timeout=25000, wait_until="domcontentloaded")
+                fb_status = fb_res.status if fb_res else None
+                elapsed_ms = round((time.time() - start_time) * 1000, 1)
+
+                return {
+                    "success": True,
+                    "proxy_server": proxy_cfg.get("server") if proxy_cfg else None,
+                    "public_ip": public_ip,
+                    "fb_status": fb_status,
+                    "latency_ms": elapsed_ms,
+                    "error": None,
+                }
+            finally:
+                await browser.close()
+    except Exception as exc:
+        elapsed_ms = round((time.time() - start_time) * 1000, 1)
+        return {
+            "success": False,
+            "proxy_server": proxy_cfg.get("server") if proxy_cfg else None,
+            "public_ip": None,
+            "latency_ms": elapsed_ms,
+            "error": str(exc),
+        }
 
 
 async def _new_stealth_context(browser: Browser) -> BrowserContext:

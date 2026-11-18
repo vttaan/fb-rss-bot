@@ -39,6 +39,7 @@ jobs:
       GEMINI_CALL_DELAY_SECONDS: "3.0"
       GEMINI_MAX_RETRIES: "3"
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+      FB_PROXY_URL: ${{ secrets.FB_PROXY_URL }}
 
     steps:
       - name: Checkout repository
