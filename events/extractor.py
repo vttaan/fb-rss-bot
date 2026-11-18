@@ -536,6 +536,66 @@ def _gemini_generate_url(model: str) -> str:
     return GEMINI_URL.format(model=model)
 
 
+def _resolve_gemini_proxy_url() -> Optional[str]:
+    """Return proxy URL for Gemini API calls (GEMINI_PROXY_URL, falling back to FB_PROXY_URL).
+    Set GEMINI_PROXY_URL=direct or none to bypass proxy for Gemini."""
+    explicit = os.environ.get("GEMINI_PROXY_URL", "").strip()
+    if explicit.lower() in ("none", "direct", "off", "false"):
+        return None
+    raw = explicit or os.environ.get("FB_PROXY_URL", "").strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"http://{raw}"
+    return raw
+
+
+def _gemini_urlopen_json(
+    url: str,
+    *,
+    method: str = "GET",
+    headers: Optional[Dict[str, str]] = None,
+    data: Optional[bytes] = None,
+    timeout: float = 30.0,
+) -> Dict[str, Any]:
+    """Execute a Gemini HTTP request (routing via GEMINI_PROXY_URL/FB_PROXY_URL if set) and return parsed JSON."""
+    import io
+
+    req_headers = dict(headers or {})
+    proxy_url = _resolve_gemini_proxy_url()
+    if proxy_url:
+        try:
+            import httpx
+
+            with httpx.Client(proxy=proxy_url, timeout=timeout) as client:
+                resp = client.request(method, url, headers=req_headers, content=data)
+                if resp.status_code >= 400:
+                    raise urllib.error.HTTPError(
+                        url,
+                        resp.status_code,
+                        resp.reason_phrase or f"HTTP {resp.status_code}",
+                        resp.headers,  # type: ignore[arg-type]
+                        io.BytesIO(resp.content),
+                    )
+                return resp.json()
+        except ImportError as imp_exc:
+            if proxy_url.startswith("socks"):
+                raise RuntimeError(
+                    f"SOCKS proxy configured ({proxy_url}) but httpx[socks] is not installed. "
+                    "Run: pip install 'httpx[socks]'"
+                ) from imp_exc
+        except Exception as exc:
+            if isinstance(exc, urllib.error.HTTPError):
+                raise
+            if exc.__class__.__module__.startswith("httpx"):
+                raise urllib.error.URLError(str(exc)) from exc
+            raise
+
+    req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
     """Dynamically query Google Gemini API to fetch active Gemini 3.x / 2.5 / 2.x generateContent models.
 
@@ -552,13 +612,12 @@ def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
     discovered: List[str] = []
     excluded_tokens = ("-tts", "-image", "-audio", "robotics", "computer-use", "deep-research", "embedding")
     try:
-        req = urllib.request.Request(
+        data = _gemini_urlopen_json(
             GEMINI_LIST_MODELS_URL,
-            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
             method="GET",
+            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
+            timeout=8,
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
         for item in data.get("models", []):
             name = item.get("name") or ""
             model_id = name.replace("models/", "").strip()
@@ -671,15 +730,14 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
         }
     ).encode("utf-8")
 
-    req = urllib.request.Request(
-        GEMINI_CACHED_CONTENTS_URL,
-        data=payload_bytes,
-        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        data = _gemini_urlopen_json(
+            GEMINI_CACHED_CONTENTS_URL,
+            method="POST",
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            data=payload_bytes,
+            timeout=20,
+        )
         cache_name = data.get("name")
         if isinstance(cache_name, str) and cache_name.strip():
             _CACHED_SYSTEM_HANDLES[cache_key] = (cache_name.strip(), now + ttl_s)
@@ -984,15 +1042,14 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
             cache_key = _cache_scope_key(model, active_key)
             for attempt in range(GEMINI_MAX_RETRIES + 1):
                 body_bytes = _build_gemini_request_body(user_text, model, active_key)
-                req = urllib.request.Request(
-                    _gemini_generate_url(model),
-                    data=body_bytes,
-                    headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
-                    method="POST",
-                )
                 try:
-                    with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
-                        payload = json.loads(resp.read().decode("utf-8"))
+                    payload = _gemini_urlopen_json(
+                        _gemini_generate_url(model),
+                        method="POST",
+                        headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
+                        data=body_bytes,
+                        timeout=GEMINI_REQUEST_TIMEOUT_SECONDS,
+                    )
                     _WORKING_GEMINI_MODEL = model
                     # Advance round-robin pointer so the next extraction uses the next key in the pool
                     pool.advance()
