@@ -513,10 +513,11 @@ def looks_event_related(content: str) -> bool:
 
 
 FALLBACK_GEMINI_MODELS = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
     "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
 # In-memory registry of active Gemini cachedContents handles per model:
@@ -528,20 +529,28 @@ _CACHE_UNSUPPORTED_MODELS: set[str] = set()
 _CACHED_GEMINI_V2_MODELS: Dict[str, List[str]] = {}
 
 
+def _gemini_generate_url(model: str) -> str:
+    """Build generateContent URL for standard `models/...` or fine-tuned `tunedModels/...`."""
+    if model.startswith("tunedModels/"):
+        return f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent"
+    return GEMINI_URL.format(model=model)
+
+
 def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
-    """Dynamically query Google Gemini API to fetch available models and select those starting with 2.
+    """Dynamically query Google Gemini API to fetch active Gemini 3.x / 2.5 / 2.x generateContent models.
 
     Prevents HTTP 404 (model not found) by ensuring we only request active models enabled for this key.
     """
     global _CACHED_GEMINI_V2_MODELS
     if not api_key:
-        return [m for m in FALLBACK_GEMINI_MODELS if "2" in m]
+        return list(FALLBACK_GEMINI_MODELS)
 
     key_hash = api_key[-8:] if len(api_key) > 8 else api_key
     if key_hash in _CACHED_GEMINI_V2_MODELS:
         return _CACHED_GEMINI_V2_MODELS[key_hash]
 
-    discovered_v2: List[str] = []
+    discovered: List[str] = []
+    excluded_tokens = ("-tts", "-image", "-audio", "robotics", "computer-use", "deep-research", "embedding")
     try:
         req = urllib.request.Request(
             GEMINI_LIST_MODELS_URL,
@@ -556,31 +565,41 @@ def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
             methods = item.get("supportedGenerationMethods") or []
             if "generateContent" not in methods:
                 continue
-
-            version = str(item.get("version") or "")
-            # Filter for models starting with 2 (e.g. gemini-2.*, version 2.*)
-            if model_id.startswith("gemini-2") or version.startswith("2") or model_id.startswith("2"):
-                discovered_v2.append(model_id)
+            low = model_id.lower()
+            if any(tok in low for tok in excluded_tokens):
+                continue
+            if low.startswith(("gemini-3", "gemini-2.5", "gemini-2")):
+                discovered.append(model_id)
     except Exception:
         pass
 
-    # Sort to prioritize flash-lite (lightweight/fast/reliable free tier), then flash, then others
-    def _rank_v2(m_name: str) -> int:
+    # Sort to prioritize 3.1 flash-lite, 2.5 flash-lite, 2.5 flash, then 2.0 fallbacks
+    def _rank_model(m_name: str) -> Tuple[int, int]:
         n = m_name.lower()
+        ver_rank = 3
+        if n.startswith("gemini-3.1"):
+            ver_rank = 0
+        elif n.startswith("gemini-3"):
+            ver_rank = 1
+        elif n.startswith("gemini-2.5"):
+            ver_rank = 2
+        elif n.startswith("gemini-2"):
+            ver_rank = 4
+
+        tier_rank = 2
         if "flash-lite" in n:
-            return 0
-        if "flash" in n:
-            return 1
-        return 2
+            tier_rank = 0
+        elif "flash" in n:
+            tier_rank = 1
+        return (ver_rank, tier_rank)
 
-    discovered_v2.sort(key=_rank_v2)
+    discovered.sort(key=_rank_model)
 
-    # Fallback to curated 2.x list if network discovery failed
-    if not discovered_v2:
-        discovered_v2 = [m for m in FALLBACK_GEMINI_MODELS if "2" in m] or FALLBACK_GEMINI_MODELS
+    if not discovered:
+        discovered = list(FALLBACK_GEMINI_MODELS)
 
-    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered_v2
-    return discovered_v2
+    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered
+    return discovered
 
 
 def _candidate_gemini_models(api_key: str = "") -> List[str]:
@@ -598,6 +617,8 @@ def _candidate_gemini_models(api_key: str = "") -> List[str]:
     candidates: List[str] = []
     if raw and not raw.lower().startswith(retired_prefixes):
         candidates.append(raw)
+        if raw.lower() == "gemini-3.1-flash-lite" and "gemini-3.1-flash-lite-preview" not in candidates:
+            candidates.append("gemini-3.1-flash-lite-preview")
 
     for m in v2_models:
         if m not in candidates:
@@ -624,7 +645,12 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
     `system_instruction` without extra round-trips.
     """
     cache_key = _cache_scope_key(model, api_key)
-    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or cache_key in _CACHE_UNSUPPORTED_MODELS:
+    if (
+        not GEMINI_ENABLE_CONTEXT_CACHE
+        or not api_key
+        or model.startswith("tunedModels/")
+        or cache_key in _CACHE_UNSUPPORTED_MODELS
+    ):
         return None
 
     now = time.time()
@@ -959,7 +985,7 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
             for attempt in range(GEMINI_MAX_RETRIES + 1):
                 body_bytes = _build_gemini_request_body(user_text, model, active_key)
                 req = urllib.request.Request(
-                    GEMINI_URL.format(model=model),
+                    _gemini_generate_url(model),
                     data=body_bytes,
                     headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
                     method="POST",
@@ -979,7 +1005,13 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
                         _CACHE_UNSUPPORTED_MODELS.add(cache_key)
                         continue
                     if exc.code in (400, 404):
-                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
+                        err_detail = ""
+                        try:
+                            err_detail = exc.read().decode("utf-8", errors="ignore").strip().replace("\n", " ")[:180]
+                        except Exception:
+                            pass
+                        detail_suffix = f" [{err_detail}]" if err_detail else ""
+                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}){detail_suffix}; trying next fallback model...")
                         break
                     if exc.code == 403:
                         print(f"[events] Gemini {pool.key_label(active_key)} returned HTTP 403 Forbidden ({exc.reason}).")
@@ -1114,7 +1146,7 @@ def call_gemini_batch(
     return None
 
 
-def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
+def call_gemini(post: Post, fanpage_name: str, api_key: str = "") -> Optional[Dict[str, Any]]:
     pub = post.published_at.isoformat() if post.published_at else "unknown"
     return call_gemini_text(post.content or "", pub, fanpage_name, api_key)
 
