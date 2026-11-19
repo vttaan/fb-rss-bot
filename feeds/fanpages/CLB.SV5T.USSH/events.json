@@ -1,0 +1,42 @@
+{
+  "fanpage": {
+    "name": "CLB Sinh Viên Năm Tốt - USSH",
+    "url": "https://www.facebook.com/CLB.SV5T.USSH",
+    "slug": "CLB.SV5T.USSH"
+  },
+  "updated_at": "2026-11-19T21:16:14.224179+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "1492128506453735",
+      "post_url": "https://www.facebook.com/CLB.SV5T.USSH/posts/pfbid02jbSXgKhYxr1FnyLnbZtVuZ5p4egt4zh5NGW57vz3KC8FPcau41Rtau2wVwXK9iu4l",
+      "posted_at": "2026-11-19T19:49:47",
+      "reason": "The post announces an active online minigame with specified participation dates, rules, registration form, and certificate benefits.",
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia minigame 'GIỮ MÙA PHẤN' nhân ngày Nhà giáo Việt Nam 20/11 để cùng ôn lại kỷ niệm thời học sinh, giải ô chữ và gửi gắm lòng tri ân đến thầy cô. Người tham gia hoàn thành đầy đủ các bước theo thể lệ và điền form xác minh sẽ nhận được Giấy chứng nhận hỗ trợ cho việc xét Điểm rèn luyện (ĐRL).",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T20:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến tại fanpage CLB Sinh Viên Năm Tốt - USSH",
+      "organizer": "CLB Sinh Viên Năm Tốt - USSH",
+      "reg_end_datetime": "2026-11-25T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:00+07:00",
+      "registration_url": "https://docs.google.com/forms/d/e/1FAIpQLSdeA2k2_FNr_neAfHeeBbFy_kISzIHNmHP_eFZhY0v6gqLVSg/viewform",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "MINIGAME 20/11 | GIỮ MÙA PHẤN - GÓI TRỌN YÊU THƯƠNG, GỬI NGÀN TRI ÂN",
+      "start_datetime": "2026-11-19T20:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    }
+  ]
+}

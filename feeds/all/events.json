@@ -1,8 +1,8 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-19T20:58:15.376724+07:00",
-  "count": 27,
+  "updated_at": "2026-11-19T21:16:14.175429+07:00",
+  "count": 28,
   "events": [
     {
       "event_id": 5,
@@ -807,6 +807,57 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
           "posted_at": "2026-11-19T20:00:04",
           "seen_at": "2026-11-19T20:57:41.495033+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 28,
+      "title": "MINIGAME 20/11 | GIỮ MÙA PHẤN - GÓI TRỌN YÊU THƯƠNG, GỬI NGÀN TRI ÂN",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-19",
+      "time": "20:00",
+      "start_datetime": "2026-11-19T20:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T20:00:00+07:00",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:00+07:00",
+      "reg_end_datetime": "2026-11-25T23:59:00+07:00",
+      "location": "Trực tuyến tại fanpage CLB Sinh Viên Năm Tốt - USSH",
+      "source_type": "facebook",
+      "source_id": "1492128506453735",
+      "fanpage_id": 16,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T21:16:14.071992+07:00",
+      "updated_at": "2026-11-19T21:16:14.071992+07:00",
+      "description": "Tham gia minigame 'GIỮ MÙA PHẤN' nhân ngày Nhà giáo Việt Nam 20/11 để cùng ôn lại kỷ niệm thời học sinh, giải ô chữ và gửi gắm lòng tri ân đến thầy cô. Người tham gia hoàn thành đầy đủ các bước theo thể lệ và điền form xác minh sẽ nhận được Giấy chứng nhận hỗ trợ cho việc xét Điểm rèn luyện (ĐRL).",
+      "organizer": "CLB Sinh Viên Năm Tốt - USSH",
+      "registration_url": "https://docs.google.com/forms/d/e/1FAIpQLSdeA2k2_FNr_neAfHeeBbFy_kISzIHNmHP_eFZhY0v6gqLVSg/viewform",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/CLB.SV5T.USSH/posts/pfbid02jbSXgKhYxr1FnyLnbZtVuZ5p4egt4zh5NGW57vz3KC8FPcau41Rtau2wVwXK9iu4l",
+      "posted_at": "2026-11-19T19:49:47+07:00",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1492128506453735",
+          "fanpage_id": 16,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/CLB.SV5T.USSH/posts/pfbid02jbSXgKhYxr1FnyLnbZtVuZ5p4egt4zh5NGW57vz3KC8FPcau41Rtau2wVwXK9iu4l",
+          "posted_at": "2026-11-19T19:49:47+07:00",
+          "seen_at": "2026-11-19T21:16:14.071992+07:00"
         }
       ],
       "update_history": []
