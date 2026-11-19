@@ -4,7 +4,119 @@
     "url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS",
     "slug": "DK.LCH.ToanTinHoc.HCMUS"
   },
-  "updated_at": "2026-11-19T20:01:18.531134+07:00",
-  "count": 0,
-  "events": []
+  "updated_at": "2026-11-19T20:58:15.382721+07:00",
+  "count": 3,
+  "events": [
+    {
+      "post_id": "1483387247284689",
+      "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid0uAmvi7Rh9uhxewtgpWUbRyC9XeUwbGTje59Z3xie5rMYguLGYtZ9DvDo3jS2w48Vl",
+      "posted_at": "2026-11-17T18:13:19",
+      "reason": "The post announces an upcoming physical workshop on time management with a registration link and specific event schedule.",
+      "category": [
+        "workshop",
+        "hướng nghiệp",
+        "học thuật"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia workshop về 'Quản lý thời gian' để nhận diện thói quen sử dụng thời gian, học cách sắp xếp công việc và xây dựng kế hoạch cá nhân hiệu quả, đồng thời nhận Giấy chứng nhận Kỹ năng phục vụ xét danh hiệu Sinh viên 5 Tốt.",
+      "event_end_datetime": "2026-11-22T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T13:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Phòng E104, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM, Cơ sở 02",
+      "organizer": "Câu lạc bộ Kỹ năng, Liên Chi Hội khoa Vật lý - Vật lý Kỹ thuật và Đoàn Khoa Toán - Tin học",
+      "reg_end_datetime": "2026-11-22T13:30:00+07:00",
+      "reg_start_datetime": "2026-11-17T18:13:19+07:00",
+      "registration_url": "https://forms.gle/5d8ttXxQMwBTSMNNA",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "[WORKSHOP: “QUẢN LÝ THỜI GIAN”]",
+      "start_datetime": "2026-11-22T13:30:00+07:00",
+      "end_datetime": "2026-11-22T23:59:00+07:00",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "reg_start_datetime": {
+          "old": "2026-11-17T18:00:03",
+          "new": "2026-11-17T18:13:19+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-11-22T13:30:00+07:00"
+        },
+        "fee": {
+          "old": null,
+          "new": "miễn phí"
+        }
+      }
+    },
+    {
+      "post_id": "1475775401379207",
+      "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid034VN686Tw9qdZqjU98VRQSxQhaLStSSW2ubNmqLcGvhmcW6FGMR83FcFvKaAGQeS7l",
+      "posted_at": "2026-11-12T20:00:01",
+      "reason": "The post announces an upcoming chess tournament open for student registration with a specified deadline and registration link to celebrate Vietnamese Teachers' Day.",
+      "category": [
+        "thể thao",
+        "cộng đồng"
+      ],
+      "format": [
+        "cá nhân",
+        "thi",
+        "offline"
+      ],
+      "description": "USCC Teacher Appreciation Tournament 2026 là giải đấu cờ dành cho sinh viên giao lưu, thử sức và gửi lời tri ân đến các thầy cô nhân dịp Ngày Nhà giáo Việt Nam 20/11. Người tham gia có cơ hội tranh tài, thể hiện bản lĩnh qua từng nước cờ và nhận những trải nghiệm ý nghĩa.",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-12T20:00:01+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "HCMUS",
+      "organizer": "USCC - Câu lạc bộ Cờ Khoa Toán - Tin học HCMUS",
+      "reg_end_datetime": "2026-11-13T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-12T20:00:01+07:00",
+      "registration_url": "https://go.hcmuschess.edu.vn/tat2026-register",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "[USCC | TEACHER APPRECIATION TOURNAMENT 2026]",
+      "start_datetime": "2026-11-12T20:00:01+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1484022483887832",
+      "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid0PqAyELuEE6yxmBcswCvH5RGz3ALrPHBHdV4pWKmYpp2n2nab6avD4bzRNjbvRD8Tl",
+      "posted_at": "2026-11-18T10:00:08",
+      "reason": "The post announces an upcoming cultural exploration activity with a specific date, time, venue, and registration link for students.",
+      "category": [
+        "cộng đồng",
+        "ngày hội"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Hoạt động 'Tìm hiểu Giọt vàng di sản' tạo cơ hội cho sinh viên khám phá lịch sử Nhà trưng bày Nước mắm Liên Thành và tìm hiểu nghề làm nước mắm truyền thống. Sinh viên tham gia đầy đủ sẽ được ghi nhận hoạt động.",
+      "event_end_datetime": "2025-11-21T11:45:00+07:00",
+      "event_start_datetime": "2025-11-21T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà trưng bày Nước mắm Liên Thành - 231 Bến Vân Đồn, Vĩnh Hội, Thành phố Hồ Chí Minh",
+      "organizer": "Ban Chấp hành Liên chi Hội khoa Toán - Tin học",
+      "reg_end_datetime": "2025-11-21T08:00:00+07:00",
+      "reg_start_datetime": "2025-11-18T10:00:08+07:00",
+      "registration_url": "https://forms.gle/riz5uzPbYXTzv5a39",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "HOẠT ĐỘNG “TÌM HIỂU GIỌT VÀNG DI SẢN”",
+      "start_datetime": "2025-11-21T08:00:00+07:00",
+      "end_datetime": "2025-11-21T11:45:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    }
+  ]
 }

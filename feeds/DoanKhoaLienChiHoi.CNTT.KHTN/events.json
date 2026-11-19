@@ -4,7 +4,40 @@
     "url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN",
     "slug": "DoanKhoaLienChiHoi.CNTT.KHTN"
   },
-  "updated_at": "2026-11-19T20:01:18.527299+07:00",
-  "count": 0,
-  "events": []
+  "updated_at": "2026-11-19T20:58:15.381616+07:00",
+  "count": 1,
+  "events": [
+    {
+      "post_id": "1158974969992018",
+      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02bqVf66YzF3Vdygf4AXceWKtzbtCoqkrZCyddyud1r1hr27MNHGVo1jwgk6iaWWNal",
+      "posted_at": "2026-11-16T11:59:40",
+      "reason": "The post announces an upcoming talkshow session with a specific registration link and event schedule for students.",
+      "category": [
+        "tọa đàm",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Chương trình talkshow trang bị kỹ năng phòng tránh lừa đảo trực tuyến, nhận diện các thủ đoạn giả mạo học bổng, việc làm và cơ quan chức năng dành cho sinh viên, giúp nâng cao ý thức pháp luật và bảo vệ bản thân.",
+      "event_end_datetime": "2026-11-14T11:30:00+07:00",
+      "event_start_datetime": "2026-11-14T08:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Hội trường B, cơ sở Đông Hòa",
+      "organizer": "Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "reg_end_datetime": "2026-11-14T08:30:00+07:00",
+      "reg_start_datetime": "2026-11-16T11:59:40+07:00",
+      "registration_url": "https://link.hcmus.edu.vn/talkshowBLKXTTDKS-1411",
+      "target_audience": [
+        "sinh viên CNTT",
+        "sinh viên"
+      ],
+      "title": "Talkshow “Bẫy lừa không xa – Tỉnh táo để không sa”",
+      "start_datetime": "2026-11-14T08:30:00+07:00",
+      "end_datetime": "2026-11-14T11:30:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    }
+  ]
 }

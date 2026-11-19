@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-19T20:01:18.545414+07:00",
-  "count": 3,
+  "updated_at": "2026-11-19T20:58:15.386213+07:00",
+  "count": 6,
   "events": [
     {
       "post_id": "1559625076190454",
@@ -56,6 +56,105 @@
       "reg_end_datetime": "2026-11-24T00:00:00+07:00",
       "registration_url": "https://q.me-qr.com/fvc8fqlm",
       "registration_status": "qr",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559865309499764",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
+      "posted_at": "2026-11-19T18:00:04",
+      "reason": "The post announces an upcoming talkshow with a specific schedule, location, and registration link for students.",
+      "category": [
+        "tọa đàm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Talkshow “Từ bản làng đến giảng đường” để lắng nghe những chia sẻ về hành trình gắn bó với giáo dục, văn hóa và cộng đồng, giúp người trẻ hiểu rõ hơn về giá trị của tri thức và cội nguồn. Người tham gia sẽ được cấp Giấy chứng nhận và có cơ hội nhận quà hấp dẫn từ Ban Tổ chức.",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T18:00:04+07:00",
+      "registration_url": "https://forms.gle/TaHKwk9MkbW5vwXS7",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "TALKSHOW “TỪ BẢN LÀNG ĐẾN GIẢNG ĐƯỜNG”",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559917579494537",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02zDZpYEyJgZkksYYJ3NEguJChmoHppF2uwayADKfgoEGBhNh5h1nb3waxsG71MLZvl",
+      "posted_at": "2026-11-19T19:00:05",
+      "reason": "The post announces an upcoming workshop with explicit time, venue, registration link, and participation benefits.",
+      "category": [
+        "workshop",
+        "học thuật",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên” để cập nhật kiến thức thực tiễn về kinh tế tuần hoàn và nhận ngay vé xem phim, túi tote giới hạn cùng giấy chứng nhận điểm rèn luyện.",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "reg_start_datetime": "2026-11-19T19:00:05+07:00",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559974292822199",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+      "posted_at": "2026-11-19T20:00:04",
+      "reason": "The post announces an active online cultural exploration and sharing challenge with specific participation instructions, form submission, and a set timeline.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 10 khám phá tỉnh Quảng Ninh bằng cách bình luận những hiểu biết, thông tin hoặc cảm nhận về địa danh, di sản và ẩm thực của địa phương. Người tham gia hoàn thành từ 18/35 bài đăng trong series sẽ đủ điều kiện nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T20:00:04+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Online",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:04+07:00",
+      "registration_url": "https://forms.gle/yg9dTNf6e1nyQx9s9",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
+      "start_datetime": "2026-11-19T20:00:04+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
+      "registration_status": "link",
       "dedup_status": "created"
     },
     {
