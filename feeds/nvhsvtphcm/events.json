@@ -4,36 +4,85 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-19T08:01:01.241448+07:00",
-  "count": 1,
+  "updated_at": "2026-11-19T15:25:37.080469+07:00",
+  "count": 3,
   "events": [
     {
-      "post_id": "1555862486566713",
-      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid027nGBZQSeBCE4EXAZPhHGpk5oNf6VaQt65VLh5zSY3gbEg9cRiMrEUcLqZqGcACqLl",
-      "posted_at": "2026-11-15T19:30:10",
-      "reason": "qualified:strong_event_signal (ngay hoi van hoa)",
-      "title": "🇻🇳 [CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [6]: VĨNH LONG",
-      "description": "Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Vĩnh Long (bao gồm: thưởng thức âm vang Đờn ca tài tử Nam Bộ, hương vị thanh ngọt của Bưởi Năm Roi, món cá tai tượng chiên xù trứ danh, sự đa dạng bởi các món được làm từ dừa đặc biệt là kẹo dừa Bến Tre, đời sống gắn kết của đồng bào dân tộc Kinh và Khmer, không gian linh thiêng tại Lễ hội Vu lan Thắng hội và Chùa Âng, cùng vẻ đẹp hữu tình của Cù lao An Bình) và chia sẻ những thông tin, hiểu biế...",
-      "event_start_datetime": "2026-11-15T00:00:00+07:00",
-      "event_end_datetime": "2026-11-15T23:59:00+07:00",
-      "start_datetime": "2026-11-15T00:00:00+07:00",
-      "end_datetime": "2026-11-15T23:59:00+07:00",
-      "reg_start_datetime": null,
-      "reg_end_datetime": null,
-      "location": null,
-      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
-      "registration_url": "https://forms.gle/sEFX9qDcgjnVfRGQ9",
-      "fee": null,
-      "is_online": null,
-      "target_audience": [
-        "sinh viên"
-      ],
+      "post_id": "1559625076190454",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029LULvz3zCuU53PHQdrFqf9kCvEsH8trJhdxjk8nttkPguna6YHbAgeCkRzHJgwX2l",
+      "posted_at": "2026-11-19T13:00:08",
+      "reason": "The post announces an upcoming career-oriented unitour event series at three universities with specific dates, locations, and a registration link for students to participate in 1:1 career counseling and skill-building activities.",
       "category": [
+        "hướng nghiệp",
         "ngày hội"
       ],
-      "format": [],
+      "format": [
+        "offline",
+        "chạy trạm"
+      ],
+      "title": "UNITOUR BẢN NHÁP PHÁC NGHỀ 2026 | ĐO ĐỎ CHÍNH THỨC KHỞI ĐỘNG BƯỚC XUẤT NHÁP 📁",
+      "description": "Chuỗi sự kiện tương tác \"Bản Nháp Phác Nghề\" chính thức cập bến 3 trường Đại học tại TP.HCM với 5 trạm trải nghiệm thực tế. Trạm 2 – Trải nghiệm Web-App: Test CRI và hoàn thiện profile để đối thoại cùng các nhà cố vấn.",
+      "location": "20 Cộng Hòa, Bảy Hiền, TP.HCM.",
+      "event_start_datetime": "2026-11-25T11:00:00+07:00",
+      "event_end_datetime": "2026-11-25T15:00:00+07:00",
+      "start_datetime": "2026-11-25T11:00:00+07:00",
+      "end_datetime": "2026-11-25T15:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T13:00:08",
+      "reg_end_datetime": "2026-11-25T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559710036181958",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid07RJChtdaZSZo9btUAPq292y3g1xgB1zMTz3DwYcYLNxhXbi7BmguqBecPp2yP1eRl",
+      "posted_at": "2026-11-19T15:00:17",
+      "reason": "The post announces an upcoming workshop for students with a specific date, time, location, and registration link.",
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "title": "Workshop “Văn hóa của người trẻ trong bối cảnh số – Từ cách nghĩ đến cách sống”",
+      "description": "Tham gia Workshop, bạn sẽ được. Khám phá những biểu hiện của văn hóa trong suy nghĩ, lời nói, thái độ và hành động thường ngày. Trong thời đại số, văn hóa không chỉ thể hiện qua trang phục, lễ hội hay các loại hình nghệ thuật, mà còn hiện diện trong từng lời nói, thái độ và cách chúng ta tương tác với thế giới xung quanh. Từ cách bình luận trên mạng xã hội, ứng xử nơi công cộng đến sự tôn trọng những khác biệt, liệu người trẻ đã thực sự ý thức đư...",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T15:00:17",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_url": "https://q.me-qr.com/fvc8fqlm",
+      "registration_status": "qr",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559666996186262",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0TGbCER3hS3ifyVxoQKzoRsEztjm3mfram1vW4bECJ7YdGppYfqmhQTMF4zqaCaXWl",
+      "posted_at": "2026-11-19T14:00:14",
+      "reason": "The post launches an active online minigame challenge with specific participation requirements, a registration form, and a deadline for students to participate.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân",
+        "thi"
+      ],
+      "description": "This is the second minigame in a series organized by the Student Cultural House of Ho Chi Minh City to celebrate Vietnamese Cultural Day. Participants will test their knowledge of traditional Vietnamese folk dances through a series of questions, with the opportunity to receive an electronic certificate upon completing all three minigames in the series.",
+      "event_start_datetime": "2026-11-19T00:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T00:00:00+07:00",
+      "registration_url": "https://forms.gle/8xPT8pRyZdQFtj5K8",
+      "title": "[MINIGAME 02 | CHÀO MỪNG NGÀY HỘI VĂN HÓA VIỆT NAM] LAN TỎA TINH HOA - KHÁM PHÁ VẺ ĐẸP NGHỆ THUẬT TRUYỀN THỐNG 🇻🇳",
+      "event_end_datetime": "2026-11-19T23:59:00+07:00",
+      "start_datetime": "2026-11-19T00:00:00+07:00",
+      "end_datetime": "2026-11-19T23:59:00+07:00",
+      "reg_end_datetime": "2026-11-19T00:00:00+07:00",
       "registration_status": "link",
-      "dedup_status": "duplicate"
+      "dedup_status": "created"
     }
   ]
 }
