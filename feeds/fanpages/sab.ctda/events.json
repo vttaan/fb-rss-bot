@@ -1,48 +1,10 @@
 {
   "fanpage": {
-    "name": "SAB in HCMUS | Ho Chi Minh City",
+    "name": "SAB in HCMUS",
     "url": "https://www.facebook.com/sab.ctda",
     "slug": "sab.ctda"
   },
-  "updated_at": "2026-11-19T08:01:01.229258+07:00",
-  "count": 1,
-  "events": [
-    {
-      "post_id": "1418975406933185",
-      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ijCbGjPH7Pgs2sNZ1oh5rEmiVvNoZcobAdG4EADiKDuiSQ5tQDRbY4exfAWrFmSsl",
-      "posted_at": "2026-05-13T20:00:21+07:00",
-      "is_event": true,
-      "title": "✨ BƯỚC CHÂN YÊU THƯƠNG ✨ - TUYỂN CỘNG TÁC VIÊN TÌNH NGUYỆN",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-05-23",
-      "time": "04:00",
-      "start_datetime": "2026-05-23T04:00:00+07:00",
-      "end_datetime": "2026-05-23T23:59:00+07:00",
-      "reg_start_datetime": null,
-      "reg_end_datetime": null,
-      "location": "Trường THCS Phú Khánh, đường huyện 24, ấp Phú Lợi, xã Đại Điền, tỉnh Vĩnh Long",
-      "description": "Tháng 5 này, Bước Chân Yêu Thương chính thức quay trở lại mang đến chuyến xe đầy ắp tiếng cười, những hoạt động ý nghĩa và cả một mùa hè được viết nên từ những điều tử tế. Nếu bạn đang tìm kiếm một mùa hè đáng nhớ, một hành trình được góp sức mình cho cộng đồng, thì hãy nhanh tay đăng ký để đồng hành cùng tụi mình nhé!. Trong hành trình lần này, tụi mình sẽ cùng nhau thực hiện những hoạt động. Thăm hỏi gia đình chính sách: Trao gửi những phần quà...",
-      "organizer": "SAB in HCMUS",
-      "registration_url": "https://t.sab.edu.vn/bcyt26_form",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": null,
-      "category": [
-        "workshop",
-        "seminar"
-      ],
-      "format": [
-        "offline"
-      ],
-      "input_url": "https://www.facebook.com/share/p/1EDnUf35ue/",
-      "fanpage_name": "SAB in HCMUS",
-      "fanpage_url": "https://www.facebook.com/sab.ctda",
-      "media_urls": [
-        "https://scontent.fsgn2-5.fna.fbcdn.net/v/t39.30808-6/698830219_1418968923600500_5130400885676014343_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x2048&ctp=p526x296&_nc_cat=107&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=NJwDYhj-UlEQ7kNvwEfCetC&_nc_oc=AdoleWTRw0N9wHT9C7PF6F-TorYKAgtYyAa2DodpOpdql00GG8AXd0ozb76LgxlYDMJAfHHoF34tuRExn8HcpdFa&_nc_zt=23&_nc_ht=scontent.fsgn2-5.fna&_nc_gid=yK7SUtyVQoLQo4SfNdwBgw&_nc_ss=78289&oh=00_AQSgXcQTwtbCgSLMYILUiVllJ-ztvmPgJQ71-xnJvdybbw&oe=6AFA394A"
-      ],
-      "extraction_method": "heuristic",
-      "scraped_at": "2026-11-11T19:37:26.857402+07:00"
-    }
-  ]
+  "updated_at": "2026-11-19T14:07:16.596193+07:00",
+  "count": 0,
+  "events": []
 }
