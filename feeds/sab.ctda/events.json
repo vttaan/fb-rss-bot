@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/sab.ctda",
     "slug": "sab.ctda"
   },
-  "updated_at": "2026-11-19T21:16:14.186417+07:00",
-  "count": 12,
+  "updated_at": "2026-11-20T08:09:44.804632+07:00",
+  "count": 13,
   "events": [
     {
       "post_id": "1568433875320670",
@@ -397,6 +397,36 @@
           ]
         }
       }
+    },
+    {
+      "post_id": "1553309656833092",
+      "post_url": "https://www.facebook.com/reel/1047126698321963",
+      "posted_at": "2026-10-09T13:57:54",
+      "reason": "The post announces an active recruitment drive for a student organization with specified application timelines and an interview schedule.",
+      "category": [
+        "hướng nghiệp"
+      ],
+      "format": [
+        "cá nhân"
+      ],
+      "description": "SAB MC is recruiting new members from K25 and K26 students of the Faculty of Information Technology. Participants can register via the online link before the deadline to join the upcoming interview round.",
+      "event_end_datetime": "2026-10-11T23:59:00+07:00",
+      "event_start_datetime": "2026-10-11T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Khoa Công nghệ thông tin",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-10-09T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-03T00:00:00+07:00",
+      "registration_url": "https://go.sabies.vn/sabfresh26",
+      "target_audience": [
+        "sinh viên K25, K26 Khoa Công nghệ thông tin"
+      ],
+      "title": "SAB FRESH 2026",
+      "start_datetime": "2026-10-11T00:00:00+07:00",
+      "end_datetime": "2026-10-11T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
     }
   ]
 }

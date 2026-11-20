@@ -4,9 +4,46 @@
     "url": "https://www.facebook.com/DoanHoiHCMUS",
     "slug": "DoanHoiHCMUS"
   },
-  "updated_at": "2026-11-19T21:16:14.196739+07:00",
-  "count": 2,
+  "updated_at": "2026-11-20T08:09:44.806802+07:00",
+  "count": 3,
   "events": [
+    {
+      "post_id": "1622645323239653",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid07x6Sf3U2Mmt4uAJTG41xYVvkZUTnAUT9XhX9LNDBrM3nZEgGvsgAZG75uSF4K3P1l",
+      "posted_at": "2026-11-20T08:00:10",
+      "reason": "The post announces an upcoming workshop on circular economy with a registration link, scheduled time, venue, and attractive benefits for student attendees.",
+      "category": [
+        "workshop"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia workshop 'Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên' để cập nhật kiến thức chuyên môn và lắng nghe chia sẻ thực tiễn. Sinh viên tham gia sẽ nhận được vé xem phim, túi tote giới hạn, và giấy chứng nhận điểm rèn luyện.",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "reg_start_datetime": "2026-11-20T08:00:10+07:00",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "target_audience": [
+        "học sinh",
+        "sinh viên"
+      ],
+      "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "reg_start_datetime": {
+          "old": "2026-11-19T19:00:05+07:00",
+          "new": "2026-11-20T08:00:10+07:00"
+        }
+      }
+    },
     {
       "post_id": "1621645143339671",
       "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02U1qUMT2HdjfseQmpdLjV5hwGS5NKEKvJJ5V1styfSj9njuTMdHy3uUmi7biWdycWl",
