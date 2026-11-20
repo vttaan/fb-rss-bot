@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-20T08:09:44.813644+07:00",
-  "count": 6,
+  "updated_at": "2026-11-20T14:09:54.428032+07:00",
+  "count": 8,
   "events": [
     {
       "post_id": "1559625076190454",
@@ -121,6 +121,69 @@
       "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
       "start_datetime": "2026-11-21T07:30:00+07:00",
       "end_datetime": "2026-11-21T09:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1560725289413766",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+      "posted_at": "2026-11-20T12:00:02",
+      "reason": "The post announces an upcoming scholarship award ceremony with specific date, time, and venue details for students to attend.",
+      "category": [
+        "học thuật",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Lễ trao học bổng Power On năm học 2026-2027 (Đợt 1) là dịp hội ngộ quan trọng để vinh danh sinh viên, nhìn lại hành trình đã qua và tiếp thêm động lực cho chặng đường mới. Sự kiện diễn ra vào sáng ngày 21/11/2026 tại Bảo tàng Tôn Đức Thắng.",
+      "event_end_datetime": "2026-11-21T11:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Hội trường lầu 3 - Bảo tàng Tôn Đức Thắng (Số 05 Tôn Đức Thắng, phường Sài Gòn, TP. Hồ Chí Minh)",
+      "organizer": "Power On",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T12:00:02+07:00",
+      "registration_url": "https://forms.gle/placeholder",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "LỄ TRAO HỌC BỔNG POWER ON NĂM HỌC 2026-2027 (ĐỢT 1)",
+      "start_datetime": "2026-11-21T07:00:00+07:00",
+      "end_datetime": "2026-11-21T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1560590859427209",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+      "posted_at": "2026-11-20T09:00:04",
+      "reason": "The post announces an active online minigame for November 20th with a participation link and clear deadline.",
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tổ chức minigame nhân Ngày Nhà giáo Việt Nam 20/11, tạo cơ hội cho sinh viên gửi gắm những lời chúc tốt đẹp và lời tri ân chân thành đến các thầy cô giáo.",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Online",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T00:00:00+07:00",
+      "registration_url": "https://forms.gle/6AM7hvtBPpRorRxs5",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[MINIGAME 20/11] GỬI NGÀN LỜI TRI ÂN - TRAO TRỌN YÊU THƯƠNG",
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
     },

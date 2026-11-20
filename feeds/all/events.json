@@ -1,8 +1,8 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-20T08:09:44.803306+07:00",
-  "count": 29,
+  "updated_at": "2026-11-20T14:09:54.416101+07:00",
+  "count": 31,
   "events": [
     {
       "event_id": 5,
@@ -569,6 +569,57 @@
       ]
     },
     {
+      "event_id": 30,
+      "title": "LỄ TRAO HỌC BỔNG POWER ON NĂM HỌC 2026-2027 (ĐỢT 1)",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-21",
+      "time": "07:00",
+      "start_datetime": "2026-11-21T07:00:00+07:00",
+      "end_datetime": "2026-11-21T11:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:00:00+07:00",
+      "event_end_datetime": "2026-11-21T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T12:00:02+07:00",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "location": "Hội trường lầu 3 - Bảo tàng Tôn Đức Thắng (Số 05 Tôn Đức Thắng, phường Sài Gòn, TP. Hồ Chí Minh)",
+      "source_type": "facebook",
+      "source_id": "1560725289413766",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-20T14:08:34.810731+07:00",
+      "updated_at": "2026-11-20T14:08:34.810731+07:00",
+      "description": "Lễ trao học bổng Power On năm học 2026-2027 (Đợt 1) là dịp hội ngộ quan trọng để vinh danh sinh viên, nhìn lại hành trình đã qua và tiếp thêm động lực cho chặng đường mới. Sự kiện diễn ra vào sáng ngày 21/11/2026 tại Bảo tàng Tôn Đức Thắng.",
+      "organizer": "Power On",
+      "registration_url": "https://forms.gle/placeholder",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "học thuật",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+      "posted_at": "2026-11-20T12:00:02",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1560725289413766",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+          "posted_at": "2026-11-20T12:00:02",
+          "seen_at": "2026-11-20T14:08:34.810731+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
       "event_id": 23,
       "title": "WORKSHOP “NÉT SON”",
       "online_mode": "offline",
@@ -776,6 +827,58 @@
           "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02U1qUMT2HdjfseQmpdLjV5hwGS5NKEKvJJ5V1styfSj9njuTMdHy3uUmi7biWdycWl",
           "posted_at": "2026-11-19T10:42:11",
           "seen_at": "2026-11-19T20:47:53.635366+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 31,
+      "title": "[MINIGAME 20/11] GỬI NGÀN LỜI TRI ÂN - TRAO TRỌN YÊU THƯƠNG",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-20",
+      "time": null,
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T00:00:00+07:00",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "location": "Online",
+      "source_type": "facebook",
+      "source_id": "1560590859427209",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-20T14:08:41.253558+07:00",
+      "updated_at": "2026-11-20T14:08:41.253558+07:00",
+      "description": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tổ chức minigame nhân Ngày Nhà giáo Việt Nam 20/11, tạo cơ hội cho sinh viên gửi gắm những lời chúc tốt đẹp và lời tri ân chân thành đến các thầy cô giáo.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/6AM7hvtBPpRorRxs5",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+      "posted_at": "2026-11-20T09:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1560590859427209",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+          "posted_at": "2026-11-20T09:00:04",
+          "seen_at": "2026-11-20T14:08:41.253558+07:00"
         }
       ],
       "update_history": []
