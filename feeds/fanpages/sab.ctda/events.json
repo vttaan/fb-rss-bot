@@ -4,9 +4,72 @@
     "url": "https://www.facebook.com/sab.ctda",
     "slug": "sab.ctda"
   },
-  "updated_at": "2026-11-21T08:07:30.939449+07:00",
-  "count": 13,
+  "updated_at": "2026-11-21T08:28:25.899076+07:00",
+  "count": 14,
   "events": [
+    {
+      "post_id": "1598950125602378",
+      "post_url": "https://www.facebook.com/reel/2392597504878112",
+      "posted_at": "2026-11-20T20:16:42",
+      "reason": "The post provides complete details including time, venue, and structure for the upcoming final round of the Let IT Shine 2026 competition.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "The Final Night of the Let IT Shine 2026 music competition is an opportunity for IT students at the University of Science to showcase their performances, compete for attractive prizes including a 3,000,000 VND Grand Prize, and enjoy a vibrant musical atmosphere.",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T20:16:42+07:00",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "title": "LET IT SHINE 2026 - ĐÊM CHUNG KẾT",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "format": {
+          "old": null,
+          "new": "offline"
+        },
+        "location": {
+          "old": "cơ sở phường Chợ Quán",
+          "new": "Giảng đường 1, cơ sở phường Chợ Quán"
+        },
+        "reg_start_datetime": {
+          "old": "2026-10-19T00:00:00+07:00",
+          "new": "2026-11-20T20:16:42+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-11-22T16:00:00+07:00"
+        },
+        "organizer": {
+          "old": null,
+          "new": "SAB in HCMUS"
+        },
+        "fee": {
+          "old": null,
+          "new": "miễn phí"
+        },
+        "target_audience": {
+          "old": null,
+          "new": [
+            "sinh viên CNTT"
+          ]
+        }
+      }
+    },
     {
       "post_id": "1568433875320670",
       "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0roA1akiEs9i47AQ5NVC4VFrtFexgES5MCWEyW3mTfdEppTFnSYA3CcpLUCidpFz2l",

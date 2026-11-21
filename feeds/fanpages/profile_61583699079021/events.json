@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/profile.php?id=61583699079021",
     "slug": "profile_61583699079021"
   },
-  "updated_at": "2026-11-21T08:07:30.992992+07:00",
-  "count": 3,
+  "updated_at": "2026-11-21T08:28:25.906258+07:00",
+  "count": 6,
   "events": [
     {
       "post_id": "122153827005123302",
@@ -75,6 +75,67 @@
       "dedup_status": "created"
     },
     {
+      "post_id": "122153148621123302",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tGF9Ye931stEEFavWc9hUq2vjMDcYhCfXn42ZohCaVvUWhUtKcZxZhVixtqrWBYNl&id=61583699079021",
+      "posted_at": "2026-07-21T21:20:41",
+      "reason": "The post announces an upcoming esports tournament \"LUNIX 2026\" with specific dates, location, and participation details for students.",
+      "category": [
+        "thể thao",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline",
+        "đồng đội",
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Tham gia giải đấu thể thao điện tử Liên Quân Mobile thuộc khuôn khổ LUNIX 2026 để trải nghiệm những trận đấu 5v5 kịch tính, giao lưu học hỏi và tranh tài giành giải thưởng hấp dẫn cùng cơ hội nhận quà từ minigame khán giả.",
+      "event_end_datetime": "2026-08-02T23:59:00+07:00",
+      "event_start_datetime": "2026-08-01T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở Nguyễn Văn Cừ",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "reg_end_datetime": "2026-08-01T00:00:00+07:00",
+      "reg_start_datetime": "2026-07-21T00:00:00+07:00",
+      "registration_url": "http://bit.ly/LUNIX2026-DieuLeChiTietAOV",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "[🕹️HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026”🕹️]",
+      "start_datetime": "2026-08-01T00:00:00+07:00",
+      "end_datetime": "2026-08-02T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "122153246373123302",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tjf2dWaU35KsYPnsq2dTCsbnKuCfZWn8uH3tJLxKkZs8tcd9q5jk5NxiHRL51q3rl&id=61583699079021",
+      "posted_at": "2026-07-22T19:41:56",
+      "reason": "The post announces an upcoming esports and strategy tournament (LUNIX 2026 - Cờ Caro) open for student registration with specific event dates and location.",
+      "category": [
+        "thể thao",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "LUNIX 2026 là sân chơi thể thao điện tử và đấu trí với bộ môn Cờ Caro dành cho sinh viên, nơi các kỳ thủ tranh tài chiến thuật để giành huy chương và giải thưởng tiền mặt hấp dẫn.",
+      "event_start_datetime": "2026-08-01T00:00:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở Nguyễn Văn Cừ",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "https://tinyurl.com/LUNIX2026-DieuLeChiTietCARO",
+      "title": "[🕹️HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026”🕹️] Cờ Caro (Tic-Tac-Toe)",
+      "event_end_datetime": "2026-08-01T23:59:00+07:00",
+      "start_datetime": "2026-08-01T00:00:00+07:00",
+      "end_datetime": "2026-08-01T23:59:00+07:00",
+      "reg_start_datetime": "2026-07-22T19:41:56",
+      "reg_end_datetime": "2026-08-01T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
       "post_id": "122153448123123302",
       "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02cV4cmpBTbsHNCyxMaks3ZVYgCau33YQbvxFSDEJsz3p2QCnQbGRG25gqAX1JRfpHl&id=61583699079021",
       "posted_at": "2026-07-24T19:48:58",
@@ -99,6 +160,38 @@
       "reg_end_datetime": "2026-08-09T23:59:00+07:00",
       "registration_url": "free",
       "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "122152074765123302",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02AkAN9NjNWZuTPLv2vswXXmBqzq4ucjqi1KNVV67Ru6Vbjn8RogdgkiLJLDiV2LQml&id=61583699079021",
+      "posted_at": "2026-07-12T20:00:09",
+      "reason": "The post announces an upcoming volunteer trip with a specified date, time, and venue.",
+      "category": [
+        "thiện nguyện",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Chương trình thiện nguyện 'Hạ Xanh Hy Vọng' tại Trường Nuôi Dạy Trẻ Mồ Côi Long Hoa nhằm trao gửi quà tặng, sự quan tâm và những khoảnh khắc ấm áp cho các em nhỏ có hoàn cảnh đặc biệt.",
+      "event_end_datetime": "2026-07-20T10:30:00+07:00",
+      "event_start_datetime": "2026-07-20T07:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Trường Nuôi Dạy Trẻ Mồ Côi Long Hoa, 1250/41 Huỳnh Tấn Phát, Phường Tân Mỹ, TP. Hồ Chí Minh",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "HẠ XANH HY VỌNG - CHUYẾN ĐI THIỆN NGUYỆN",
+      "start_datetime": "2026-07-20T07:00:00+07:00",
+      "end_datetime": "2026-07-20T10:30:00+07:00",
+      "reg_start_datetime": "2026-07-12T20:00:09",
+      "reg_end_datetime": "2026-07-20T00:00:00+07:00",
+      "registration_status": "link",
       "dedup_status": "created"
     }
   ]
