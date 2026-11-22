@@ -4,9 +4,40 @@
     "url": "https://www.facebook.com/sab.ctda",
     "slug": "sab.ctda"
   },
-  "updated_at": "2026-11-22T14:30:38.110360+07:00",
-  "count": 14,
+  "updated_at": "2026-11-22T14:39:58.958185+07:00",
+  "count": 15,
   "events": [
+    {
+      "post_id": "1600041702159887",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+      "posted_at": "2026-11-21T20:00:27",
+      "reason": "The post announces the upcoming final round details, schedule, and venue of an ongoing student music competition.",
+      "category": [
+        "ca nhạc",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Đêm Chung kết cuộc thi Let IT Shine 2026 với chủ đề 'Winter Aria' sẽ diễn ra vào ngày 22/11/2026 tại Giảng đường 1, cơ sở phường Chợ Quán. Sự kiện có sự tham gia của Hội đồng Ban Giám khảo chuyên môn và các giải thưởng giá trị dành cho thí sinh xuất sắc nhất.",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-11-22T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-21T20:00:27+07:00",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "❄️ LET IT SHINE 2026 ❄️ - CHUNG KẾT 'WINTER ARIA'",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
     {
       "post_id": "1598950125602378",
       "post_url": "https://www.facebook.com/reel/2392597504878112",

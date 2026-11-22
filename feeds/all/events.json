@@ -1,8 +1,8 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-22T14:30:38.107191+07:00",
-  "count": 39,
+  "updated_at": "2026-11-22T14:39:58.955995+07:00",
+  "count": 40,
   "events": [
     {
       "event_id": 5,
@@ -256,6 +256,57 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
           "posted_at": "2026-11-22T14:00:07",
           "seen_at": "2026-11-22T14:29:35.692111+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 40,
+      "title": "❄️ LET IT SHINE 2026 ❄️ - CHUNG KẾT 'WINTER ARIA'",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-22",
+      "time": "16:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": "2026-11-21T20:00:27+07:00",
+      "reg_end_datetime": "2026-11-22T23:59:00+07:00",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1600041702159887",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:39:58.651611+07:00",
+      "updated_at": "2026-11-22T14:39:58.651611+07:00",
+      "description": "Đêm Chung kết cuộc thi Let IT Shine 2026 với chủ đề 'Winter Aria' sẽ diễn ra vào ngày 22/11/2026 tại Giảng đường 1, cơ sở phường Chợ Quán. Sự kiện có sự tham gia của Hội đồng Ban Giám khảo chuyên môn và các giải thưởng giá trị dành cho thí sinh xuất sắc nhất.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ca nhạc",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+      "posted_at": "2026-11-21T20:00:27",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1600041702159887",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+          "posted_at": "2026-11-21T20:00:27",
+          "seen_at": "2026-11-22T14:39:58.651611+07:00"
         }
       ],
       "update_history": []
