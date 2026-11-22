@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/doanhoikhoavatly",
     "slug": "doanhoikhoavatly"
   },
-  "updated_at": "2026-11-22T14:07:36.468010+07:00",
-  "count": 3,
+  "updated_at": "2026-11-22T14:30:38.115554+07:00",
+  "count": 4,
   "events": [
     {
       "post_id": "1649964783595200",
@@ -89,6 +89,37 @@
       "end_datetime": "2026-11-14T17:00:00+07:00",
       "reg_start_datetime": "2026-11-11T16:58:05",
       "reg_end_datetime": "2026-11-14T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1634708015120877",
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0bXb1XM6GyxogKLsTVfShwoVEYVWexnX2Lh85uBZd4MaoFesNYzfsLa4nGi2tyu9tl",
+      "posted_at": "2026-11-04T07:00:06",
+      "reason": "The post announces an upcoming training session on document formatting, communications, and email writing organized for student union chapters with a specific time and venue.",
+      "category": [
+        "workshop",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Buổi tập huấn trang bị kiến thức và kỹ năng về thể thức văn bản, xây dựng kế hoạch, thiết kế ấn phẩm truyền thông và kỹ năng soạn thảo email chuyên nghiệp. Đây cũng là dịp để Ban Chấp hành các chi hội, CLB, Đội, Nhóm giao lưu, kết nối và nâng cao chất lượng vận hành công tác Đoàn - Hội.",
+      "event_start_datetime": "2026-11-05T17:30:00+07:00",
+      "is_online": false,
+      "location": "Hội quán Khoa học, tầng hầm Nhà điều hành, cơ sở 2, Trường Đại học Khoa học tự nhiên, ĐHQG - HCM",
+      "organizer": "Liên chi Hội Khoa Vật lý - Vật lý Kỹ thuật, ĐH KHTN TP. HCM",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên",
+        "sinh viên K25, K26"
+      ],
+      "title": "📑 TẬP HUẤN THỂ THỨC VĂN BẢN, TRUYỀN THÔNG VÀ EMAIL",
+      "event_end_datetime": "2026-11-05T23:59:00+07:00",
+      "start_datetime": "2026-11-05T17:30:00+07:00",
+      "end_datetime": "2026-11-05T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-04T07:00:06",
+      "reg_end_datetime": "2026-11-05T00:00:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
     }

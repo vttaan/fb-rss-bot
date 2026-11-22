@@ -1,8 +1,8 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-22T14:07:36.425175+07:00",
-  "count": 36,
+  "updated_at": "2026-11-22T14:30:38.107191+07:00",
+  "count": 39,
   "events": [
     {
       "event_id": 5,
@@ -151,6 +151,111 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
           "posted_at": "2026-11-19T18:00:04",
           "seen_at": "2026-11-19T20:58:15.140490+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 39,
+      "title": "[NGÀY HỘI VĂN HÓA NĂM 2026] BẬT MÍ KHÔNG GIAN VR ART “DI SẢN SỐ” VÀ WORKSHOP “TỪ DI SẢN TRUYỀN THỐNG ĐẾN NGHỆ THUẬT SỐ”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T13:00:03+07:00",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM (01 Lưu Hữu Phước, P. Đông Hòa, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1563108279175467",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:29:42.482727+07:00",
+      "updated_at": "2026-11-22T14:29:42.482727+07:00",
+      "description": "Tham gia Ngày hội Văn hóa năm 2026 để trải nghiệm không gian VR Art 'Di sản số' kết hợp công nghệ thực tế ảo và workshop 'Từ di sản truyền thống đến nghệ thuật số' cùng nghệ sĩ VR Minh Hằng. Sự kiện mang đến cơ hội tìm hiểu về số hóa nghệ thuật, nâng cao tư duy thẩm mỹ và biến các giá trị văn hóa truyền thống thành tác phẩm nghệ thuật số độc đáo qua công nghệ VR.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://tinyurl.com/DK-VRArtxWorkshop-NHVH2026",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "category": [
+        "workshop",
+        "ngày hội",
+        "học thuật"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+      "posted_at": "2026-11-22T13:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563108279175467",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+          "posted_at": "2026-11-22T13:00:03",
+          "seen_at": "2026-11-22T14:29:42.482727+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 38,
+      "title": "Không gian trưng bày, giới thiệu và trải nghiệm trang phục dân tộc và trang phục truyền thống",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T14:00:07+07:00",
+      "reg_end_datetime": "2026-11-24T23:59:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP. HCM tại Khu đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1563152869171008",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:29:35.692111+07:00",
+      "updated_at": "2026-11-22T14:29:35.692111+07:00",
+      "description": "Tham gia không gian trưng bày và trải nghiệm trang phục dân tộc, trang phục truyền thống để khám phá sự đa dạng văn hóa của 54 dân tộc Việt Nam, mặc thử trang phục, check-in lưu giữ khoảnh khắc và nhận 01 vé xem phim miễn phí cho 100 bạn đầu tiên.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/qkQSBZ2sWBRSiAwz6",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ngày hội",
+        "triển lãm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+      "posted_at": "2026-11-22T14:00:07",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563152869171008",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+          "posted_at": "2026-11-22T14:00:07",
+          "seen_at": "2026-11-22T14:29:35.692111+07:00"
         }
       ],
       "update_history": []
@@ -486,6 +591,97 @@
             "fee": {
               "old": null,
               "new": "miễn phí"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 25,
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-22",
+      "time": "11:03",
+      "start_datetime": "2026-11-22T11:03:01+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T11:03:01+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T11:03:01+07:00",
+      "reg_end_datetime": "2026-11-24T24:00:00+07:00",
+      "location": "Trực tuyến",
+      "source_type": "facebook",
+      "source_id": "1559974292822199",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 2,
+      "created_at": "2026-11-19T20:57:41.495033+07:00",
+      "updated_at": "2026-11-22T14:29:53.930040+07:00",
+      "description": "Tham gia chuỗi hoạt động khám phá văn hóa Cà Mau qua hình ảnh gợi ý, bình luận chia sẻ hiểu biết và điền form để ghi nhận dấu mốc tham gia. Người tham gia tích lũy đủ số bài theo quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/rHd3PrhqiYMQa2EJ9",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+      "posted_at": "2026-11-19T20:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559974292822199",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+          "posted_at": "2026-11-19T20:00:04",
+          "seen_at": "2026-11-19T20:57:41.495033+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
+          "posted_at": "2026-11-22T11:03:01",
+          "seen_at": "2026-11-22T14:29:53.930040+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-22T14:29:53.930040+07:00",
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-19",
+              "new": "2026-11-22"
+            },
+            "time": {
+              "old": "20:00",
+              "new": "11:03"
+            },
+            "location": {
+              "old": "Online",
+              "new": "Trực tuyến"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-19T20:00:04+07:00",
+              "new": "2026-11-22T11:03:01+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-21T24:00:00+07:00",
+              "new": "2026-11-24T24:00:00+07:00"
             }
           }
         }
@@ -1037,59 +1233,6 @@
       "update_history": []
     },
     {
-      "event_id": 25,
-      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
-      "online_mode": "online",
-      "is_online": true,
-      "date": "2026-11-19",
-      "time": "20:00",
-      "start_datetime": "2026-11-19T20:00:04+07:00",
-      "end_datetime": "2026-11-21T23:59:00+07:00",
-      "event_start_datetime": "2026-11-19T20:00:04+07:00",
-      "event_end_datetime": "2026-11-21T23:59:00+07:00",
-      "reg_start_datetime": "2026-11-19T20:00:04+07:00",
-      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
-      "location": "Online",
-      "source_type": "facebook",
-      "source_id": "1559974292822199",
-      "fanpage_id": 15,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-19T20:57:41.495033+07:00",
-      "updated_at": "2026-11-19T20:57:41.495033+07:00",
-      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 10 khám phá tỉnh Quảng Ninh bằng cách bình luận những hiểu biết, thông tin hoặc cảm nhận về địa danh, di sản và ẩm thực của địa phương. Người tham gia hoàn thành từ 18/35 bài đăng trong series sẽ đủ điều kiện nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
-      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
-      "registration_url": "https://forms.gle/yg9dTNf6e1nyQx9s9",
-      "registration_status": "link",
-      "fee": "miễn phí",
-      "target_audience": [
-        "sinh viên",
-        "cộng đồng"
-      ],
-      "category": [
-        "cộng đồng",
-        "cuộc thi"
-      ],
-      "format": [
-        "online",
-        "cá nhân"
-      ],
-      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
-      "posted_at": "2026-11-19T20:00:04",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1559974292822199",
-          "fanpage_id": 15,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
-          "posted_at": "2026-11-19T20:00:04",
-          "seen_at": "2026-11-19T20:57:41.495033+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
       "event_id": 28,
       "title": "MINIGAME 20/11 | GIỮ MÙA PHẤN - GÓI TRỌN YÊU THƯƠNG, GỬI NGÀN TRI ÂN",
       "online_mode": "online",
@@ -1500,6 +1643,58 @@
           "post_url": null,
           "posted_at": "2026-11-10T18:00:42.422854+07:00",
           "seen_at": "2026-11-11T17:04:34.483336+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 37,
+      "title": "📑 TẬP HUẤN THỂ THỨC VĂN BẢN, TRUYỀN THÔNG VÀ EMAIL",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-05",
+      "time": "17:30",
+      "start_datetime": "2026-11-05T17:30:00+07:00",
+      "end_datetime": "2026-11-05T23:59:00+07:00",
+      "event_start_datetime": "2026-11-05T17:30:00+07:00",
+      "event_end_datetime": "2026-11-05T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-04T07:00:06",
+      "reg_end_datetime": "2026-11-05T00:00:00+07:00",
+      "location": "Hội quán Khoa học, tầng hầm Nhà điều hành, cơ sở 2, Trường Đại học Khoa học tự nhiên, ĐHQG - HCM",
+      "source_type": "facebook",
+      "source_id": "1634708015120877",
+      "fanpage_id": 10,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:25:01.874494+07:00",
+      "updated_at": "2026-11-22T14:25:01.874494+07:00",
+      "description": "Buổi tập huấn trang bị kiến thức và kỹ năng về thể thức văn bản, xây dựng kế hoạch, thiết kế ấn phẩm truyền thông và kỹ năng soạn thảo email chuyên nghiệp. Đây cũng là dịp để Ban Chấp hành các chi hội, CLB, Đội, Nhóm giao lưu, kết nối và nâng cao chất lượng vận hành công tác Đoàn - Hội.",
+      "organizer": "Liên chi Hội Khoa Vật lý - Vật lý Kỹ thuật, ĐH KHTN TP. HCM",
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên",
+        "sinh viên K25, K26"
+      ],
+      "category": [
+        "workshop",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0bXb1XM6GyxogKLsTVfShwoVEYVWexnX2Lh85uBZd4MaoFesNYzfsLa4nGi2tyu9tl",
+      "posted_at": "2026-11-04T07:00:06",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1634708015120877",
+          "fanpage_id": 10,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0bXb1XM6GyxogKLsTVfShwoVEYVWexnX2Lh85uBZd4MaoFesNYzfsLa4nGi2tyu9tl",
+          "posted_at": "2026-11-04T07:00:06",
+          "seen_at": "2026-11-22T14:25:01.874494+07:00"
         }
       ],
       "update_history": []

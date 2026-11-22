@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-22T14:07:36.488685+07:00",
-  "count": 10,
+  "updated_at": "2026-11-22T14:30:38.131736+07:00",
+  "count": 13,
   "events": [
     {
       "post_id": "1559625076190454",
@@ -89,6 +89,126 @@
       "end_datetime": "2026-11-24T11:00:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
+    },
+    {
+      "post_id": "1563108279175467",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+      "posted_at": "2026-11-22T13:00:03",
+      "reason": "The post announces an upcoming cultural and workshop event with an explicit schedule, location, and registration link.",
+      "category": [
+        "workshop",
+        "ngày hội",
+        "học thuật"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Ngày hội Văn hóa năm 2026 để trải nghiệm không gian VR Art 'Di sản số' kết hợp công nghệ thực tế ảo và workshop 'Từ di sản truyền thống đến nghệ thuật số' cùng nghệ sĩ VR Minh Hằng. Sự kiện mang đến cơ hội tìm hiểu về số hóa nghệ thuật, nâng cao tư duy thẩm mỹ và biến các giá trị văn hóa truyền thống thành tác phẩm nghệ thuật số độc đáo qua công nghệ VR.",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM (01 Lưu Hữu Phước, P. Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T13:00:03+07:00",
+      "registration_url": "https://tinyurl.com/DK-VRArtxWorkshop-NHVH2026",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "title": "[NGÀY HỘI VĂN HÓA NĂM 2026] BẬT MÍ KHÔNG GIAN VR ART “DI SẢN SỐ” VÀ WORKSHOP “TỪ DI SẢN TRUYỀN THỐNG ĐẾN NGHỆ THUẬT SỐ”",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563152869171008",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+      "posted_at": "2026-11-22T14:00:07",
+      "reason": "The post announces an upcoming cultural exhibition and check-in event with registration details, a clear schedule, and movie ticket gifts for participants.",
+      "category": [
+        "ngày hội",
+        "triển lãm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia không gian trưng bày và trải nghiệm trang phục dân tộc, trang phục truyền thống để khám phá sự đa dạng văn hóa của 54 dân tộc Việt Nam, mặc thử trang phục, check-in lưu giữ khoảnh khắc và nhận 01 vé xem phim miễn phí cho 100 bạn đầu tiên.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP. HCM tại Khu đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T14:00:07+07:00",
+      "registration_url": "https://forms.gle/qkQSBZ2sWBRSiAwz6",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "Không gian trưng bày, giới thiệu và trải nghiệm trang phục dân tộc và trang phục truyền thống",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563025289183766",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
+      "posted_at": "2026-11-22T11:03:01",
+      "reason": "The post announces an active online cultural challenge with specific participation rules, form submission, and a clear deadline window.",
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động khám phá văn hóa Cà Mau qua hình ảnh gợi ý, bình luận chia sẻ hiểu biết và điền form để ghi nhận dấu mốc tham gia. Người tham gia tích lũy đủ số bài theo quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T11:03:01+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T11:03:01+07:00",
+      "registration_url": "https://forms.gle/rHd3PrhqiYMQa2EJ9",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [12]: CÀ MAU",
+      "start_datetime": "2026-11-22T11:03:01+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-19",
+          "new": "2026-11-22"
+        },
+        "time": {
+          "old": "20:00",
+          "new": "11:03"
+        },
+        "location": {
+          "old": "Online",
+          "new": "Trực tuyến"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-19T20:00:04+07:00",
+          "new": "2026-11-22T11:03:01+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-21T24:00:00+07:00",
+          "new": "2026-11-24T24:00:00+07:00"
+        }
+      }
     },
     {
       "post_id": "1561162162703412",
