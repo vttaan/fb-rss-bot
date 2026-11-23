@@ -4,9 +4,41 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-22T20:07:22.671400+07:00",
-  "count": 13,
+  "updated_at": "2026-11-23T08:08:21.383732+07:00",
+  "count": 16,
   "events": [
+    {
+      "post_id": "1563444215808540",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0RynNkrUF4H3iFpWnZKkiestkAchNefM3K4exsxzCKbbQG8XfucvG5Zozgrme3ro1l",
+      "posted_at": "2026-11-22T20:01:23",
+      "reason": "The post announces an upcoming annual music festival with scheduled dates, time, and venue, and invites students to register.",
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Đại nhạc hội Bcons Bestival 2026 - Nhạc đa tầng, sống đa best với 3 đêm âm nhạc bùng nổ quy tụ nhiều nghệ sĩ nổi tiếng, cùng các hoạt động giải trí và ẩm thực hấp dẫn.",
+      "event_end_datetime": "2026-11-29T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "BCONS CITY MALL, 38 Thống Nhất, phường Đông Hòa, Tp.HCM",
+      "organizer": "Tập đoàn Bcons & Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-29T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T20:01:23+07:00",
+      "registration_url": "https://bit.ly/3zY62oN",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "ĐẠI NHẠC HỘI BCONS BESTIVAL 2026 - NHẠC ĐA TẦNG, SỐNG ĐA BEST!",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-29T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
     {
       "post_id": "1559625076190454",
       "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029LULvz3zCuU53PHQdrFqf9kCvEsH8trJhdxjk8nttkPguna6YHbAgeCkRzHJgwX2l",
@@ -59,6 +91,38 @@
       "dedup_status": "created"
     },
     {
+      "post_id": "1563558635797098",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0sSJaGvVCca7Tv8sSAf97p2S39TgfCPPzmz5CUCD2owNfRLcrajGJm2tNMD2VghdAl",
+      "posted_at": "2026-11-22T22:01:21",
+      "reason": "The post announces the schedule, time, and venue for the upcoming final round of a traditional music festival, inviting students and audiences to attend and support the contestants.",
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Vòng Chung kết Liên hoan Vọng cổ và các ca khúc mang âm hưởng dân ca năm 2026 để thưởng thức những màn trình diễn nghệ thuật truyền thống đặc sắc, giàu cảm xúc từ các thí sinh tài năng.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tại Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hoà, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:30:00+07:00",
+      "reg_start_datetime": "2026-11-22T22:01:21+07:00",
+      "registration_url": "nhavanhoasinhvien.vn",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "LIÊN HOAN VỌNG CỔ VÀ CÁC CA KHÚC MANG ÂM HƯỞNG DÂN CA NĂM 2026",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
       "post_id": "1559865309499764",
       "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
       "posted_at": "2026-11-19T18:00:04",
@@ -87,6 +151,38 @@
       "title": "TALKSHOW “TỪ BẢN LÀNG ĐẾN GIẢNG ĐƯỜNG”",
       "start_datetime": "2026-11-24T08:30:00+07:00",
       "end_datetime": "2026-11-24T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563618719124423",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0wAkvzcNWeCt2PWiuWBvUskN34396PLSDWbM1Y8ES29Si9tyQtJQNQW2z5ZJD87UEl",
+      "posted_at": "2026-11-22T23:00:41",
+      "reason": "The post announces an upcoming cultural festival event featuring traditional Vietnamese food booths with a specific date, time, and location.",
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Ngày hội Văn hóa 2026 để khám phá và thưởng thức không gian ẩm thực với các gian hàng bánh dân gian truyền thống của Việt Nam. Sinh viên sẽ có dịp tìm hiểu về hương vị, màu sắc và câu chuyện văn hóa phía sau những món bánh quen thuộc cùng bạn bè.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "NGÀY HỘI VĂN HÓA 2026 | KHÔNG GIAN ẨM THỰC – GIAN HÀNG BÁNH DÂN GIAN VIỆT NAM",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T23:00:41",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
     },
