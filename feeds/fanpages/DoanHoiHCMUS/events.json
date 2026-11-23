@@ -4,9 +4,99 @@
     "url": "https://www.facebook.com/DoanHoiHCMUS",
     "slug": "DoanHoiHCMUS"
   },
-  "updated_at": "2026-11-23T14:04:25.337460+07:00",
-  "count": 3,
+  "updated_at": "2026-11-23T20:25:54.757387+07:00",
+  "count": 6,
   "events": [
+    {
+      "post_id": "1625997896237729",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+      "posted_at": "2026-11-23T09:44:20",
+      "reason": "The post announces an upcoming conference summarizing student scientific research with a specific time, venue, and invitation for student attendance.",
+      "category": [
+        "hội nghị",
+        "khoa học",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Hội nghị tổng kết chương trình sinh viên nghiên cứu khoa học - công nghệ năm 2026 là sự kiện thường niên nhằm nhìn nhận, đánh giá và tổng kết các hoạt động nghiên cứu khoa học của sinh viên trong năm. Sự kiện diễn ra trực tiếp tại Giảng đường 1, Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM, mở cửa đón chào các bạn sinh viên tham gia.",
+      "event_end_datetime": "2026-11-27T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1 - Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ)",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "reg_end_datetime": "2026-11-27T17:30:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:44:20+07:00",
+      "registration_url": "https://khunghinh.net/p/hntksvnckh2026",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "HỘI NGHỊ TỔNG KẾT CHƯƠng TRÌNH SINH VIÊN NGHIÊN CỨU KHOA HỌC - CÔNG NGHỆ NĂM 2026",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-27T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1625997439571108",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+      "posted_at": "2026-11-23T09:43:43",
+      "reason": "The post announces a mandatory periodic health checkup drive for students with scheduled times, making it an active administrative student event.",
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Nhà trường tổ chức đợt khám sức khỏe định kỳ cho sinh viên đủ điều kiện với các khung giờ buổi sáng và buổi chiều. Sinh viên tham gia đầy đủ để đảm bảo quyền lợi và tuân thủ quy định của nhà trường.",
+      "event_start_datetime": "2026-11-23T07:30:00+07:00",
+      "title": "TỔ CHỨC KHÁM SỨC KHỎE ĐỊNH KỲ CHO SINH VIÊN ĐỢT 3 NĂM 2026]",
+      "location": "trường phải tham gia",
+      "fee": "miễn phí",
+      "event_end_datetime": "2026-11-23T11:00:00+07:00",
+      "start_datetime": "2026-11-23T07:30:00+07:00",
+      "end_datetime": "2026-11-23T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:43:43",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1626045062899679",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+      "posted_at": "2026-11-23T10:51:22",
+      "reason": "The post announces an upcoming campus health activity providing free deworming medication with a clear schedule and locations for students and staff.",
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM tổ chức chương trình phát thuốc tẩy giun Albendazol 400mg miễn phí đợt 2 năm 2026 nhằm chăm sóc sức khỏe và nâng cao ý thức phòng bệnh cho người học và viên chức.",
+      "event_end_datetime": "2026-12-12T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Trạm y tế cơ sở phường Chợ Quán (E.001) và Trạm y tế cơ sở phường Đông Hòa (E.103)",
+      "organizer": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "free",
+      "target_audience": [
+        "sinh viên",
+        "giảng viên",
+        "nhân viên"
+      ],
+      "title": "PHÁT THUỐC TẨY GIUN ĐỢT 2 NĂM 2026",
+      "start_datetime": "2026-11-23T00:00:00+07:00",
+      "end_datetime": "2026-12-12T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T10:51:22",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
     {
       "post_id": "1622645323239653",
       "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid07x6Sf3U2Mmt4uAJTG41xYVvkZUTnAUT9XhX9LNDBrM3nZEgGvsgAZG75uSF4K3P1l",

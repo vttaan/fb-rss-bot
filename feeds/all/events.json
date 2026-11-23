@@ -1,9 +1,61 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-23T14:04:25.325037+07:00",
-  "count": 43,
+  "updated_at": "2026-11-23T20:25:54.749355+07:00",
+  "count": 50,
   "events": [
+    {
+      "event_id": 45,
+      "title": "HỘI NGHỊ TỔNG KẾT CHƯƠng TRÌNH SINH VIÊN NGHIÊN CỨU KHOA HỌC - CÔNG NGHỆ NĂM 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-27",
+      "time": "17:30",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-27T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "event_end_datetime": "2026-11-27T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:44:20+07:00",
+      "reg_end_datetime": "2026-11-27T17:30:00+07:00",
+      "location": "Giảng đường 1 - Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ)",
+      "source_type": "facebook",
+      "source_id": "1625997896237729",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:16.806857+07:00",
+      "updated_at": "2026-11-23T20:02:16.806857+07:00",
+      "description": "Hội nghị tổng kết chương trình sinh viên nghiên cứu khoa học - công nghệ năm 2026 là sự kiện thường niên nhằm nhìn nhận, đánh giá và tổng kết các hoạt động nghiên cứu khoa học của sinh viên trong năm. Sự kiện diễn ra trực tiếp tại Giảng đường 1, Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM, mở cửa đón chào các bạn sinh viên tham gia.",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "registration_url": "https://khunghinh.net/p/hntksvnckh2026",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "hội nghị",
+        "khoa học",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+      "posted_at": "2026-11-23T09:44:20",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1625997896237729",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+          "posted_at": "2026-11-23T09:44:20",
+          "seen_at": "2026-11-23T20:02:16.806857+07:00"
+        }
+      ],
+      "update_history": []
+    },
     {
       "event_id": 43,
       "title": "ĐẠI NHẠC HỘI BCONS BESTIVAL 2026 - NHẠC ĐA TẦNG, SỐNG ĐA BEST!",
@@ -107,6 +159,55 @@
       "update_history": []
     },
     {
+      "event_id": 50,
+      "title": "Workshop “Người trẻ có văn hóa – Từ cách nghĩ đến cách sống”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "13:30",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T14:00:02+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1564260075726954",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:10:46.619055+07:00",
+      "updated_at": "2026-11-23T20:10:46.619055+07:00",
+      "description": "Workshop 'Người trẻ có văn hóa – Từ cách nghĩ đến cách sống' là không gian để sinh viên thảo luận về nhân cách, văn hóa ứng xử và lối sống văn minh trong thời đại số. Người tham gia sẽ có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP.HCM và nhiều phần quà hấp dẫn.",
+      "organizer": null,
+      "registration_url": "https://forms.gle/4jTCvJgBMBLdZ2KU7",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid021d3Jm9xc5XgY7MqV6HUjZGLH5GrnNX8n7KHvn1TygtDs4neQcVPV1PYTqd7Dqd1Cl",
+      "posted_at": "2026-11-23T14:00:02",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564260075726954",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid021d3Jm9xc5XgY7MqV6HUjZGLH5GrnNX8n7KHvn1TygtDs4neQcVPV1PYTqd7Dqd1Cl",
+          "posted_at": "2026-11-23T14:00:02",
+          "seen_at": "2026-11-23T20:10:46.619055+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
       "event_id": 3,
       "title": "Workshop “Văn hóa của người trẻ trong bối cảnh số – Từ cách nghĩ đến cách sống”",
       "online_mode": "offline",
@@ -151,6 +252,56 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid07RJChtdaZSZo9btUAPq292y3g1xgB1zMTz3DwYcYLNxhXbi7BmguqBecPp2yP1eRl",
           "posted_at": "2026-11-19T15:00:17",
           "seen_at": "2026-11-19T15:25:21.988024+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 47,
+      "title": "TRIỂN LÃM VÀ GIỚI THIỆU VỀ THƯ PHÁP VIỆT - WORKSHOP “NÉT CHỮ - NÉT NGƯỜI”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "09:00",
+      "start_datetime": "2026-11-24T09:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T09:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T19:00:03+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM (Số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1564487712370857",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:08:24.590710+07:00",
+      "updated_at": "2026-11-23T20:08:24.590710+07:00",
+      "description": "The 'Nét chữ - Nét người' event is a workshop and exhibition dedicated to Vietnamese calligraphy, offering participants the chance to explore traditional art, learn about the stories behind calligraphy, and practice creating their own works. This event aims to foster an appreciation for cultural heritage and provides a relaxing space for creative expression.",
+      "organizer": null,
+      "registration_url": "https://tinyurl.com/NHVanhoaVietNam2026",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "triển lãm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02NjBCcrnQAtggu4m8hQT5aYerKiwMug15W9qrPFHveQt2qj7GsrxgjjhhbnmcoTfRl",
+      "posted_at": "2026-11-23T19:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564487712370857",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02NjBCcrnQAtggu4m8hQT5aYerKiwMug15W9qrPFHveQt2qj7GsrxgjjhhbnmcoTfRl",
+          "posted_at": "2026-11-23T19:00:03",
+          "seen_at": "2026-11-23T20:08:24.590710+07:00"
         }
       ],
       "update_history": []
@@ -255,6 +406,113 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
           "posted_at": "2026-11-19T18:00:04",
           "seen_at": "2026-11-19T20:58:15.140490+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 49,
+      "title": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T16:29:47",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hòa, TP. Hồ Chí Minh).",
+      "source_type": "facebook",
+      "source_id": "1564367475716214",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:09:34.877811+07:00",
+      "updated_at": "2026-11-23T20:09:34.877811+07:00",
+      "description": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026 là chương trình nghệ thuật nhằm tôn vinh các tiết mục đặc sắc, lan tỏa giá trị văn hóa và bản sắc dân tộc. Sự kiện quy tụ các chuyên gia nghệ thuật trong vai trò giám khảo để đánh giá và tìm ra những màn trình diễn ấn tượng nhất.",
+      "organizer": null,
+      "registration_url": "https://q.me-qr.com/vo76o3na",
+      "registration_status": "qr",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02y1yZ5jrNF2czFVRB7F3Hm5Ct3SdtBwhG1mBa1RqduJr1pT4gPdVVDVcKt6cRUbdl",
+      "posted_at": "2026-11-23T16:29:47",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564367475716214",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02y1yZ5jrNF2czFVRB7F3Hm5Ct3SdtBwhG1mBa1RqduJr1pT4gPdVVDVcKt6cRUbdl",
+          "posted_at": "2026-11-23T16:29:47",
+          "seen_at": "2026-11-23T20:09:34.877811+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564219732397655",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02P2Kh9uv7mLaseibUaXVXugxMkZBh8aZk5qk4cGN4aMDsfTFuB1SxmkY7LMgvWg7Hl",
+          "posted_at": "2026-11-23T13:00:04",
+          "seen_at": "2026-11-23T20:11:58.738750+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 48,
+      "title": "NGÀY HỘI VĂN HÓA 2026| KHÁM PHÁ KHÔNG GIAN LÀNG NGHỀ – TỰ TAY SÁNG TẠO, MANG THÀNH PHẨM VỀ NHÀ!",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1564389272380701",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:09:27.209845+07:00",
+      "updated_at": "2026-11-23T20:09:27.209845+07:00",
+      "description": "Ngày hội Văn hóa 2026 mang đến không gian trải nghiệm các làng nghề truyền thống như nặn tò he, vẽ gốm Lái Thiêu và đan giỏ trạc. Sinh viên tham gia sẽ được tự tay sáng tạo sản phẩm thủ công và mang thành phẩm về nhà hoàn toàn miễn phí.",
+      "organizer": null,
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": null,
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02W47X7STUTbkXmzYwxS9C8KTNQ9sQyGmijyDd8Kg9Q2fttVWiky8PLpKgCTPVytzKl",
+      "posted_at": "2026-11-23T17:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564389272380701",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02W47X7STUTbkXmzYwxS9C8KTNQ9sQyGmijyDd8Kg9Q2fttVWiky8PLpKgCTPVytzKl",
+          "posted_at": "2026-11-23T17:00:03",
+          "seen_at": "2026-11-23T20:09:27.209845+07:00"
         }
       ],
       "update_history": []
@@ -412,6 +670,107 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
           "posted_at": "2026-11-22T14:00:07",
           "seen_at": "2026-11-22T14:29:35.692111+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 46,
+      "title": "TỔ CHỨC KHÁM SỨC KHỎE ĐỊNH KỲ CHO SINH VIÊN ĐỢT 3 NĂM 2026]",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-23",
+      "time": "07:30",
+      "start_datetime": "2026-11-23T07:30:00+07:00",
+      "end_datetime": "2026-11-23T11:00:00+07:00",
+      "event_start_datetime": "2026-11-23T07:30:00+07:00",
+      "event_end_datetime": "2026-11-23T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:43:43",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "location": "trường phải tham gia",
+      "source_type": "facebook",
+      "source_id": "1625997439571108",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:22.244557+07:00",
+      "updated_at": "2026-11-23T20:02:22.244557+07:00",
+      "description": "Nhà trường tổ chức đợt khám sức khỏe định kỳ cho sinh viên đủ điều kiện với các khung giờ buổi sáng và buổi chiều. Sinh viên tham gia đầy đủ để đảm bảo quyền lợi và tuân thủ quy định của nhà trường.",
+      "organizer": null,
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": "miễn phí",
+      "target_audience": null,
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+      "posted_at": "2026-11-23T09:43:43",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1625997439571108",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+          "posted_at": "2026-11-23T09:43:43",
+          "seen_at": "2026-11-23T20:02:22.244557+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 44,
+      "title": "PHÁT THUỐC TẨY GIUN ĐỢT 2 NĂM 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-23",
+      "time": null,
+      "start_datetime": "2026-11-23T00:00:00+07:00",
+      "end_datetime": "2026-12-12T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T00:00:00+07:00",
+      "event_end_datetime": "2026-12-12T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T10:51:22",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "location": "Trạm y tế cơ sở phường Chợ Quán (E.001) và Trạm y tế cơ sở phường Đông Hòa (E.103)",
+      "source_type": "facebook",
+      "source_id": "1626045062899679",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:09.275455+07:00",
+      "updated_at": "2026-11-23T20:02:09.275455+07:00",
+      "description": "Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM tổ chức chương trình phát thuốc tẩy giun Albendazol 400mg miễn phí đợt 2 năm 2026 nhằm chăm sóc sức khỏe và nâng cao ý thức phòng bệnh cho người học và viên chức.",
+      "organizer": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "giảng viên",
+        "nhân viên"
+      ],
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+      "posted_at": "2026-11-23T10:51:22",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1626045062899679",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+          "posted_at": "2026-11-23T10:51:22",
+          "seen_at": "2026-11-23T20:02:09.275455+07:00"
         }
       ],
       "update_history": []
@@ -814,16 +1173,16 @@
       "end_datetime": "2026-11-24T23:59:00+07:00",
       "event_start_datetime": "2026-11-22T11:03:01+07:00",
       "event_end_datetime": "2026-11-24T23:59:00+07:00",
-      "reg_start_datetime": "2026-11-22T11:03:01+07:00",
+      "reg_start_datetime": "2026-11-22T00:00:00+07:00",
       "reg_end_datetime": "2026-11-24T24:00:00+07:00",
       "location": "Trực tuyến",
       "source_type": "facebook",
       "source_id": "1559974292822199",
       "fanpage_id": 15,
       "client_id": null,
-      "version": 2,
+      "version": 3,
       "created_at": "2026-11-19T20:57:41.495033+07:00",
-      "updated_at": "2026-11-22T14:29:53.930040+07:00",
+      "updated_at": "2026-11-23T20:25:05.414123+07:00",
       "description": "Tham gia chuỗi hoạt động khám phá văn hóa Cà Mau qua hình ảnh gợi ý, bình luận chia sẻ hiểu biết và điền form để ghi nhận dấu mốc tham gia. Người tham gia tích lũy đủ số bài theo quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
       "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
       "registration_url": "https://forms.gle/rHd3PrhqiYMQa2EJ9",
@@ -861,6 +1220,15 @@
           "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
           "posted_at": "2026-11-22T11:03:01",
           "seen_at": "2026-11-22T14:29:53.930040+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02eDeYxCzFsF3xYDquNpTWjqmGCwxTVS5HQJvedL3mw1kkD2S8vC6iD8sCiBVa35iVl",
+          "posted_at": "2026-11-23T11:00:01",
+          "seen_at": "2026-11-23T20:25:05.414123+07:00"
         }
       ],
       "update_history": [
@@ -889,6 +1257,18 @@
             "reg_end_datetime": {
               "old": "2026-11-21T24:00:00+07:00",
               "new": "2026-11-24T24:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-23T20:25:05.414123+07:00",
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "client_id": null,
+          "changes": {
+            "reg_start_datetime": {
+              "old": "2026-11-22T11:03:01+07:00",
+              "new": "2026-11-22T00:00:00+07:00"
             }
           }
         }
