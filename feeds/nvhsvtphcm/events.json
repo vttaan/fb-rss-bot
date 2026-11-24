@@ -4,8 +4,8 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-24T08:01:41.884569+07:00",
-  "count": 22,
+  "updated_at": "2026-11-24T09:35:09.067766+07:00",
+  "count": 25,
   "events": [
     {
       "post_id": "1563444215808540",
@@ -142,6 +142,57 @@
       "dedup_status": "created"
     },
     {
+      "post_id": "1565125212307107",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02nxVXz2MQGeYvhk8JMvkuD9DQtSd2bxv4iMYKQUetx2Yg4zWxqJKBus5tbZtuQtLil",
+      "posted_at": "2026-11-24T08:30:55",
+      "reason": "The post launches an active online cultural challenge with specific participation steps, a form link, and a submission deadline.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia series 'Bản đồ Văn hóa' số 15 để khám phá nét đẹp văn hóa, lịch sử, kiến trúc và ẩm thực của TP. Hồ Chí Minh thông qua việc chia sẻ hiểu biết dưới bài viết và điền form xác thực. Người tham gia hoàn thành đủ số lượng bài viết quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-26T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:55+07:00",
+      "fee": "Miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-26T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-24T08:30:55+07:00",
+      "registration_url": "https://forms.gle/8ZhDbuyPLcRJbepU7",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [15]: TP. HỒ CHÍ MINH",
+      "start_datetime": "2026-11-24T08:30:55+07:00",
+      "end_datetime": "2026-11-26T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-22",
+          "new": "2026-11-24"
+        },
+        "time": {
+          "old": "11:03",
+          "new": "08:30"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-11-24T08:30:55+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-24T24:00:00+07:00",
+          "new": "2026-11-26T24:00:00+07:00"
+        }
+      }
+    },
+    {
       "post_id": "1563558635797098",
       "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0sSJaGvVCca7Tv8sSAf97p2S39TgfCPPzmz5CUCD2owNfRLcrajGJm2tNMD2VghdAl",
       "posted_at": "2026-11-22T22:01:21",
@@ -202,6 +253,38 @@
       "title": "TALKSHOW “TỪ BẢN LÀNG ĐẾN GIẢNG ĐƯỜNG”",
       "start_datetime": "2026-11-24T08:30:00+07:00",
       "end_datetime": "2026-11-24T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564574392362189",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+      "posted_at": "2026-11-23T20:30:39",
+      "reason": "The post announces an upcoming cultural exploration event with specific time, venue, and registration instructions.",
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Khám phá Không gian Văn hóa Trống đồng là chương trình giúp sinh viên tìm hiểu về các hoa văn, giá trị lịch sử và bản sắc văn hóa dân tộc Việt Nam qua hình tượng trống đồng Đông Sơn. Sự kiện mang đến cơ hội nuôi dưỡng lòng tự hào dân tộc và góp phần gìn giữ di sản văn hóa trong thời1 đại hiện đại.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T20:30:39+07:00",
+      "registration_url": "https://www.facebook.com/nhavanhoasinhvien",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "KHÁM PHÁ KHÔNG GIAN VĂN HÓA TRỐNG ĐỒNG – CHẠM VÀO HỒN CỐT VĂN HÓA VIỆT!",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
     },
@@ -378,6 +461,61 @@
       "end_datetime": "2026-11-24T23:59:00+07:00",
       "registration_status": "link",
       "dedup_status": "created"
+    },
+    {
+      "post_id": "1564601895692772",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0svbBHtF2k4d5Vb7ggYTxT2SWPbDLEaWmxKTkyjSSXKp2UwBU5VLceMdY3J7eZCZhl",
+      "posted_at": "2026-11-23T21:00:04",
+      "reason": "The post announces an active online cultural exploration challenge with a participation form, clear timeline, and specific guidelines for students to earn certification.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 14 khám phá vùng đất Đắk Lắk bằng cách tìm hiểu và bình luận về các địa danh, món ăn, nét văn hóa đặc sắc. Học sinh sinh viên tham gia hoàn thành thử thách sẽ tích lũy điểm và có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T21:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-25T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T21:00:00+07:00",
+      "registration_url": "https://forms.gle/7f8Trg1PPW8jktd3A",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [14]: ĐẮK LẮK",
+      "start_datetime": "2026-11-23T21:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-24",
+          "new": "2026-11-23"
+        },
+        "time": {
+          "old": "08:30",
+          "new": "21:00"
+        },
+        "location": {
+          "old": "Trực tuyến",
+          "new": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-24T08:30:55+07:00",
+          "new": "2026-11-23T21:00:00+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-26T24:00:00+07:00",
+          "new": "2026-11-25T24:00:00+07:00"
+        }
+      }
     },
     {
       "post_id": "1563025289183766",

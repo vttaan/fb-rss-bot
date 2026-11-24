@@ -1,8 +1,8 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-24T08:01:41.654368+07:00",
-  "count": 50,
+  "updated_at": "2026-11-24T09:35:09.036000+07:00",
+  "count": 51,
   "events": [
     {
       "event_id": 45,
@@ -411,6 +411,58 @@
       "update_history": []
     },
     {
+      "event_id": 51,
+      "title": "KHÁM PHÁ KHÔNG GIAN VĂN HÓA TRỐNG ĐỒNG – CHẠM VÀO HỒN CỐT VĂN HÓA VIỆT!",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T20:30:39+07:00",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1564574392362189",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-24T09:34:16.240142+07:00",
+      "updated_at": "2026-11-24T09:34:16.240142+07:00",
+      "description": "Khám phá Không gian Văn hóa Trống đồng là chương trình giúp sinh viên tìm hiểu về các hoa văn, giá trị lịch sử và bản sắc văn hóa dân tộc Việt Nam qua hình tượng trống đồng Đông Sơn. Sự kiện mang đến cơ hội nuôi dưỡng lòng tự hào dân tộc và góp phần gìn giữ di sản văn hóa trong thời1 đại hiện đại.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://www.facebook.com/nhavanhoasinhvien",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+      "posted_at": "2026-11-23T20:30:39",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564574392362189",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+          "posted_at": "2026-11-23T20:30:39",
+          "seen_at": "2026-11-24T09:34:16.240142+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
       "event_id": 49,
       "title": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026",
       "online_mode": "offline",
@@ -673,6 +725,188 @@
         }
       ],
       "update_history": []
+    },
+    {
+      "event_id": 25,
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-23",
+      "time": "21:00",
+      "start_datetime": "2026-11-23T21:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T21:00:00+07:00",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T21:00:00+07:00",
+      "reg_end_datetime": "2026-11-25T24:00:00+07:00",
+      "location": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "source_type": "facebook",
+      "source_id": "1559974292822199",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 5,
+      "created_at": "2026-11-19T20:57:41.495033+07:00",
+      "updated_at": "2026-11-24T09:34:10.615649+07:00",
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 14 khám phá vùng đất Đắk Lắk bằng cách tìm hiểu và bình luận về các địa danh, món ăn, nét văn hóa đặc sắc. Học sinh sinh viên tham gia hoàn thành thử thách sẽ tích lũy điểm và có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/7f8Trg1PPW8jktd3A",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+      "posted_at": "2026-11-19T20:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559974292822199",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+          "posted_at": "2026-11-19T20:00:04",
+          "seen_at": "2026-11-19T20:57:41.495033+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
+          "posted_at": "2026-11-22T11:03:01",
+          "seen_at": "2026-11-22T14:29:53.930040+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02eDeYxCzFsF3xYDquNpTWjqmGCwxTVS5HQJvedL3mw1kkD2S8vC6iD8sCiBVa35iVl",
+          "posted_at": "2026-11-23T11:00:01",
+          "seen_at": "2026-11-23T20:25:05.414123+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1565125212307107",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02nxVXz2MQGeYvhk8JMvkuD9DQtSd2bxv4iMYKQUetx2Yg4zWxqJKBus5tbZtuQtLil",
+          "posted_at": "2026-11-24T08:30:55",
+          "seen_at": "2026-11-24T09:33:32.836122+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564601895692772",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0svbBHtF2k4d5Vb7ggYTxT2SWPbDLEaWmxKTkyjSSXKp2UwBU5VLceMdY3J7eZCZhl",
+          "posted_at": "2026-11-23T21:00:04",
+          "seen_at": "2026-11-24T09:34:10.615649+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-22T14:29:53.930040+07:00",
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-19",
+              "new": "2026-11-22"
+            },
+            "time": {
+              "old": "20:00",
+              "new": "11:03"
+            },
+            "location": {
+              "old": "Online",
+              "new": "Trực tuyến"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-19T20:00:04+07:00",
+              "new": "2026-11-22T11:03:01+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-21T24:00:00+07:00",
+              "new": "2026-11-24T24:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-23T20:25:05.414123+07:00",
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "client_id": null,
+          "changes": {
+            "reg_start_datetime": {
+              "old": "2026-11-22T11:03:01+07:00",
+              "new": "2026-11-22T00:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-24T09:33:32.836122+07:00",
+          "source_type": "facebook",
+          "source_id": "1565125212307107",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-22",
+              "new": "2026-11-24"
+            },
+            "time": {
+              "old": "11:03",
+              "new": "08:30"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-22T00:00:00+07:00",
+              "new": "2026-11-24T08:30:55+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-24T24:00:00+07:00",
+              "new": "2026-11-26T24:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-24T09:34:10.615649+07:00",
+          "source_type": "facebook",
+          "source_id": "1564601895692772",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-24",
+              "new": "2026-11-23"
+            },
+            "time": {
+              "old": "08:30",
+              "new": "21:00"
+            },
+            "location": {
+              "old": "Trực tuyến",
+              "new": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-24T08:30:55+07:00",
+              "new": "2026-11-23T21:00:00+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-26T24:00:00+07:00",
+              "new": "2026-11-25T24:00:00+07:00"
+            }
+          }
+        }
+      ]
     },
     {
       "event_id": 46,
@@ -1157,118 +1391,6 @@
             "fee": {
               "old": null,
               "new": "miễn phí"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "event_id": 25,
-      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
-      "online_mode": "online",
-      "is_online": true,
-      "date": "2026-11-22",
-      "time": "11:03",
-      "start_datetime": "2026-11-22T11:03:01+07:00",
-      "end_datetime": "2026-11-24T23:59:00+07:00",
-      "event_start_datetime": "2026-11-22T11:03:01+07:00",
-      "event_end_datetime": "2026-11-24T23:59:00+07:00",
-      "reg_start_datetime": "2026-11-22T00:00:00+07:00",
-      "reg_end_datetime": "2026-11-24T24:00:00+07:00",
-      "location": "Trực tuyến",
-      "source_type": "facebook",
-      "source_id": "1559974292822199",
-      "fanpage_id": 15,
-      "client_id": null,
-      "version": 3,
-      "created_at": "2026-11-19T20:57:41.495033+07:00",
-      "updated_at": "2026-11-23T20:25:05.414123+07:00",
-      "description": "Tham gia chuỗi hoạt động khám phá văn hóa Cà Mau qua hình ảnh gợi ý, bình luận chia sẻ hiểu biết và điền form để ghi nhận dấu mốc tham gia. Người tham gia tích lũy đủ số bài theo quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
-      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
-      "registration_url": "https://forms.gle/rHd3PrhqiYMQa2EJ9",
-      "registration_status": "link",
-      "fee": "miễn phí",
-      "target_audience": [
-        "sinh viên",
-        "cộng đồng"
-      ],
-      "category": [
-        "cộng đồng",
-        "khác"
-      ],
-      "format": [
-        "online",
-        "cá nhân"
-      ],
-      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
-      "posted_at": "2026-11-19T20:00:04",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1559974292822199",
-          "fanpage_id": 15,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
-          "posted_at": "2026-11-19T20:00:04",
-          "seen_at": "2026-11-19T20:57:41.495033+07:00"
-        },
-        {
-          "source_type": "facebook",
-          "source_id": "1563025289183766",
-          "fanpage_id": 15,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
-          "posted_at": "2026-11-22T11:03:01",
-          "seen_at": "2026-11-22T14:29:53.930040+07:00"
-        },
-        {
-          "source_type": "facebook",
-          "source_id": "1564136432405985",
-          "fanpage_id": 15,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02eDeYxCzFsF3xYDquNpTWjqmGCwxTVS5HQJvedL3mw1kkD2S8vC6iD8sCiBVa35iVl",
-          "posted_at": "2026-11-23T11:00:01",
-          "seen_at": "2026-11-23T20:25:05.414123+07:00"
-        }
-      ],
-      "update_history": [
-        {
-          "updated_at": "2026-11-22T14:29:53.930040+07:00",
-          "source_type": "facebook",
-          "source_id": "1563025289183766",
-          "client_id": null,
-          "changes": {
-            "date": {
-              "old": "2026-11-19",
-              "new": "2026-11-22"
-            },
-            "time": {
-              "old": "20:00",
-              "new": "11:03"
-            },
-            "location": {
-              "old": "Online",
-              "new": "Trực tuyến"
-            },
-            "reg_start_datetime": {
-              "old": "2026-11-19T20:00:04+07:00",
-              "new": "2026-11-22T11:03:01+07:00"
-            },
-            "reg_end_datetime": {
-              "old": "2026-11-21T24:00:00+07:00",
-              "new": "2026-11-24T24:00:00+07:00"
-            }
-          }
-        },
-        {
-          "updated_at": "2026-11-23T20:25:05.414123+07:00",
-          "source_type": "facebook",
-          "source_id": "1564136432405985",
-          "client_id": null,
-          "changes": {
-            "reg_start_datetime": {
-              "old": "2026-11-22T11:03:01+07:00",
-              "new": "2026-11-22T00:00:00+07:00"
             }
           }
         }
