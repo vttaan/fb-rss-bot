@@ -1,17 +1,31 @@
 import json
 import re
+import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 
-from sqlalchemy import create_engine, select, func
+from sqlalchemy import create_engine, select, func, text
 from sqlalchemy.orm import Session, sessionmaker, joinedload
 
 from config import DATABASE_URL, LOCAL_TIMEZONE
-from .models import Base, EmailMessage, EventRecord, Fanpage, Post, PostAnalysis, User, UserSubscription, ensure_local_tz
+from .models import (
+    Base,
+    EmailMessage,
+    EventRecord,
+    EventSubscription,
+    Fanpage,
+    Post,
+    PostAnalysis,
+    User,
+    UserSubscription,
+    ensure_local_tz,
+    local_now_iso,
+)
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
+_DB_INITIALIZED = False
 
 _INVALID_FANPAGE_EXACT_NAMES = {
     "facebook",
@@ -83,8 +97,226 @@ def is_valid_fanpage_name(name: Optional[str]) -> bool:
     return clean_fanpage_name(name) is not None
 
 
+def _table_columns(conn, table_name: str) -> List[str]:
+    rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+    return [r[1] for r in rows]
+
+
+def _migrate_sqlite_schema() -> None:
+    """Safely migrate legacy SQLite tables (`users`, `user_subscriptions`, `events`) in place."""
+    with engine.begin() as conn:
+        existing_tables = {
+            r[0]
+            for r in conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
+        }
+
+        # 1. Migrate legacy `users` & `user_subscriptions` if `user_id` is not yet the PK
+        if "users" in existing_tables:
+            u_cols = _table_columns(conn, "users")
+            if "user_id" not in u_cols or "username" not in u_cols or "password" not in u_cols:
+                old_users = conn.execute(
+                    text("SELECT id, client_id, created_at FROM users")
+                ).fetchall()
+                old_subs = []
+                if "user_subscriptions" in existing_tables:
+                    old_subs = conn.execute(
+                        text("SELECT user_id, fanpage_id, created_at FROM user_subscriptions")
+                    ).fetchall()
+                    conn.execute(text("DROP TABLE user_subscriptions"))
+                conn.execute(text("DROP TABLE users"))
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE users (
+                            user_id VARCHAR(128) NOT NULL PRIMARY KEY,
+                            username VARCHAR(128) NOT NULL UNIQUE,
+                            password VARCHAR(255) NOT NULL DEFAULT '',
+                            start_year INTEGER NOT NULL DEFAULT 2024,
+                            created_at DATETIME
+                        )
+                        """
+                    )
+                )
+                id_map: Dict[int, str] = {}
+                for old_id, client_id, created_at in old_users:
+                    new_uid = uuid.uuid4().hex
+                    id_map[old_id] = new_uid
+                    conn.execute(
+                        text(
+                            "INSERT INTO users (user_id, username, password, start_year, created_at) "
+                            "VALUES (:uid, :uname, '', 2024, :cat)"
+                        ),
+                        {"uid": new_uid, "uname": client_id, "cat": created_at},
+                    )
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE user_subscriptions (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id VARCHAR(128) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                            fanpage_id INTEGER NOT NULL REFERENCES fanpages(id) ON DELETE CASCADE,
+                            created_at DATETIME,
+                            CONSTRAINT uq_user_fanpage UNIQUE (user_id, fanpage_id)
+                        )
+                        """
+                    )
+                )
+                for old_uid, fp_id, created_at in old_subs:
+                    new_uid = id_map.get(old_uid)
+                    if new_uid:
+                        conn.execute(
+                            text(
+                                "INSERT OR IGNORE INTO user_subscriptions (user_id, fanpage_id, created_at) "
+                                "VALUES (:uid, :fpid, :cat)"
+                            ),
+                            {"uid": new_uid, "fpid": fp_id, "cat": created_at},
+                        )
+
+        # 2. Migrate legacy `events` table (id -> event_id + new structured columns)
+        if "events" in existing_tables:
+            e_cols = _table_columns(conn, "events")
+            if "event_id" not in e_cols:
+                fanpage_names: Dict[int, str] = {}
+                if "fanpages" in existing_tables:
+                    for fid, fname, fslug in conn.execute(
+                        text("SELECT id, name, slug FROM fanpages")
+                    ).fetchall():
+                        fanpage_names[fid] = fname or fslug or ""
+
+                old_events = conn.execute(text("SELECT * FROM events")).mappings().all()
+                conn.execute(text("ALTER TABLE events RENAME TO events_legacy_backup"))
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE events (
+                            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            title VARCHAR(512) NOT NULL,
+                            description TEXT NOT NULL DEFAULT '',
+                            organizer VARCHAR(512) NOT NULL DEFAULT '',
+                            is_online BOOLEAN NOT NULL DEFAULT 0,
+                            event_start_datetime VARCHAR(64),
+                            reg_start_datetime VARCHAR(64),
+                            reg_end_datetime VARCHAR(64),
+                            event_end_datetime VARCHAR(64),
+                            location VARCHAR(512) NOT NULL DEFAULT '',
+                            source_type VARCHAR(255) NOT NULL DEFAULT 'facebook',
+                            created_at VARCHAR(64) NOT NULL,
+                            updated_at VARCHAR(64) NOT NULL,
+                            fee VARCHAR(255) NOT NULL DEFAULT '',
+                            target_audience TEXT NOT NULL DEFAULT '[]',
+                            award TEXT NOT NULL DEFAULT '',
+                            registration VARCHAR(1024),
+                            category TEXT NOT NULL DEFAULT '[]',
+                            format TEXT NOT NULL DEFAULT '[]',
+                            post_url VARCHAR(1024),
+                            normalized_title VARCHAR(512) NOT NULL DEFAULT '',
+                            online_mode VARCHAR(32),
+                            event_date VARCHAR(32),
+                            event_time VARCHAR(32),
+                            start_datetime VARCHAR(64),
+                            end_datetime VARCHAR(64),
+                            normalized_location VARCHAR(512),
+                            source_id VARCHAR(255) NOT NULL DEFAULT '',
+                            fanpage_id INTEGER REFERENCES fanpages(id) ON DELETE SET NULL,
+                            client_id VARCHAR(128),
+                            event_json TEXT NOT NULL DEFAULT '{}',
+                            version INTEGER NOT NULL DEFAULT 1
+                        )
+                        """
+                    )
+                )
+                for row in old_events:
+                    try:
+                        extra = json.loads(row.get("event_json") or "{}")
+                    except Exception:
+                        extra = {}
+                    fp_id = row.get("fanpage_id")
+                    raw_st = (row.get("source_type") or "facebook").strip()
+                    if raw_st == "facebook" and fp_id and fanpage_names.get(fp_id):
+                        src_type = f"facebook: {fanpage_names[fp_id]}"
+                    else:
+                        src_type = raw_st
+
+                    ev_start = extra.get("event_start_datetime") or row.get("start_datetime")
+                    ev_end = extra.get("event_end_datetime") or row.get("end_datetime")
+                    reg_start = extra.get("reg_start_datetime")
+                    reg_end = extra.get("reg_end_datetime")
+                    reg_url = extra.get("registration_url") or extra.get("registration")
+                    p_url = extra.get("post_url")
+                    cat = extra.get("category") or []
+                    fmt = extra.get("format") or []
+                    aud = extra.get("target_audience") or []
+                    if isinstance(aud, str):
+                        aud = [aud] if aud.strip() else []
+
+                    conn.execute(
+                        text(
+                            """
+                            INSERT INTO events (
+                                event_id, title, description, organizer, is_online,
+                                event_start_datetime, reg_start_datetime, reg_end_datetime, event_end_datetime,
+                                location, source_type, created_at, updated_at,
+                                fee, target_audience, award, registration, category, format, post_url,
+                                normalized_title, online_mode, event_date, event_time,
+                                start_datetime, end_datetime, normalized_location,
+                                source_id, fanpage_id, client_id, event_json, version
+                            ) VALUES (
+                                :event_id, :title, :description, :organizer, :is_online,
+                                :event_start_datetime, :reg_start_datetime, :reg_end_datetime, :event_end_datetime,
+                                :location, :source_type, :created_at, :updated_at,
+                                :fee, :target_audience, :award, :registration, :category, :format, :post_url,
+                                :normalized_title, :online_mode, :event_date, :event_time,
+                                :start_datetime, :end_datetime, :normalized_location,
+                                :source_id, :fanpage_id, :client_id, :event_json, :version
+                            )
+                            """
+                        ),
+                        {
+                            "event_id": row["id"],
+                            "title": row["title"],
+                            "description": extra.get("description") or "",
+                            "organizer": extra.get("organizer") or "",
+                            "is_online": 1 if row.get("is_online") else 0,
+                            "event_start_datetime": ev_start,
+                            "reg_start_datetime": reg_start,
+                            "reg_end_datetime": reg_end,
+                            "event_end_datetime": ev_end,
+                            "location": row.get("location") or "",
+                            "source_type": src_type,
+                            "created_at": str(row.get("created_at") or local_now_iso()),
+                            "updated_at": str(row.get("updated_at") or local_now_iso()),
+                            "fee": extra.get("fee") or "",
+                            "target_audience": json.dumps(aud, ensure_ascii=False),
+                            "award": extra.get("award") or "",
+                            "registration": reg_url,
+                            "category": json.dumps(cat if isinstance(cat, list) else [], ensure_ascii=False),
+                            "format": json.dumps(fmt if isinstance(fmt, list) else [], ensure_ascii=False),
+                            "post_url": p_url,
+                            "normalized_title": row.get("normalized_title") or "",
+                            "online_mode": row.get("online_mode"),
+                            "event_date": row.get("event_date"),
+                            "event_time": row.get("event_time"),
+                            "start_datetime": row.get("start_datetime"),
+                            "end_datetime": row.get("end_datetime"),
+                            "normalized_location": row.get("normalized_location"),
+                            "source_id": row.get("source_id") or "",
+                            "fanpage_id": fp_id,
+                            "client_id": row.get("client_id"),
+                            "event_json": row.get("event_json") or "{}",
+                            "version": row.get("version") or 1,
+                        },
+                    )
+                conn.execute(text("DROP TABLE events_legacy_backup"))
+
+
 def init_db() -> None:
-    """Create database tables if they do not exist."""
+    """Create database tables if they do not exist and run safe schema migrations."""
+    global _DB_INITIALIZED
+    if not _DB_INITIALIZED:
+        _migrate_sqlite_schema()
+        _DB_INITIALIZED = True
     Base.metadata.create_all(bind=engine)
 
 
@@ -319,13 +551,84 @@ def get_or_create_user(client_id: str) -> User:
     init_db()
     clean_id = client_id.strip()
     with get_session() as session:
-        user = session.scalar(select(User).where(User.client_id == clean_id))
+        user = session.scalar(
+            select(User).where((User.username == clean_id) | (User.user_id == clean_id))
+        )
         if not user:
-            user = User(client_id=clean_id)
+            user = User(
+                user_id=uuid.uuid4().hex,
+                username=clean_id,
+                password="",
+                start_year=2024,
+            )
             session.add(user)
             session.commit()
             session.refresh(user)
         return user
+
+
+def create_user(username: str, hashed_password: str, start_year: int) -> User:
+    """Create a registered client user account."""
+    init_db()
+    clean_username = username.strip()
+    with get_session() as session:
+        existing = session.scalar(select(User).where(User.username == clean_username))
+        if existing:
+            if not existing.password:
+                # Upgrade legacy RSS-only placeholder user with password & start_year
+                existing.password = hashed_password
+                existing.start_year = int(start_year)
+                session.commit()
+                session.refresh(existing)
+                return existing
+            raise ValueError(f"Username '{clean_username}' is already taken.")
+        user = User(
+            user_id=uuid.uuid4().hex,
+            username=clean_username,
+            password=hashed_password,
+            start_year=int(start_year),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+
+def get_user_by_username(username: str) -> Optional[User]:
+    init_db()
+    with get_session() as session:
+        return session.scalar(select(User).where(User.username == username.strip()))
+
+
+def get_user_by_id(user_id: str) -> Optional[User]:
+    init_db()
+    with get_session() as session:
+        return session.get(User, user_id.strip())
+
+
+def list_users() -> List[Dict[str, Any]]:
+    """Return all users with their event subscription counts and total credits."""
+    init_db()
+    with get_session() as session:
+        users = list(session.scalars(select(User).order_by(User.created_at.desc())).all())
+        subs = list(session.scalars(select(EventSubscription)).all())
+        stats: Dict[str, Dict[str, int]] = {}
+        for s in subs:
+            entry = stats.setdefault(s.user_id, {"event_count": 0, "total_credit": 0})
+            entry["event_count"] += 1
+            entry["total_credit"] += int(s.credit or 0)
+        result = []
+        for u in users:
+            st = stats.get(u.user_id, {"event_count": 0, "total_credit": 0})
+            result.append(
+                {
+                    **u.to_dict(),
+                    "has_password": bool(u.password),
+                    "subscribed_events_count": st["event_count"],
+                    "total_credit": st["total_credit"],
+                }
+            )
+        return result
 
 
 def subscribe_user_to_fanpages(
@@ -466,12 +769,138 @@ def get_all_events(
     """Retrieve deduplicated events from the unified EventRecord table."""
     init_db()
     with get_session() as session:
-        stmt = select(EventRecord).order_by(EventRecord.updated_at.desc(), EventRecord.id.desc())
+        stmt = select(EventRecord).order_by(EventRecord.updated_at.desc(), EventRecord.event_id.desc())
         if source_type:
-            stmt = stmt.where(EventRecord.source_type == source_type)
+            st_clean = source_type.strip()
+            if st_clean.lower() == "facebook":
+                stmt = stmt.where(EventRecord.source_type.ilike("facebook%"))
+            else:
+                stmt = stmt.where(EventRecord.source_type == st_clean)
         if client_id:
             stmt = stmt.where(EventRecord.client_id == client_id.strip())
         if fanpage_id is not None:
             stmt = stmt.where(EventRecord.fanpage_id == fanpage_id)
         stmt = stmt.limit(limit)
         return list(session.scalars(stmt).all())
+
+
+def get_event_by_id(event_id: int) -> Optional[EventRecord]:
+    init_db()
+    with get_session() as session:
+        return session.get(EventRecord, event_id)
+
+
+def subscribe_user_to_event(
+    user_id: str,
+    event_id: int,
+    audience: str = "",
+    progress: str = "interested",
+    evidence: str = "",
+    credit: int = 0,
+) -> EventSubscription:
+    """Create or update a user's subscription to an event."""
+    init_db()
+    now_iso = local_now_iso()
+    with get_session() as session:
+        ev = session.get(EventRecord, event_id)
+        if not ev:
+            raise ValueError(f"Event {event_id} not found.")
+        sub = session.get(EventSubscription, (user_id, event_id))
+        if sub:
+            if audience:
+                sub.audience = audience.strip()
+            if progress:
+                sub.progress = progress.strip()
+            if evidence:
+                sub.evidence = evidence.strip()
+            if credit is not None:
+                sub.credit = int(credit)
+            sub.updated_at = now_iso
+        else:
+            sub = EventSubscription(
+                user_id=user_id,
+                event_id=event_id,
+                audience=(audience or "").strip(),
+                progress=(progress or "interested").strip(),
+                evidence=(evidence or "").strip(),
+                credit=int(credit or 0),
+                created_at=now_iso,
+                updated_at=now_iso,
+            )
+            session.add(sub)
+        session.commit()
+        session.refresh(sub)
+        return sub
+
+
+def update_event_subscription(
+    user_id: str,
+    event_id: int,
+    audience: Optional[str] = None,
+    progress: Optional[str] = None,
+    evidence: Optional[str] = None,
+    credit: Optional[int] = None,
+) -> Optional[EventSubscription]:
+    """Update fields on an existing (user_id, event_id) subscription."""
+    init_db()
+    with get_session() as session:
+        sub = session.get(EventSubscription, (user_id, event_id))
+        if not sub:
+            return None
+        if audience is not None:
+            sub.audience = audience.strip()
+        if progress is not None:
+            sub.progress = progress.strip()
+        if evidence is not None:
+            sub.evidence = evidence.strip()
+        if credit is not None:
+            sub.credit = int(credit)
+        sub.updated_at = local_now_iso()
+        session.commit()
+        session.refresh(sub)
+        return sub
+
+
+def unsubscribe_user_from_event(user_id: str, event_id: int) -> bool:
+    """Remove a user's subscription to an event."""
+    init_db()
+    with get_session() as session:
+        sub = session.get(EventSubscription, (user_id, event_id))
+        if not sub:
+            return False
+        session.delete(sub)
+        session.commit()
+        return True
+
+
+def get_user_event_subscriptions(user_id: str) -> List[Dict[str, Any]]:
+    """Return all event subscriptions (with nested event details) for a given user_id."""
+    init_db()
+    with get_session() as session:
+        stmt = (
+            select(EventSubscription)
+            .options(joinedload(EventSubscription.event))
+            .where(EventSubscription.user_id == user_id)
+            .order_by(EventSubscription.updated_at.desc())
+        )
+        rows = list(session.scalars(stmt).all())
+        return [r.to_dict(include_event=True) for r in rows]
+
+
+def list_all_event_subscriptions(limit: int = 200) -> List[Dict[str, Any]]:
+    """Return recent event subscriptions across all users (for admin view)."""
+    init_db()
+    with get_session() as session:
+        stmt = (
+            select(EventSubscription)
+            .options(joinedload(EventSubscription.event), joinedload(EventSubscription.user))
+            .order_by(EventSubscription.updated_at.desc())
+            .limit(limit)
+        )
+        rows = list(session.scalars(stmt).all())
+        out = []
+        for r in rows:
+            item = r.to_dict(include_event=True)
+            item["username"] = r.user.username if r.user else r.user_id
+            out.append(item)
+        return out

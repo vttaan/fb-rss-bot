@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from config import FEEDS_DIR, LOCAL_TIMEZONE
+from .classifier import classify_event
 from database import (
     EmailMessage,
     EventRecord,
@@ -2096,6 +2097,47 @@ def _merge_registration_and_null_fields(
     return extra_changes
 
 
+def _format_source_type(session, source_type: str, fanpage_id: Optional[int]) -> str:
+    raw = (source_type or "facebook").strip()
+    if raw.lower() == "facebook" and fanpage_id:
+        fp = session.get(Fanpage, fanpage_id)
+        if fp:
+            label = (fp.name or fp.slug or "").strip()
+            if label:
+                return f"facebook: {label}"
+    return raw
+
+
+def _sync_event_columns(
+    record: EventRecord,
+    info: Dict[str, Any],
+    source_type_label: Optional[str] = None,
+    post_url: Optional[str] = None,
+) -> None:
+    """Run classification and synchronize structured EventRecord columns from info dict."""
+    classified = classify_event({**info, "title": record.title, "location": record.location, "is_online": record.is_online})
+    info.update(classified)
+    record.description = str(info.get("description") or record.description or "")
+    record.organizer = str(info.get("organizer") or record.organizer or "")
+    record.is_online = bool(classified["is_online"])
+    record.event_start_datetime = info.get("event_start_datetime") or record.start_datetime or record.event_start_datetime
+    record.event_end_datetime = info.get("event_end_datetime") or record.end_datetime or record.event_end_datetime
+    record.reg_start_datetime = info.get("reg_start_datetime") or record.reg_start_datetime
+    record.reg_end_datetime = info.get("reg_end_datetime") or record.reg_end_datetime
+    record.fee = str(info.get("fee") or record.fee or "")
+    record.target_audience = classified["target_audience"]
+    record.award = classified["award"]
+    record.registration = info.get("registration_url") or info.get("registration") or record.registration
+    record.category = classified["category"]
+    record.format = classified["format"]
+    if post_url:
+        record.post_url = post_url
+    elif info.get("post_url"):
+        record.post_url = info.get("post_url")
+    if source_type_label:
+        record.source_type = source_type_label
+
+
 def upsert_unified_event(
     session,
     raw_data: Dict[str, Any],
@@ -2177,6 +2219,7 @@ def upsert_unified_event(
             stored_info["update_history"] = history
             existing.version = (existing.version or 1) + 1
             existing.updated_at = now_dt
+            _sync_event_columns(existing, stored_info, post_url=post_url)
             existing.event_json = json.dumps(stored_info, ensure_ascii=False)
             session.flush()
             return "updated", existing, extra_changes
@@ -2239,6 +2282,7 @@ def upsert_unified_event(
 
         existing.version = (existing.version or 1) + 1
         existing.updated_at = now_dt
+        _sync_event_columns(existing, stored_info, post_url=post_url)
         existing.event_json = json.dumps(stored_info, ensure_ascii=False)
         session.flush()
         return "updated", existing, all_changes
@@ -2262,26 +2306,29 @@ def upsert_unified_event(
         "sources": [source_entry],
         "update_history": [],
     }
+    formatted_source_type = _format_source_type(session, source_type, fanpage_id)
     new_record = EventRecord(
         title=anchor["title"],
         normalized_title=anchor["normalized_title"],
         online_mode=anchor["online_mode"],
-        is_online=anchor["is_online"],
+        is_online=bool(anchor["is_online"]) if anchor["is_online"] is not None else False,
         event_date=anchor["date"],
         event_time=anchor["time"],
         start_datetime=anchor["start_datetime"],
         end_datetime=anchor["end_datetime"],
-        location=anchor["location"],
+        location=anchor["location"] or "",
         normalized_location=anchor["normalized_location"],
-        source_type=source_type,
+        source_type=formatted_source_type,
         source_id=source_id,
         fanpage_id=fanpage_id,
         client_id=client_id,
         event_json=json.dumps(full_info, ensure_ascii=False),
         version=1,
-        created_at=now_dt,
-        updated_at=now_dt,
+        created_at=now_dt.isoformat(),
+        updated_at=now_dt.isoformat(),
     )
+    _sync_event_columns(new_record, full_info, source_type_label=formatted_source_type, post_url=post_url)
+    new_record.event_json = json.dumps(full_info, ensure_ascii=False)
     session.add(new_record)
     session.flush()
     return "created", new_record, {}
