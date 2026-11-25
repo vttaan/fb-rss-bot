@@ -1,8 +1,29 @@
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Auto-load .env file if present
+def _load_env_file() -> None:
+    env_path = BASE_DIR / ".env"
+    if env_path.is_file():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip("'\"")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+        except Exception:
+            pass
+
+_load_env_file()
 
 # Timezone Configuration (Asia/Ho_Chi_Minh / GMT+7)
 try:
@@ -35,15 +56,11 @@ PAGE_TIMEOUT_MS = 45000          # Page navigation timeout
 MAX_POSTS_IN_RSS = 50            # Max items to include in generated XML feed
 INITIAL_NEW_PAGE_POST_LIMIT = 5  # Fetch only the 5 most recent posts when scraping a newly added page
 
+# Residential Proxy Configuration for Playwright Scraping
+FB_PROXY_URL = os.environ.get("FB_PROXY_URL", "").strip()
+
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/131.0.0.0 Safari/537.36"
 )
-
-# --- Email ingestion hardening ---
-STORE_EMAIL_CONTENT = False
-INGEST_RATE_LIMIT_PER_MINUTE = 60
-INGEST_MAX_BATCH_SIZE = 50
-INGEST_MAX_CONTENT_CHARS = 50000
-INGEST_MAX_HASHES_PER_CHECK = 500

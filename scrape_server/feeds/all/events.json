@@ -1,38 +1,190 @@
 {
   "folder": "all",
   "description": "Unified deduplicated & updated events from Facebook fanpages and client emails",
-  "updated_at": "2026-11-15T21:48:37.238667+07:00",
-  "count": 16,
+  "updated_at": "2026-11-24T09:35:09.036000+07:00",
+  "count": 51,
   "events": [
     {
-      "event_id": 2,
-      "title": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
+      "event_id": 45,
+      "title": "HỘI NGHỊ TỔNG KẾT CHƯƠng TRÌNH SINH VIÊN NGHIÊN CỨU KHOA HỌC - CÔNG NGHỆ NĂM 2026",
       "online_mode": "offline",
       "is_online": false,
-      "date": "2026-11-20",
-      "time": "14:00",
-      "start_datetime": "2026-11-20T14:00:00+07:00",
-      "end_datetime": "2026-11-20T23:59:00+07:00",
-      "event_start_datetime": "2026-11-20T14:00:00+07:00",
-      "event_end_datetime": "2026-11-20T23:59:00+07:00",
-      "reg_start_datetime": null,
-      "reg_end_datetime": null,
-      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).",
-      "source_type": "email",
-      "source_id": "email_dcc51d42aa11b354b3cd",
-      "fanpage_id": null,
-      "client_id": "anonymous",
-      "version": 2,
-      "created_at": "2026-11-11T13:34:53.183204+07:00",
-      "updated_at": "2026-11-15T21:48:14.132400+07:00",
-      "description": "Đến với NÉT SON, bạn sẽ có cơ hội. Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt. Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa...",
-      "organizer": "BEE Club",
-      "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
+      "date": "2026-11-27",
+      "time": "17:30",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-27T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "event_end_datetime": "2026-11-27T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:44:20+07:00",
+      "reg_end_datetime": "2026-11-27T17:30:00+07:00",
+      "location": "Giảng đường 1 - Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ)",
+      "source_type": "facebook",
+      "source_id": "1625997896237729",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:16.806857+07:00",
+      "updated_at": "2026-11-23T20:02:16.806857+07:00",
+      "description": "Hội nghị tổng kết chương trình sinh viên nghiên cứu khoa học - công nghệ năm 2026 là sự kiện thường niên nhằm nhìn nhận, đánh giá và tổng kết các hoạt động nghiên cứu khoa học của sinh viên trong năm. Sự kiện diễn ra trực tiếp tại Giảng đường 1, Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM, mở cửa đón chào các bạn sinh viên tham gia.",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "registration_url": "https://khunghinh.net/p/hntksvnckh2026",
       "registration_status": "link",
-      "fee": "25.000 VNĐ/sinh viên",
+      "fee": "miễn phí",
       "target_audience": [
         "sinh viên"
       ],
+      "category": [
+        "hội nghị",
+        "khoa học",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+      "posted_at": "2026-11-23T09:44:20",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1625997896237729",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+          "posted_at": "2026-11-23T09:44:20",
+          "seen_at": "2026-11-23T20:02:16.806857+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 43,
+      "title": "ĐẠI NHẠC HỘI BCONS BESTIVAL 2026 - NHẠC ĐA TẦNG, SỐNG ĐA BEST!",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-27",
+      "time": "17:30",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-29T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "event_end_datetime": "2026-11-29T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T20:01:23+07:00",
+      "reg_end_datetime": "2026-11-29T23:59:00+07:00",
+      "location": "BCONS CITY MALL, 38 Thống Nhất, phường Đông Hòa, Tp.HCM",
+      "source_type": "facebook",
+      "source_id": "1563444215808540",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T08:07:23.495342+07:00",
+      "updated_at": "2026-11-23T08:07:23.495342+07:00",
+      "description": "Tham gia Đại nhạc hội Bcons Bestival 2026 - Nhạc đa tầng, sống đa best với 3 đêm âm nhạc bùng nổ quy tụ nhiều nghệ sĩ nổi tiếng, cùng các hoạt động giải trí và ẩm thực hấp dẫn.",
+      "organizer": "Tập đoàn Bcons & Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://bit.ly/3zY62oN",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0RynNkrUF4H3iFpWnZKkiestkAchNefM3K4exsxzCKbbQG8XfucvG5Zozgrme3ro1l",
+      "posted_at": "2026-11-22T20:01:23",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563444215808540",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0RynNkrUF4H3iFpWnZKkiestkAchNefM3K4exsxzCKbbQG8XfucvG5Zozgrme3ro1l",
+          "posted_at": "2026-11-22T20:01:23",
+          "seen_at": "2026-11-23T08:07:23.495342+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 5,
+      "title": "UNITOUR BẢN NHÁP PHÁC NGHỀ 2026 | ĐO ĐỎ CHÍNH THỨC KHỞI ĐỘNG BƯỚC XUẤT NHÁP 📁",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-25",
+      "time": "11:00",
+      "start_datetime": "2026-11-25T11:00:00+07:00",
+      "end_datetime": "2026-11-25T15:00:00+07:00",
+      "event_start_datetime": "2026-11-25T11:00:00+07:00",
+      "event_end_datetime": "2026-11-25T15:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T13:00:08",
+      "reg_end_datetime": "2026-11-25T00:00:00+07:00",
+      "location": "20 Cộng Hòa, Bảy Hiền, TP.HCM.",
+      "source_type": "facebook",
+      "source_id": "1559625076190454",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T15:25:36.325987+07:00",
+      "updated_at": "2026-11-19T15:25:36.325987+07:00",
+      "description": "Chuỗi sự kiện tương tác \"Bản Nháp Phác Nghề\" chính thức cập bến 3 trường Đại học tại TP.HCM với 5 trạm trải nghiệm thực tế. Trạm 2 – Trải nghiệm Web-App: Test CRI và hoàn thiện profile để đối thoại cùng các nhà cố vấn.",
+      "organizer": null,
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "hướng nghiệp",
+        "ngày hội"
+      ],
+      "format": [
+        "offline",
+        "chạy trạm"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029LULvz3zCuU53PHQdrFqf9kCvEsH8trJhdxjk8nttkPguna6YHbAgeCkRzHJgwX2l",
+      "posted_at": "2026-11-19T13:00:08",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559625076190454",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029LULvz3zCuU53PHQdrFqf9kCvEsH8trJhdxjk8nttkPguna6YHbAgeCkRzHJgwX2l",
+          "posted_at": "2026-11-19T13:00:08",
+          "seen_at": "2026-11-19T15:25:36.325987+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 50,
+      "title": "Workshop “Người trẻ có văn hóa – Từ cách nghĩ đến cách sống”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "13:30",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T14:00:02+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1564260075726954",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:10:46.619055+07:00",
+      "updated_at": "2026-11-23T20:10:46.619055+07:00",
+      "description": "Workshop 'Người trẻ có văn hóa – Từ cách nghĩ đến cách sống' là không gian để sinh viên thảo luận về nhân cách, văn hóa ứng xử và lối sống văn minh trong thời đại số. Người tham gia sẽ có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP.HCM và nhiều phần quà hấp dẫn.",
+      "organizer": null,
+      "registration_url": "https://forms.gle/4jTCvJgBMBLdZ2KU7",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
       "category": [
         "workshop",
         "tọa đàm"
@@ -40,91 +192,515 @@
       "format": [
         "offline"
       ],
-      "post_url": null,
-      "posted_at": "2026-11-11T13:34:52.858441+07:00",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid021d3Jm9xc5XgY7MqV6HUjZGLH5GrnNX8n7KHvn1TygtDs4neQcVPV1PYTqd7Dqd1Cl",
+      "posted_at": "2026-11-23T14:00:02",
       "sources": [
         {
-          "source_type": "email",
-          "source_id": "email_dcc51d42aa11b354b3cd",
-          "fanpage_id": null,
-          "client_id": "anonymous",
-          "post_url": null,
-          "posted_at": "2026-11-11T13:34:52.858441+07:00",
-          "seen_at": "2026-11-11T13:34:53.183204+07:00"
+          "source_type": "facebook",
+          "source_id": "1564260075726954",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid021d3Jm9xc5XgY7MqV6HUjZGLH5GrnNX8n7KHvn1TygtDs4neQcVPV1PYTqd7Dqd1Cl",
+          "posted_at": "2026-11-23T14:00:02",
+          "seen_at": "2026-11-23T20:10:46.619055+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 3,
+      "title": "Workshop “Văn hóa của người trẻ trong bối cảnh số – Từ cách nghĩ đến cách sống”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "13:30",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T15:00:17",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1559710036181958",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T15:25:21.988024+07:00",
+      "updated_at": "2026-11-19T15:25:21.988024+07:00",
+      "description": "Tham gia Workshop, bạn sẽ được. Khám phá những biểu hiện của văn hóa trong suy nghĩ, lời nói, thái độ và hành động thường ngày. Trong thời đại số, văn hóa không chỉ thể hiện qua trang phục, lễ hội hay các loại hình nghệ thuật, mà còn hiện diện trong từng lời nói, thái độ và cách chúng ta tương tác với thế giới xung quanh. Từ cách bình luận trên mạng xã hội, ứng xử nơi công cộng đến sự tôn trọng những khác biệt, liệu người trẻ đã thực sự ý thức đư...",
+      "organizer": null,
+      "registration_url": "https://q.me-qr.com/fvc8fqlm",
+      "registration_status": "qr",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid07RJChtdaZSZo9btUAPq292y3g1xgB1zMTz3DwYcYLNxhXbi7BmguqBecPp2yP1eRl",
+      "posted_at": "2026-11-19T15:00:17",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559710036181958",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid07RJChtdaZSZo9btUAPq292y3g1xgB1zMTz3DwYcYLNxhXbi7BmguqBecPp2yP1eRl",
+          "posted_at": "2026-11-19T15:00:17",
+          "seen_at": "2026-11-19T15:25:21.988024+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 47,
+      "title": "TRIỂN LÃM VÀ GIỚI THIỆU VỀ THƯ PHÁP VIỆT - WORKSHOP “NÉT CHỮ - NÉT NGƯỜI”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "09:00",
+      "start_datetime": "2026-11-24T09:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T09:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T19:00:03+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM (Số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "source_type": "facebook",
+      "source_id": "1564487712370857",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:08:24.590710+07:00",
+      "updated_at": "2026-11-23T20:08:24.590710+07:00",
+      "description": "The 'Nét chữ - Nét người' event is a workshop and exhibition dedicated to Vietnamese calligraphy, offering participants the chance to explore traditional art, learn about the stories behind calligraphy, and practice creating their own works. This event aims to foster an appreciation for cultural heritage and provides a relaxing space for creative expression.",
+      "organizer": null,
+      "registration_url": "https://tinyurl.com/NHVanhoaVietNam2026",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "triển lãm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02NjBCcrnQAtggu4m8hQT5aYerKiwMug15W9qrPFHveQt2qj7GsrxgjjhhbnmcoTfRl",
+      "posted_at": "2026-11-23T19:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564487712370857",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02NjBCcrnQAtggu4m8hQT5aYerKiwMug15W9qrPFHveQt2qj7GsrxgjjhhbnmcoTfRl",
+          "posted_at": "2026-11-23T19:00:03",
+          "seen_at": "2026-11-23T20:08:24.590710+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 42,
+      "title": "LIÊN HOAN VỌNG CỔ VÀ CÁC CA KHÚC MANG ÂM HƯỞNG DÂN CA NĂM 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:30",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T22:01:21+07:00",
+      "reg_end_datetime": "2026-11-24T08:30:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tại Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hoà, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1563558635797098",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T08:07:16.225687+07:00",
+      "updated_at": "2026-11-23T08:07:16.225687+07:00",
+      "description": "Tham gia Vòng Chung kết Liên hoan Vọng cổ và các ca khúc mang âm hưởng dân ca năm 2026 để thưởng thức những màn trình diễn nghệ thuật truyền thống đặc sắc, giàu cảm xúc từ các thí sinh tài năng.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "nhavanhoasinhvien.vn",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0sSJaGvVCca7Tv8sSAf97p2S39TgfCPPzmz5CUCD2owNfRLcrajGJm2tNMD2VghdAl",
+      "posted_at": "2026-11-22T22:01:21",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563558635797098",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0sSJaGvVCca7Tv8sSAf97p2S39TgfCPPzmz5CUCD2owNfRLcrajGJm2tNMD2VghdAl",
+          "posted_at": "2026-11-22T22:01:21",
+          "seen_at": "2026-11-23T08:07:16.225687+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 27,
+      "title": "TALKSHOW “TỪ BẢN LÀNG ĐẾN GIẢNG ĐƯỜNG”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:30",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T18:00:04+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1559865309499764",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:58:15.140490+07:00",
+      "updated_at": "2026-11-19T20:58:15.140490+07:00",
+      "description": "Tham gia Talkshow “Từ bản làng đến giảng đường” để lắng nghe những chia sẻ về hành trình gắn bó với giáo dục, văn hóa và cộng đồng, giúp người trẻ hiểu rõ hơn về giá trị của tri thức và cội nguồn. Người tham gia sẽ được cấp Giấy chứng nhận và có cơ hội nhận quà hấp dẫn từ Ban Tổ chức.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/TaHKwk9MkbW5vwXS7",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "tọa đàm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
+      "posted_at": "2026-11-19T18:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559865309499764",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
+          "posted_at": "2026-11-19T18:00:04",
+          "seen_at": "2026-11-19T20:58:15.140490+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 51,
+      "title": "KHÁM PHÁ KHÔNG GIAN VĂN HÓA TRỐNG ĐỒNG – CHẠM VÀO HỒN CỐT VĂN HÓA VIỆT!",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T20:30:39+07:00",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1564574392362189",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-24T09:34:16.240142+07:00",
+      "updated_at": "2026-11-24T09:34:16.240142+07:00",
+      "description": "Khám phá Không gian Văn hóa Trống đồng là chương trình giúp sinh viên tìm hiểu về các hoa văn, giá trị lịch sử và bản sắc văn hóa dân tộc Việt Nam qua hình tượng trống đồng Đông Sơn. Sự kiện mang đến cơ hội nuôi dưỡng lòng tự hào dân tộc và góp phần gìn giữ di sản văn hóa trong thời1 đại hiện đại.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://www.facebook.com/nhavanhoasinhvien",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+      "posted_at": "2026-11-23T20:30:39",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564574392362189",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+          "posted_at": "2026-11-23T20:30:39",
+          "seen_at": "2026-11-24T09:34:16.240142+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 49,
+      "title": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T16:29:47",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hòa, TP. Hồ Chí Minh).",
+      "source_type": "facebook",
+      "source_id": "1564367475716214",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:09:34.877811+07:00",
+      "updated_at": "2026-11-23T20:09:34.877811+07:00",
+      "description": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026 là chương trình nghệ thuật nhằm tôn vinh các tiết mục đặc sắc, lan tỏa giá trị văn hóa và bản sắc dân tộc. Sự kiện quy tụ các chuyên gia nghệ thuật trong vai trò giám khảo để đánh giá và tìm ra những màn trình diễn ấn tượng nhất.",
+      "organizer": null,
+      "registration_url": "https://q.me-qr.com/vo76o3na",
+      "registration_status": "qr",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02y1yZ5jrNF2czFVRB7F3Hm5Ct3SdtBwhG1mBa1RqduJr1pT4gPdVVDVcKt6cRUbdl",
+      "posted_at": "2026-11-23T16:29:47",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564367475716214",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02y1yZ5jrNF2czFVRB7F3Hm5Ct3SdtBwhG1mBa1RqduJr1pT4gPdVVDVcKt6cRUbdl",
+          "posted_at": "2026-11-23T16:29:47",
+          "seen_at": "2026-11-23T20:09:34.877811+07:00"
         },
         {
           "source_type": "facebook",
-          "source_id": "1682172040361742",
+          "source_id": "1564219732397655",
           "fanpage_id": 15,
           "client_id": null,
-          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02xELytqgy1vTdoXiKYMZM1a5zxEFQA1Dytd9y1JQkbigGMcUnTzteVuNVNiSd2CVKl",
-          "posted_at": "2026-11-10T20:30:12+07:00",
-          "seen_at": "2026-11-15T21:48:14.132400+07:00"
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02P2Kh9uv7mLaseibUaXVXugxMkZBh8aZk5qk4cGN4aMDsfTFuB1SxmkY7LMgvWg7Hl",
+          "posted_at": "2026-11-23T13:00:04",
+          "seen_at": "2026-11-23T20:11:58.738750+07:00"
         }
       ],
-      "update_history": [
-        {
-          "updated_at": "2026-11-15T21:48:14.132400+07:00",
-          "source_type": "facebook",
-          "source_id": "1682172040361742",
-          "client_id": null,
-          "changes": {
-            "format": {
-              "old": [],
-              "new": [
-                "offline"
-              ]
-            },
-            "location": {
-              "old": null,
-              "new": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau)."
-            },
-            "event_start_datetime": {
-              "old": null,
-              "new": "2026-11-20T14:00:00+07:00"
-            },
-            "event_end_datetime": {
-              "old": null,
-              "new": "2026-11-20T23:59:00+07:00"
-            },
-            "organizer": {
-              "old": null,
-              "new": "BEE Club"
-            },
-            "fee": {
-              "old": null,
-              "new": "25.000 VNĐ/sinh viên"
-            }
-          }
-        }
-      ]
+      "update_history": []
     },
     {
-      "event_id": 7,
-      "title": "🌟 🌟🔥TỰ HÀO 85 NĂM DẤU ẤN VẬT LÝ – VẸN TRÒN NGHĨA TÌNH TRI ÂN 🔥",
+      "event_id": 48,
+      "title": "NGÀY HỘI VĂN HÓA 2026| KHÁM PHÁ KHÔNG GIAN LÀNG NGHỀ – TỰ TAY SÁNG TẠO, MANG THÀNH PHẨM VỀ NHÀ!",
       "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-11-20",
-      "time": "13:30",
-      "start_datetime": "2026-11-20T13:30:00+07:00",
-      "end_datetime": "2026-11-20T17:00:00+07:00",
-      "event_start_datetime": "2026-11-20T13:30:00+07:00",
-      "event_end_datetime": "2026-11-20T17:00:00+07:00",
-      "reg_start_datetime": "2026-11-11T16:58:05+07:00",
-      "reg_end_datetime": "2026-11-20T00:00:00+07:00",
-      "location": "Khuôn viên xung quanh Giảng đường 1 - Trường ĐH Khoa học tự nhiên, ĐHQG-HCM (Cơ sở Nguyễn Văn Cử) (Chi tiết vị trí xem tại sơ đồ đính kèm).",
+      "is_online": null,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
       "source_type": "facebook",
-      "source_id": "1642883240970021",
-      "fanpage_id": 10,
+      "source_id": "1564389272380701",
+      "fanpage_id": 15,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:14.129862+07:00",
-      "updated_at": "2026-11-15T21:48:14.129862+07:00",
-      "description": "Hòa chung không khí ấm áp hướng về Ngày Nhà giáo Việt Nam 20/11 và tự hào kỷ niệm chặng đường 85 năm thành lập Khoa Vật lý - Vật lý kỹ thuật (1941 - 2026), Khoa Vật lý - Vật lý kỹ thuật tổ chức Ngày hội Tri ân và Kết nối 2026. Đây là dịp ý nghĩa các thế hệ giảng viên, sinh viên cùng hội ngộ, lưu giữ thanh xuân dưới mái nhà chung. Đến với không gian mở của Ngày hội dành cho đoàn viên, sinh viên, các bạn sẽ được hòa mình vào chuỗi hoạt động trải ng...",
-      "organizer": "Đoàn khoa × Liên chi Hội Khoa Vật lý - Vật lý Kỹ thuật, ĐH KHTN TP. HCM",
-      "registration_url": "https://forms.gle/CxXgUUFHdWczGzGfA",
+      "created_at": "2026-11-23T20:09:27.209845+07:00",
+      "updated_at": "2026-11-23T20:09:27.209845+07:00",
+      "description": "Ngày hội Văn hóa 2026 mang đến không gian trải nghiệm các làng nghề truyền thống như nặn tò he, vẽ gốm Lái Thiêu và đan giỏ trạc. Sinh viên tham gia sẽ được tự tay sáng tạo sản phẩm thủ công và mang thành phẩm về nhà hoàn toàn miễn phí.",
+      "organizer": null,
+      "registration_url": "null",
       "registration_status": "link",
-      "fee": null,
+      "fee": "miễn phí",
+      "target_audience": null,
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02W47X7STUTbkXmzYwxS9C8KTNQ9sQyGmijyDd8Kg9Q2fttVWiky8PLpKgCTPVytzKl",
+      "posted_at": "2026-11-23T17:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1564389272380701",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02W47X7STUTbkXmzYwxS9C8KTNQ9sQyGmijyDd8Kg9Q2fttVWiky8PLpKgCTPVytzKl",
+          "posted_at": "2026-11-23T17:00:03",
+          "seen_at": "2026-11-23T20:09:27.209845+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 41,
+      "title": "NGÀY HỘI VĂN HÓA 2026 | KHÔNG GIAN ẨM THỰC – GIAN HÀNG BÁNH DÂN GIAN VIỆT NAM",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T23:00:41",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1563618719124423",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T08:07:08.501400+07:00",
+      "updated_at": "2026-11-23T08:07:08.501400+07:00",
+      "description": "Tham gia Ngày hội Văn hóa 2026 để khám phá và thưởng thức không gian ẩm thực với các gian hàng bánh dân gian truyền thống của Việt Nam. Sinh viên sẽ có dịp tìm hiểu về hương vị, màu sắc và câu chuyện văn hóa phía sau những món bánh quen thuộc cùng bạn bè.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0wAkvzcNWeCt2PWiuWBvUskN34396PLSDWbM1Y8ES29Si9tyQtJQNQW2z5ZJD87UEl",
+      "posted_at": "2026-11-22T23:00:41",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563618719124423",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0wAkvzcNWeCt2PWiuWBvUskN34396PLSDWbM1Y8ES29Si9tyQtJQNQW2z5ZJD87UEl",
+          "posted_at": "2026-11-22T23:00:41",
+          "seen_at": "2026-11-23T08:07:08.501400+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 39,
+      "title": "[NGÀY HỘI VĂN HÓA NĂM 2026] BẬT MÍ KHÔNG GIAN VR ART “DI SẢN SỐ” VÀ WORKSHOP “TỪ DI SẢN TRUYỀN THỐNG ĐẾN NGHỆ THUẬT SỐ”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T13:00:03+07:00",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM (01 Lưu Hữu Phước, P. Đông Hòa, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1563108279175467",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:29:42.482727+07:00",
+      "updated_at": "2026-11-22T14:29:42.482727+07:00",
+      "description": "Tham gia Ngày hội Văn hóa năm 2026 để trải nghiệm không gian VR Art 'Di sản số' kết hợp công nghệ thực tế ảo và workshop 'Từ di sản truyền thống đến nghệ thuật số' cùng nghệ sĩ VR Minh Hằng. Sự kiện mang đến cơ hội tìm hiểu về số hóa nghệ thuật, nâng cao tư duy thẩm mỹ và biến các giá trị văn hóa truyền thống thành tác phẩm nghệ thuật số độc đáo qua công nghệ VR.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://tinyurl.com/DK-VRArtxWorkshop-NHVH2026",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "category": [
+        "workshop",
+        "ngày hội",
+        "học thuật"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+      "posted_at": "2026-11-22T13:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563108279175467",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+          "posted_at": "2026-11-22T13:00:03",
+          "seen_at": "2026-11-22T14:29:42.482727+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 38,
+      "title": "Không gian trưng bày, giới thiệu và trải nghiệm trang phục dân tộc và trang phục truyền thống",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-24",
+      "time": "08:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T14:00:07+07:00",
+      "reg_end_datetime": "2026-11-24T23:59:00+07:00",
+      "location": "Nhà Văn hóa Sinh viên TP. HCM tại Khu đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1563152869171008",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:29:35.692111+07:00",
+      "updated_at": "2026-11-22T14:29:35.692111+07:00",
+      "description": "Tham gia không gian trưng bày và trải nghiệm trang phục dân tộc, trang phục truyền thống để khám phá sự đa dạng văn hóa của 54 dân tộc Việt Nam, mặc thử trang phục, check-in lưu giữ khoảnh khắc và nhận 01 vé xem phim miễn phí cho 100 bạn đầu tiên.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/qkQSBZ2sWBRSiAwz6",
+      "registration_status": "link",
+      "fee": "miễn phí",
       "target_audience": [
         "sinh viên"
       ],
@@ -135,95 +711,1262 @@
       "format": [
         "offline"
       ],
-      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0fbUXij9Q98RYRfCUYLwSnk516rBAQf9GpjewDPLodY6y7EVXwyvyUGMui1tvu3Tzl",
-      "posted_at": "2026-11-11T16:58:05+07:00",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+      "posted_at": "2026-11-22T14:00:07",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "1642883240970021",
+          "source_id": "1563152869171008",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+          "posted_at": "2026-11-22T14:00:07",
+          "seen_at": "2026-11-22T14:29:35.692111+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 25,
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-23",
+      "time": "21:00",
+      "start_datetime": "2026-11-23T21:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T21:00:00+07:00",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T21:00:00+07:00",
+      "reg_end_datetime": "2026-11-25T24:00:00+07:00",
+      "location": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "source_type": "facebook",
+      "source_id": "1559974292822199",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 5,
+      "created_at": "2026-11-19T20:57:41.495033+07:00",
+      "updated_at": "2026-11-24T09:34:10.615649+07:00",
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 14 khám phá vùng đất Đắk Lắk bằng cách tìm hiểu và bình luận về các địa danh, món ăn, nét văn hóa đặc sắc. Học sinh sinh viên tham gia hoàn thành thử thách sẽ tích lũy điểm và có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/7f8Trg1PPW8jktd3A",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+      "posted_at": "2026-11-19T20:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559974292822199",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+          "posted_at": "2026-11-19T20:00:04",
+          "seen_at": "2026-11-19T20:57:41.495033+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
+          "posted_at": "2026-11-22T11:03:01",
+          "seen_at": "2026-11-22T14:29:53.930040+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02eDeYxCzFsF3xYDquNpTWjqmGCwxTVS5HQJvedL3mw1kkD2S8vC6iD8sCiBVa35iVl",
+          "posted_at": "2026-11-23T11:00:01",
+          "seen_at": "2026-11-23T20:25:05.414123+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1565125212307107",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02nxVXz2MQGeYvhk8JMvkuD9DQtSd2bxv4iMYKQUetx2Yg4zWxqJKBus5tbZtuQtLil",
+          "posted_at": "2026-11-24T08:30:55",
+          "seen_at": "2026-11-24T09:33:32.836122+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1564601895692772",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0svbBHtF2k4d5Vb7ggYTxT2SWPbDLEaWmxKTkyjSSXKp2UwBU5VLceMdY3J7eZCZhl",
+          "posted_at": "2026-11-23T21:00:04",
+          "seen_at": "2026-11-24T09:34:10.615649+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-22T14:29:53.930040+07:00",
+          "source_type": "facebook",
+          "source_id": "1563025289183766",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-19",
+              "new": "2026-11-22"
+            },
+            "time": {
+              "old": "20:00",
+              "new": "11:03"
+            },
+            "location": {
+              "old": "Online",
+              "new": "Trực tuyến"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-19T20:00:04+07:00",
+              "new": "2026-11-22T11:03:01+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-21T24:00:00+07:00",
+              "new": "2026-11-24T24:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-23T20:25:05.414123+07:00",
+          "source_type": "facebook",
+          "source_id": "1564136432405985",
+          "client_id": null,
+          "changes": {
+            "reg_start_datetime": {
+              "old": "2026-11-22T11:03:01+07:00",
+              "new": "2026-11-22T00:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-24T09:33:32.836122+07:00",
+          "source_type": "facebook",
+          "source_id": "1565125212307107",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-22",
+              "new": "2026-11-24"
+            },
+            "time": {
+              "old": "11:03",
+              "new": "08:30"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-22T00:00:00+07:00",
+              "new": "2026-11-24T08:30:55+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-24T24:00:00+07:00",
+              "new": "2026-11-26T24:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-24T09:34:10.615649+07:00",
+          "source_type": "facebook",
+          "source_id": "1564601895692772",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-24",
+              "new": "2026-11-23"
+            },
+            "time": {
+              "old": "08:30",
+              "new": "21:00"
+            },
+            "location": {
+              "old": "Trực tuyến",
+              "new": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-24T08:30:55+07:00",
+              "new": "2026-11-23T21:00:00+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-26T24:00:00+07:00",
+              "new": "2026-11-25T24:00:00+07:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 46,
+      "title": "TỔ CHỨC KHÁM SỨC KHỎE ĐỊNH KỲ CHO SINH VIÊN ĐỢT 3 NĂM 2026]",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-23",
+      "time": "07:30",
+      "start_datetime": "2026-11-23T07:30:00+07:00",
+      "end_datetime": "2026-11-23T11:00:00+07:00",
+      "event_start_datetime": "2026-11-23T07:30:00+07:00",
+      "event_end_datetime": "2026-11-23T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:43:43",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "location": "trường phải tham gia",
+      "source_type": "facebook",
+      "source_id": "1625997439571108",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:22.244557+07:00",
+      "updated_at": "2026-11-23T20:02:22.244557+07:00",
+      "description": "Nhà trường tổ chức đợt khám sức khỏe định kỳ cho sinh viên đủ điều kiện với các khung giờ buổi sáng và buổi chiều. Sinh viên tham gia đầy đủ để đảm bảo quyền lợi và tuân thủ quy định của nhà trường.",
+      "organizer": null,
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": "miễn phí",
+      "target_audience": null,
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+      "posted_at": "2026-11-23T09:43:43",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1625997439571108",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+          "posted_at": "2026-11-23T09:43:43",
+          "seen_at": "2026-11-23T20:02:22.244557+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 44,
+      "title": "PHÁT THUỐC TẨY GIUN ĐỢT 2 NĂM 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-23",
+      "time": null,
+      "start_datetime": "2026-11-23T00:00:00+07:00",
+      "end_datetime": "2026-12-12T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T00:00:00+07:00",
+      "event_end_datetime": "2026-12-12T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T10:51:22",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "location": "Trạm y tế cơ sở phường Chợ Quán (E.001) và Trạm y tế cơ sở phường Đông Hòa (E.103)",
+      "source_type": "facebook",
+      "source_id": "1626045062899679",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-23T20:02:09.275455+07:00",
+      "updated_at": "2026-11-23T20:02:09.275455+07:00",
+      "description": "Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM tổ chức chương trình phát thuốc tẩy giun Albendazol 400mg miễn phí đợt 2 năm 2026 nhằm chăm sóc sức khỏe và nâng cao ý thức phòng bệnh cho người học và viên chức.",
+      "organizer": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "giảng viên",
+        "nhân viên"
+      ],
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+      "posted_at": "2026-11-23T10:51:22",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1626045062899679",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+          "posted_at": "2026-11-23T10:51:22",
+          "seen_at": "2026-11-23T20:02:09.275455+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 40,
+      "title": "❄️ LET IT SHINE 2026 ❄️ - CHUNG KẾT 'WINTER ARIA'",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-22",
+      "time": "16:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": "2026-11-21T20:00:27+07:00",
+      "reg_end_datetime": "2026-11-22T23:59:00+07:00",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1600041702159887",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-22T14:39:58.651611+07:00",
+      "updated_at": "2026-11-22T14:39:58.651611+07:00",
+      "description": "Đêm Chung kết cuộc thi Let IT Shine 2026 với chủ đề 'Winter Aria' sẽ diễn ra vào ngày 22/11/2026 tại Giảng đường 1, cơ sở phường Chợ Quán. Sự kiện có sự tham gia của Hội đồng Ban Giám khảo chuyên môn và các giải thưởng giá trị dành cho thí sinh xuất sắc nhất.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ca nhạc",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+      "posted_at": "2026-11-21T20:00:27",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1600041702159887",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+          "posted_at": "2026-11-21T20:00:27",
+          "seen_at": "2026-11-22T14:39:58.651611+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 13,
+      "title": "LET IT SHINE 2026 — VÒNG CHUNG KẾT",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-22",
+      "time": "16:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T20:16:42+07:00",
+      "reg_end_datetime": "2026-11-22T16:00:00+07:00",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1576992477798143",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 2,
+      "created_at": "2026-11-19T20:32:08.236818+07:00",
+      "updated_at": "2026-11-21T08:19:57.674944+07:00",
+      "description": "The Final Night of the Let IT Shine 2026 music competition is an opportunity for IT students at the University of Science to showcase their performances, compete for attractive prizes including a 3,000,000 VND Grand Prize, and enjoy a vibrant musical atmosphere.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02KrqWz3uxiWHpZjWHK9UF48M6jqqTsffPNzcFjVm8zY87fy4QRVFwNLV5ARderJ3dl",
+      "posted_at": "2026-11-01T20:00:06",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1576992477798143",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02KrqWz3uxiWHpZjWHK9UF48M6jqqTsffPNzcFjVm8zY87fy4QRVFwNLV5ARderJ3dl",
+          "posted_at": "2026-11-01T20:00:06",
+          "seen_at": "2026-11-19T20:32:08.236818+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1598950125602378",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/reel/2392597504878112",
+          "posted_at": "2026-11-20T20:16:42",
+          "seen_at": "2026-11-21T08:19:57.674944+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-21T08:19:57.674944+07:00",
+          "source_type": "facebook",
+          "source_id": "1598950125602378",
+          "client_id": null,
+          "changes": {
+            "format": {
+              "old": null,
+              "new": "offline"
+            },
+            "location": {
+              "old": "cơ sở phường Chợ Quán",
+              "new": "Giảng đường 1, cơ sở phường Chợ Quán"
+            },
+            "reg_start_datetime": {
+              "old": "2026-10-19T00:00:00+07:00",
+              "new": "2026-11-20T20:16:42+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-22T00:00:00+07:00",
+              "new": "2026-11-22T16:00:00+07:00"
+            },
+            "organizer": {
+              "old": null,
+              "new": "SAB in HCMUS"
+            },
+            "fee": {
+              "old": null,
+              "new": "miễn phí"
+            },
+            "target_audience": {
+              "old": null,
+              "new": [
+                "sinh viên CNTT"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 9,
+      "title": "LET IT SHINE 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-22",
+      "time": "16:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "location": "cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1597755775721813",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 2,
+      "created_at": "2026-11-19T20:31:16.529283+07:00",
+      "updated_at": "2026-11-19T20:32:32.126834+07:00",
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, offering a platform to showcase vocal talent and passion. Participants compete for various prizes including a Grand Prize, Runner-up, Second Runner-up, and a Popularity Award.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "https://go.sabies.vn/lis26_dangky",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "cá nhân",
+        "thi"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02F8Bdfz7C1p3LRpjKrrh32FjEzNJxs4edpuH65tGwMko1tKkwpAjApKucaaLNk6qul",
+      "posted_at": "2026-11-19T20:00:01",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1597755775721813",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02F8Bdfz7C1p3LRpjKrrh32FjEzNJxs4edpuH65tGwMko1tKkwpAjApKucaaLNk6qul",
+          "posted_at": "2026-11-19T20:00:01",
+          "seen_at": "2026-11-19T20:31:16.529283+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1589377503226307",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid023tRD6TrDWDoTpJVsUsu587nqS4wSS5nk6oLqj8tEbpWrp7GyPsrqtyBVtbrmscwZl",
+          "posted_at": "2026-11-12T20:00:10",
+          "seen_at": "2026-11-19T20:31:45.701260+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1584629080367816",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02vjQsSaMxgEmrwcnn1h523oa3cQUzAKLtvv2AeXvJ9VgooVNvM1mavyDuvaiNdtYVl",
+          "posted_at": "2026-11-08T20:00:09",
+          "seen_at": "2026-11-19T20:31:53.467585+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1571561958341195",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid032PujPg1XcmaULzFJqrn2pGt1JRoVYVteaKj775mTZqWTYFamCryxSKEvRjSp5WCml",
+          "posted_at": "2026-10-27T20:00:10",
+          "seen_at": "2026-11-19T20:32:32.126834+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1568433875320670",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0roA1akiEs9i47AQ5NVC4VFrtFexgES5MCWEyW3mTfdEppTFnSYA3CcpLUCidpFz2l",
+          "posted_at": "2026-10-24T20:00:02",
+          "seen_at": "2026-11-19T20:32:40.573681+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-19T20:32:32.126834+07:00",
+          "source_type": "facebook",
+          "source_id": "1571561958341195",
+          "client_id": null,
+          "changes": {
+            "location": {
+              "old": "Giảng đường 1, cơ sở phường Chợ Quán.",
+              "new": "cơ sở phường Chợ Quán"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-19T20:00:01",
+              "new": "2026-10-19T00:00:00+07:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 12,
+      "title": "LET IT SHINE 2026 — ECHOES OF WINTER (Vòng Chung kết) ❄️",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-22",
+      "time": "16:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "location": "cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1581496077347783",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:32:01.049981+07:00",
+      "updated_at": "2026-11-19T20:32:01.049981+07:00",
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, where participants showcase their musical talents before mentors. The event culminates in a Final Round featuring top contestants competing for cash prizes.",
+      "organizer": null,
+      "registration_url": "null",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "cá nhân",
+        "thi"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ULPu4tiKn2Jj7fh1pXASftbroTzdkcKtTPJQ94P3YAyrXmd3285Y1DAWuUcWwk1xl",
+      "posted_at": "2026-11-05T21:00:05",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1581496077347783",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ULPu4tiKn2Jj7fh1pXASftbroTzdkcKtTPJQ94P3YAyrXmd3285Y1DAWuUcWwk1xl",
+          "posted_at": "2026-11-05T21:00:05",
+          "seen_at": "2026-11-19T20:32:01.049981+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 6,
+      "title": "WORKSHOP: “QUẢN LÝ THỜI GIAN”",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-22",
+      "time": "13:30",
+      "start_datetime": "2026-11-22T13:30:00+07:00",
+      "end_datetime": "2026-11-22T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T13:30:00+07:00",
+      "event_end_datetime": "2026-11-22T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-17T18:13:19+07:00",
+      "reg_end_datetime": "2026-11-22T13:30:00+07:00",
+      "location": "Phòng E104, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM, Cơ sở 02",
+      "source_type": "facebook",
+      "source_id": "1649964783595200",
+      "fanpage_id": 10,
+      "client_id": null,
+      "version": 2,
+      "created_at": "2026-11-19T16:50:22.026369+07:00",
+      "updated_at": "2026-11-19T20:52:40.402256+07:00",
+      "description": "This workshop aims to help students master time management skills, prioritize tasks, and balance academic and personal life. Participants will learn how to build effective personal plans and receive a certificate that contributes to the 'Sinh viên 5 Tốt' criteria.",
+      "organizer": "Câu lạc bộ Kỹ năng, Liên chi Hội khoa Vật lý – Vật lý kỹ thuật và Đoàn Khoa Toán – Tin học",
+      "registration_url": "https://forms.gle/5d8ttXxQMwBTSMNNA",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "workshop",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0kUzKqCqLb31UUXtGR9xunZbxGJLQA5FGKToLyskxnmVjdfKaMFgm78pzWMo7Bt1el",
+      "posted_at": "2026-11-17T18:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1649964783595200",
           "fanpage_id": 10,
           "client_id": null,
-          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0fbUXij9Q98RYRfCUYLwSnk516rBAQf9GpjewDPLodY6y7EVXwyvyUGMui1tvu3Tzl",
-          "posted_at": "2026-11-11T16:58:05+07:00",
-          "seen_at": "2026-11-15T21:48:14.129862+07:00"
+          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0kUzKqCqLb31UUXtGR9xunZbxGJLQA5FGKToLyskxnmVjdfKaMFgm78pzWMo7Bt1el",
+          "posted_at": "2026-11-17T18:00:03",
+          "seen_at": "2026-11-19T16:50:22.026369+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1483387247284689",
+          "fanpage_id": 12,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid0uAmvi7Rh9uhxewtgpWUbRyC9XeUwbGTje59Z3xie5rMYguLGYtZ9DvDo3jS2w48Vl",
+          "posted_at": "2026-11-17T18:13:19",
+          "seen_at": "2026-11-19T20:52:40.402256+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-19T20:52:40.402256+07:00",
+          "source_type": "facebook",
+          "source_id": "1483387247284689",
+          "client_id": null,
+          "changes": {
+            "reg_start_datetime": {
+              "old": "2026-11-17T18:00:03",
+              "new": "2026-11-17T18:13:19+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-22T00:00:00+07:00",
+              "new": "2026-11-22T13:30:00+07:00"
+            },
+            "fee": {
+              "old": null,
+              "new": "miễn phí"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 10,
+      "title": "NẶN MỘT CHÚT THƯƠNG - WORKSHOP GÂY QUỸ THIỆN NGUYỆN ẤM ÁP MÙA ĐÔNG 2026",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-21",
+      "time": "08:30",
+      "start_datetime": "2026-11-21T08:30:00+07:00",
+      "end_datetime": "2026-11-21T11:30:00+07:00",
+      "event_start_datetime": "2026-11-21T08:30:00+07:00",
+      "event_end_datetime": "2026-11-21T11:30:00+07:00",
+      "reg_start_datetime": "2026-11-16T10:00:14+07:00",
+      "reg_end_datetime": "2026-11-21T00:00:00+07:00",
+      "location": "Sảnh I, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM,  227 Nguyễn Văn Cừ, Phường Chợ Quán, TP. HCM",
+      "source_type": "facebook",
+      "source_id": "1593744126122978",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:31:27.256476+07:00",
+      "updated_at": "2026-11-19T20:31:27.256476+07:00",
+      "description": "Nặn một chút thương là một workshop làm đồ thủ công từ đất sét tự khô, nơi sinh viên có thể thư giãn và sáng tạo sản phẩm cá nhân. Toàn bộ phí tham gia sẽ được đóng góp vào quỹ thiện nguyện Ấm áp mùa đông để hỗ trợ các em nhỏ tại Chùa Kỳ Quang 2.",
+      "organizer": null,
+      "registration_url": "https://go.sabies.vn/amd26_workshop",
+      "registration_status": "link",
+      "fee": "30.000 VNĐ/1 người/1 buổi",
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "thiện nguyện"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02wPeCx37bCZVuZwiqdzb1EWKdrKMzbGCG5HY6FsnbUsKR3Msj4iteG86uWgTrnW2Dl",
+      "posted_at": "2026-11-16T10:00:14",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1593744126122978",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02wPeCx37bCZVuZwiqdzb1EWKdrKMzbGCG5HY6FsnbUsKR3Msj4iteG86uWgTrnW2Dl",
+          "posted_at": "2026-11-16T10:00:14",
+          "seen_at": "2026-11-19T20:31:27.256476+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 36,
+      "title": "[SCG SHARING THE DREAM 2026] WORKSHOP 'KINH TẾ TUẦN HOÀN – KHI RÁC THẢI TRỞ THÀNH TÀI NGUYÊN'",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-21",
+      "time": "07:30",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T20:00:56+07:00",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1561162162703412",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-21T08:27:10.940626+07:00",
+      "updated_at": "2026-11-21T08:27:10.940626+07:00",
+      "description": "Tham gia workshop 'Kinh tế tuần hoàn – Khi rác thải thành tài nguyên' để khám phá tư duy sống xanh, cập nhật xu hướng kinh tế tuần hoàn từ các chuyên gia. Người tham gia có cơ hội nhận vé xem phim, túi tote giới hạn và giấy chứng nhận điểm rèn luyện.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "học sinh",
+        "sinh viên"
+      ],
+      "category": [
+        "workshop",
+        "học thuật",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid034QZQiQtx9Fvzd6V4dSQJJcbzF8yXecfxzdADphKc9wDBEbb24KN4X8MXGCnVpRkNl",
+      "posted_at": "2026-11-20T20:00:56",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1561162162703412",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid034QZQiQtx9Fvzd6V4dSQJJcbzF8yXecfxzdADphKc9wDBEbb24KN4X8MXGCnVpRkNl",
+          "posted_at": "2026-11-20T20:00:56",
+          "seen_at": "2026-11-21T08:27:10.940626+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 26,
+      "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-21",
+      "time": "07:30",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T08:00:10+07:00",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "source_type": "facebook",
+      "source_id": "1559917579494537",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 2,
+      "created_at": "2026-11-19T20:57:47.564349+07:00",
+      "updated_at": "2026-11-20T08:02:30.528532+07:00",
+      "description": "Tham gia Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên” để cập nhật kiến thức thực tiễn về kinh tế tuần hoàn và nhận ngay vé xem phim, túi tote giới hạn cùng giấy chứng nhận điểm rèn luyện.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "category": [
+        "workshop",
+        "học thuật",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02zDZpYEyJgZkksYYJ3NEguJChmoHppF2uwayADKfgoEGBhNh5h1nb3waxsG71MLZvl",
+      "posted_at": "2026-11-19T19:00:05",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559917579494537",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02zDZpYEyJgZkksYYJ3NEguJChmoHppF2uwayADKfgoEGBhNh5h1nb3waxsG71MLZvl",
+          "posted_at": "2026-11-19T19:00:05",
+          "seen_at": "2026-11-19T20:57:47.564349+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1622645323239653",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid07x6Sf3U2Mmt4uAJTG41xYVvkZUTnAUT9XhX9LNDBrM3nZEgGvsgAZG75uSF4K3P1l",
+          "posted_at": "2026-11-20T08:00:10",
+          "seen_at": "2026-11-20T08:02:30.528532+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-20T08:02:30.528532+07:00",
+          "source_type": "facebook",
+          "source_id": "1622645323239653",
+          "client_id": null,
+          "changes": {
+            "reg_start_datetime": {
+              "old": "2026-11-19T19:00:05+07:00",
+              "new": "2026-11-20T08:00:10+07:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 30,
+      "title": "LỄ TRAO HỌC BỔNG POWER ON NĂM HỌC 2026-2027 (ĐỢT 1)",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-21",
+      "time": "07:00",
+      "start_datetime": "2026-11-21T07:00:00+07:00",
+      "end_datetime": "2026-11-21T11:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:00:00+07:00",
+      "event_end_datetime": "2026-11-21T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T12:00:02+07:00",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "location": "Hội trường lầu 3 - Bảo tàng Tôn Đức Thắng (Số 05 Tôn Đức Thắng, phường Sài Gòn, TP. Hồ Chí Minh)",
+      "source_type": "facebook",
+      "source_id": "1560725289413766",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-20T14:08:34.810731+07:00",
+      "updated_at": "2026-11-20T14:08:34.810731+07:00",
+      "description": "Lễ trao học bổng Power On năm học 2026-2027 (Đợt 1) là dịp hội ngộ quan trọng để vinh danh sinh viên, nhìn lại hành trình đã qua và tiếp thêm động lực cho chặng đường mới. Sự kiện diễn ra vào sáng ngày 21/11/2026 tại Bảo tàng Tôn Đức Thắng.",
+      "organizer": "Power On",
+      "registration_url": "https://forms.gle/placeholder",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "học thuật",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+      "posted_at": "2026-11-20T12:00:02",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1560725289413766",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+          "posted_at": "2026-11-20T12:00:02",
+          "seen_at": "2026-11-20T14:08:34.810731+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 23,
+      "title": "WORKSHOP “NÉT SON”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-20",
+      "time": "14:00",
+      "start_datetime": "2026-11-20T14:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T14:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-17T20:37:04+07:00",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "location": "Phòng 5.10 - Nhà điều hành, Cơ sở 2 (Trường ĐH Khoa học tự nhiên, ĐHQG-HCM)",
+      "source_type": "facebook",
+      "source_id": "1690517749527171",
+      "fanpage_id": 14,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:55:48.558573+07:00",
+      "updated_at": "2026-11-19T20:55:48.558573+07:00",
+      "description": "Workshop 'Nét Son - Chạm nét truyền thống, tô đậm sắc Việt' mang đến cho học sinh, sinh viên các hoạt động trải nghiệm văn hóa hấp dẫn như vẽ quạt truyền thống, nặn tò he và tham gia talkshow thú vị.",
+      "organizer": "BEE Club",
+      "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
+      "registration_status": "link",
+      "fee": "25.000 VNĐ/sinh viên",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "category": [
+        "workshop",
+        "ngày hội"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid0jecHFRVBKTj1BRBAi29afrULYfSFAbvjHKxj6xerS2zwGFbyV94puMZrteMGg1W3l",
+      "posted_at": "2026-11-17T20:37:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1690517749527171",
+          "fanpage_id": 14,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid0jecHFRVBKTj1BRBAi29afrULYfSFAbvjHKxj6xerS2zwGFbyV94puMZrteMGg1W3l",
+          "posted_at": "2026-11-17T20:37:04",
+          "seen_at": "2026-11-19T20:55:48.558573+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 8,
+      "title": "Workshop “NÉT SON” – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳 🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa những giá trị văn hóa truyền thống Việt Nam đến với thế hệ trẻ. ✨ Văn hóa dân tộc không chỉ được lưu giữ qua những trang sử hay câu chuyện của cha ông, mà còn hiện diện trong những điều bình dị của đời sống. Từ những chiếc quạt mang đậm dấu ấn quê hương đến những hình tò he rực rỡ sắc màu, mỗi trải nghiệm đều là một cách để chúng ta hiểu hơn, yêu hơn và tiếp nối những giá trị truyền thống. 🎨 Đến với NÉT SON, bạn sẽ có cơ hội: 🪭 Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt. 🎭 Workshop nặn tò he: Khám phá nghệ thuật tạo hình dân gian và trải nghiệm nặn nên những hình tượng ngộ nghĩnh dưới sự hướng dẫn của nghệ nhân. 💬 Talkshow Nét Son: Cùng tìm hiểu những đặc trưng văn hóa Việt Nam, giao lưu và chia sẻ về câu chuyện gìn giữ bản sắc dân tộc trong thời đại hội nhập. __________________________ ⏰ THỜI GIAN: 14h00, ngày 20/11/2026. 📍 ĐỊA ĐIỂM: Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau). 👥 ĐỐI TƯỢNG: Học sinh, sinh viên trên toàn địa bàn TP. Hồ Chí Minh. 💸 LỆ PHÍ: 25.000 VNĐ/sinh viên. ✏️ NỘI DUNG CHUYỂN KHOẢN: Họ và tên - MSSV - NETSON. 📌 LINK ĐĂNG KÝ: https://forms.gle/yuczTRTEM4S4FxH2A __________________________ ❤️ Mỗi nét vẽ, mỗi hình tò he không chỉ là một sản phẩm sáng tạo, mà còn là một cách để những giá trị văn hóa được tiếp nối và lan tỏa. Còn chần chờ gì nữa? Hãy cùng NÉT SON lưu giữ những sắc màu truyền thống và viết tiếp câu chuyện văn hóa Việt bằng chính đôi tay của mình nhé! #NetSon #NgayVanHoaVietNam #VanHoaVietNam #HCMUS #SDGs",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-20",
+      "time": "14:00",
+      "start_datetime": "2026-11-20T14:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T14:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-10T20:49:37+07:00",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).",
+      "source_type": "facebook",
+      "source_id": "1641929814398697",
+      "fanpage_id": 10,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T16:50:47.217011+07:00",
+      "updated_at": "2026-11-19T16:50:47.217011+07:00",
+      "description": "Workshop NÉT SON là không gian trải nghiệm nghệ thuật dân gian bao gồm vẽ quạt, nặn tò he và talkshow về văn hóa Việt Nam. Sự kiện giúp sinh viên hiểu và lan tỏa các giá trị truyền thống dân tộc thông qua các hoạt động sáng tạo thực tế.",
+      "organizer": null,
+      "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
+      "registration_status": "link",
+      "fee": "25.000 VNĐ/sinh viên",
+      "target_audience": null,
+      "category": [
+        "workshop",
+        "tọa đàm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid02kP5wuT9EnbrBTCA4icmCVshV9aTwPAz2awXmzFRtwG6CK9mZEQCTkatdP5k3iopVl",
+      "posted_at": "2026-11-10T20:49:37",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1641929814398697",
+          "fanpage_id": 10,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid02kP5wuT9EnbrBTCA4icmCVshV9aTwPAz2awXmzFRtwG6CK9mZEQCTkatdP5k3iopVl",
+          "posted_at": "2026-11-10T20:49:37",
+          "seen_at": "2026-11-19T16:50:47.217011+07:00"
         }
       ],
       "update_history": []
     },
     {
       "event_id": 1,
-      "title": "🇻🇳 [CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [6]: VĨNH LONG",
+      "title": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
       "online_mode": null,
       "is_online": null,
-      "date": "2026-11-15",
-      "time": null,
-      "start_datetime": "2026-11-15T00:00:00+07:00",
-      "end_datetime": "2026-11-15T23:59:00+07:00",
-      "event_start_datetime": "2026-11-15T00:00:00+07:00",
-      "event_end_datetime": "2026-11-15T23:59:00+07:00",
-      "reg_start_datetime": "2026-11-15T19:30:10+07:00",
-      "reg_end_datetime": "2026-11-15T00:00:00+07:00",
+      "date": "2026-11-20",
+      "time": "14:00",
+      "start_datetime": "2026-11-20T14:00:00+07:00",
+      "end_datetime": null,
+      "event_start_datetime": "2026-11-20T14:00:00+07:00",
+      "event_end_datetime": null,
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
       "location": null,
-      "source_type": "facebook",
-      "source_id": "1555862486566713",
-      "fanpage_id": 14,
-      "client_id": null,
+      "source_type": "email",
+      "source_id": "email_dcc51d42aa11b354b3cd",
+      "fanpage_id": null,
+      "client_id": "anonymous",
       "version": 1,
-      "created_at": "2026-11-15T20:09:00.673227+07:00",
-      "updated_at": "2026-11-15T20:09:00.673227+07:00",
-      "description": "Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Vĩnh Long (bao gồm: thưởng thức âm vang Đờn ca tài tử Nam Bộ, hương vị thanh ngọt của Bưởi Năm Roi, món cá tai tượng chiên xù trứ danh, sự đa dạng bởi các món được làm từ dừa đặc biệt là kẹo dừa Bến Tre, đời sống gắn kết của đồng bào dân tộc Kinh và Khmer, không gian linh thiêng tại Lễ hội Vu lan Thắng hội và Chùa Âng, cùng vẻ đẹp hữu tình của Cù lao An Bình) và chia sẻ những thông tin, hiểu biế...",
-      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
-      "registration_url": "https://forms.gle/sEFX9qDcgjnVfRGQ9",
+      "created_at": "2026-11-11T17:04:11.668475+07:00",
+      "updated_at": "2026-11-11T17:04:11.668475+07:00",
+      "description": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳 🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật ...",
+      "organizer": null,
+      "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
       "registration_status": "link",
       "fee": null,
       "target_audience": [
         "sinh viên"
       ],
       "category": [
-        "ngày hội"
+        "workshop",
+        "tọa đàm"
       ],
       "format": [],
-      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid027nGBZQSeBCE4EXAZPhHGpk5oNf6VaQt65VLh5zSY3gbEg9cRiMrEUcLqZqGcACqLl",
-      "posted_at": "2026-11-15T19:30:10+07:00",
+      "post_url": null,
+      "posted_at": "2026-11-11T13:34:52.858441+07:00",
       "sources": [
         {
+          "source_type": "email",
+          "source_id": "email_dcc51d42aa11b354b3cd",
+          "fanpage_id": null,
+          "client_id": "anonymous",
+          "post_url": null,
+          "posted_at": "2026-11-11T13:34:52.858441+07:00",
+          "seen_at": "2026-11-11T17:04:11.668475+07:00"
+        },
+        {
           "source_type": "facebook",
-          "source_id": "1555862486566713",
+          "source_id": "1682172040361742",
           "fanpage_id": 14,
           "client_id": null,
-          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid027nGBZQSeBCE4EXAZPhHGpk5oNf6VaQt65VLh5zSY3gbEg9cRiMrEUcLqZqGcACqLl",
-          "posted_at": "2026-11-15T19:30:10+07:00",
-          "seen_at": "2026-11-15T20:09:00.673227+07:00"
+          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02xELytqgy1vTdoXiKYMZM1a5zxEFQA1Dytd9y1JQkbigGMcUnTzteVuNVNiSd2CVKl",
+          "posted_at": "2026-11-10T20:30:12+07:00",
+          "seen_at": "2026-11-11T17:06:58.809320+07:00"
         }
       ],
       "update_history": []
     },
     {
-      "event_id": 14,
-      "title": "[GALA CHUNG KẾT SCHALLENGE 2026 - SẴN SÀNG BÙNG NỔ CHẶNG ĐUA CUỐI CÙNG] 🔥",
+      "event_id": 15,
+      "title": "LỄ KỶ NIỆM VÀ TRI ÂN THẦY CÔ - CHÀO MỪNG NGÀY NHÀ GIÁO VIỆT NAM 20/11",
       "online_mode": "offline",
       "is_online": false,
-      "date": "2026-11-14",
-      "time": "12:30",
-      "start_datetime": "2026-11-14T12:30:00+07:00",
-      "end_datetime": "2026-11-14T23:59:00+07:00",
-      "event_start_datetime": "2026-11-14T12:30:00+07:00",
-      "event_end_datetime": "2026-11-14T23:59:00+07:00",
-      "reg_start_datetime": "2026-11-11T20:00:00+07:00",
-      "reg_end_datetime": "2026-11-14T00:00:00+07:00",
-      "location": "Hội trường A, Trường Đại học Kinh tế - Luật, ĐHQG - HCM.",
+      "date": "2026-11-20",
+      "time": "09:30",
+      "start_datetime": "2026-11-20T09:30:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T09:30:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "null",
+      "reg_end_datetime": "null",
+      "location": "Giảng đường 1, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh)",
       "source_type": "facebook",
-      "source_id": "1622430336564651",
-      "fanpage_id": 19,
+      "source_id": "1621645143339671",
+      "fanpage_id": 9,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:36.220449+07:00",
-      "updated_at": "2026-11-15T21:48:36.220449+07:00",
-      "description": "Hành trình CHIẾN LƯỢC XUYÊN BIÊN GIỚI XIV – SCHALLENGE 2026 đang dần đi đến hồi kết, nơi Top 4 đội thi xuất sắc nhất sẽ cùng bước vào vòng Chung kết để tranh tài và chinh phục ngôi vị cao nhất. Với chủ đề “Supply Chain Resilience: Strategic Risk Governance in Global Supply Chains”, Gala Chung kết hứa hẹn mang đến những màn tranh biện kịch tính, những chiến lược ấn tượng cùng nhiều khoảnh khắc đáng mong đợi! 🌎. Lắng nghe những góc nhìn và chia sẻ ...",
-      "organizer": "Đội Văn Nghệ ITUS",
-      "registration_url": "https://byvn.net/Nm7W",
+      "created_at": "2026-11-19T20:47:53.635366+07:00",
+      "updated_at": "2026-11-19T20:47:53.635366+07:00",
+      "description": "Lễ kỷ niệm Ngày Nhà giáo Việt Nam 20/11 là dịp để sinh viên trường Đại học Khoa học Tự nhiên gửi lời tri ân đến quý thầy cô, tôn vinh những đóng góp trong sự nghiệp trồng người và lan tỏa truyền thống tôn sư trọng đạo.",
+      "organizer": "Đoàn Thanh niên - Hội Sinh viên Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "null",
       "registration_status": "link",
-      "fee": "Hoàn toàn miễn phí",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02U1qUMT2HdjfseQmpdLjV5hwGS5NKEKvJJ5V1styfSj9njuTMdHy3uUmi7biWdycWl",
+      "posted_at": "2026-11-19T10:42:11",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1621645143339671",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02U1qUMT2HdjfseQmpdLjV5hwGS5NKEKvJJ5V1styfSj9njuTMdHy3uUmi7biWdycWl",
+          "posted_at": "2026-11-19T10:42:11",
+          "seen_at": "2026-11-19T20:47:53.635366+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 35,
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [11]: HÀ TĨNHMỗi vùng đất đi qua là một mảnh ghép rực rỡ của bản sắc Việt! Hành trình khám phá \"Bản đồ Văn hóa\" sẽ dừng chân tại Hà Tĩnh – mảnh đất miền Trung giàu truyền thống hiếu học, nơi lưu giữ những di sản văn hóa - lịch sử hào hùng, danh thắng thiên nhiên kỳ thú cùng nền ẩm thực dân dã đậm đà nghĩa tình. Liệu bạn đã sẵn sàng chia sẻ những hiểu biết thú vị của mình về vùng đất này chưa?🎯 THỬ THÁCH CỦA BẠN Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Hà Tĩnh (bao gồm: thăm Khu di tích Đại thi hào Nguyễn Du, tưởng niệm tại Ngã ba Đồng Lộc, hành hương về Chùa Hương Tích, khám phá thiên nhiên tại Vườn quốc gia Vũ Quang, hòa mình vào không gian Lễ hội Hải Thượng Lãn Ông, cùng thưởng thức hương vị trứ danh của Kẹo cu đơ, Bánh bèo Hà Tĩnh và Gỏi cá đục Xuân Nghi) và chia sẻ những thông tin, hiểu biết của bạn về các địa danh, món ăn hoặc nét văn hóa xuất hiện trong hình!📝 CÁCH THAM GIABước 1: Theo dõi Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, đồng thời thả ❤️ và chia sẻ 🔄 bài viết ở chế độ công khai.Bước 2: Bình luận dưới bài viết những hiểu biết, thông tin thú vị hoặc cảm nhận của bạn về các nét văn hóa, di sản, ẩm thực của tỉnh Hà Tĩnh theo hình ảnh gợi ý.Bước 3: Cú pháp bình luận: [Chia sẻ thông tin/hiểu biết của bạn] kèm theo việc tag 03 người bạn cùng tham gia.(Ví dụ: Mình rất ấn tượng với Khu di tích Đại thi hào Nguyễn Du, lịch sử hào hùng tại Ngã ba Đồng Lộc và đặc sản kẹo cu đơ giòn tan đậm vị... @BạnA @BạnB @BạnC)Bước 4: Truy cập biểu mẫu và điền đầy đủ thông tin theo yêu cầu để Ban Tổ chức ghi nhận minh chứng. 🔗 Link form: https://forms.gle/jV3Qxcceask8uAvn7 📌 LƯU Ý VỀ GIẤY CHỨNG NHẬN: Mỗi bài đăng trong series hoàn thành hợp lệ sẽ được Ban Tổ chức ghi nhận là 01 dấu mốc trên hành trình. Người tham gia hoàn thành từ 18/35 bài đăng sẽ đủ điều kiện nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.⏰ Thời gian tham gia: Từ ngày 20/11/2026 đến 24h00 ngày 22/11/2026.Cùng xách ba lô lên, khám phá văn hóa ba miền và lan tỏa niềm tự hào dân tộc cùng chuỗi hoạt động hướng đến Ngày hội Văn hóa Việt Nam nhé các bạn ơi!#NgayHoiVanHoa2026 #BanDoVanHoa #HaTinh #NgaBaDongLoc #NhaVanHoaSinhVienTPHCM #NVHSV #NgayVanHoaVietNam",
+      "online_mode": "online",
+      "is_online": null,
+      "date": "2026-11-20",
+      "time": null,
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T22:00:03",
+      "reg_end_datetime": "2026-11-20T00:00:00+07:00",
+      "location": null,
+      "source_type": "facebook",
+      "source_id": "1561286209357674",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-21T08:27:02.149924+07:00",
+      "updated_at": "2026-11-21T08:27:02.149924+07:00",
+      "description": "Mỗi vùng đất đi qua là một mảnh ghép rực rỡ của bản sắc Việt! Hành trình khám phá \"Bản đồ Văn hóa\" sẽ dừng chân tại Hà Tĩnh – mảnh đất miền Trung giàu truyền thống hiếu học, nơi lưu giữ những di sản văn hóa - lịch sử hào hùng, danh thắng thiên nhiên kỳ thú cùng nền ẩm thực dân dã đậm đà nghĩa tình. Liệu bạn đã sẵn sàng chia sẻ những hiểu biết thú vị của mình về vùng đất này chưa?. Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Hà Tĩnh (bao g...",
+      "organizer": null,
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "cộng đồng",
+        "học thuật"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid05qEXsqXXpsedRGifyRfortAYdcQ9r4Teo5TG6yttKm5XHhgAXrdvQpN53Jq1dBUDl",
+      "posted_at": "2026-11-20T22:00:03",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1561286209357674",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid05qEXsqXXpsedRGifyRfortAYdcQ9r4Teo5TG6yttKm5XHhgAXrdvQpN53Jq1dBUDl",
+          "posted_at": "2026-11-20T22:00:03",
+          "seen_at": "2026-11-21T08:27:02.149924+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 31,
+      "title": "[MINIGAME 20/11] GỬI NGÀN LỜI TRI ÂN - TRAO TRỌN YÊU THƯƠNG",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-20",
+      "time": null,
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T00:00:00+07:00",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "location": "Online",
+      "source_type": "facebook",
+      "source_id": "1560590859427209",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-20T14:08:41.253558+07:00",
+      "updated_at": "2026-11-20T14:08:41.253558+07:00",
+      "description": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tổ chức minigame nhân Ngày Nhà giáo Việt Nam 20/11, tạo cơ hội cho sinh viên gửi gắm những lời chúc tốt đẹp và lời tri ân chân thành đến các thầy cô giáo.",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "https://forms.gle/6AM7hvtBPpRorRxs5",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+      "posted_at": "2026-11-20T09:00:04",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1560590859427209",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+          "posted_at": "2026-11-20T09:00:04",
+          "seen_at": "2026-11-20T14:08:41.253558+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 28,
+      "title": "MINIGAME 20/11 | GIỮ MÙA PHẤN - GÓI TRỌN YÊU THƯƠNG, GỬI NGÀN TRI ÂN",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-19",
+      "time": "20:00",
+      "start_datetime": "2026-11-19T20:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T20:00:00+07:00",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:00+07:00",
+      "reg_end_datetime": "2026-11-25T23:59:00+07:00",
+      "location": "Trực tuyến tại fanpage CLB Sinh Viên Năm Tốt - USSH",
+      "source_type": "facebook",
+      "source_id": "1492128506453735",
+      "fanpage_id": 16,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T21:16:14.071992+07:00",
+      "updated_at": "2026-11-19T21:16:14.071992+07:00",
+      "description": "Tham gia minigame 'GIỮ MÙA PHẤN' nhân ngày Nhà giáo Việt Nam 20/11 để cùng ôn lại kỷ niệm thời học sinh, giải ô chữ và gửi gắm lòng tri ân đến thầy cô. Người tham gia hoàn thành đầy đủ các bước theo thể lệ và điền form xác minh sẽ nhận được Giấy chứng nhận hỗ trợ cho việc xét Điểm rèn luyện (ĐRL).",
+      "organizer": "CLB Sinh Viên Năm Tốt - USSH",
+      "registration_url": "https://docs.google.com/forms/d/e/1FAIpQLSdeA2k2_FNr_neAfHeeBbFy_kISzIHNmHP_eFZhY0v6gqLVSg/viewform",
+      "registration_status": "link",
+      "fee": "miễn phí",
       "target_audience": [
         "sinh viên"
       ],
@@ -231,25 +1974,340 @@
         "cuộc thi"
       ],
       "format": [
-        "offline"
+        "online",
+        "cá nhân"
       ],
-      "post_url": "https://www.facebook.com/doivanngheitus/posts/pfbid023xte1BksLNhByMyjCHjfVdL4LUCLtQB3UrEKt1QuYDJUFL7zvZN3JdU7d4BtmCagl",
-      "posted_at": "2026-11-11T20:00:00+07:00",
+      "post_url": "https://www.facebook.com/CLB.SV5T.USSH/posts/pfbid02jbSXgKhYxr1FnyLnbZtVuZ5p4egt4zh5NGW57vz3KC8FPcau41Rtau2wVwXK9iu4l",
+      "posted_at": "2026-11-19T19:49:47+07:00",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "1622430336564651",
-          "fanpage_id": 19,
+          "source_id": "1492128506453735",
+          "fanpage_id": 16,
           "client_id": null,
-          "post_url": "https://www.facebook.com/doivanngheitus/posts/pfbid023xte1BksLNhByMyjCHjfVdL4LUCLtQB3UrEKt1QuYDJUFL7zvZN3JdU7d4BtmCagl",
-          "posted_at": "2026-11-11T20:00:00+07:00",
-          "seen_at": "2026-11-15T21:48:36.220449+07:00"
+          "post_url": "https://www.facebook.com/CLB.SV5T.USSH/posts/pfbid02jbSXgKhYxr1FnyLnbZtVuZ5p4egt4zh5NGW57vz3KC8FPcau41Rtau2wVwXK9iu4l",
+          "posted_at": "2026-11-19T19:49:47+07:00",
+          "seen_at": "2026-11-19T21:16:14.071992+07:00"
         }
       ],
       "update_history": []
     },
     {
-      "event_id": 3,
+      "event_id": 4,
+      "title": "[MINIGAME 02 | CHÀO MỪNG NGÀY HỘI VĂN HÓA VIỆT NAM] LAN TỎA TINH HOA - KHÁM PHÁ VẺ ĐẸP NGHỆ THUẬT TRUYỀN THỐNG 🇻🇳",
+      "online_mode": "online",
+      "is_online": null,
+      "date": "2026-11-19",
+      "time": null,
+      "start_datetime": "2026-11-19T00:00:00+07:00",
+      "end_datetime": "2026-11-19T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T00:00:00+07:00",
+      "event_end_datetime": "2026-11-19T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-19T00:00:00+07:00",
+      "reg_end_datetime": "2026-11-19T00:00:00+07:00",
+      "location": null,
+      "source_type": "facebook",
+      "source_id": "1559666996186262",
+      "fanpage_id": 15,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T15:25:30.828016+07:00",
+      "updated_at": "2026-11-19T15:25:30.828016+07:00",
+      "description": "This is the second minigame in a series organized by the Student Cultural House of Ho Chi Minh City to celebrate Vietnamese Cultural Day. Participants will test their knowledge of traditional Vietnamese folk dances through a series of questions, with the opportunity to receive an electronic certificate upon completing all three minigames in the series.",
+      "organizer": null,
+      "registration_url": "https://forms.gle/8xPT8pRyZdQFtj5K8",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": null,
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân",
+        "thi"
+      ],
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0TGbCER3hS3ifyVxoQKzoRsEztjm3mfram1vW4bECJ7YdGppYfqmhQTMF4zqaCaXWl",
+      "posted_at": "2026-11-19T14:00:14",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1559666996186262",
+          "fanpage_id": 15,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0TGbCER3hS3ifyVxoQKzoRsEztjm3mfram1vW4bECJ7YdGppYfqmhQTMF4zqaCaXWl",
+          "posted_at": "2026-11-19T14:00:14",
+          "seen_at": "2026-11-19T15:25:30.828016+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 16,
+      "title": "Cuộc thi sáng tạo clip ngắn “Hiểu luật – Sống chất”",
+      "online_mode": "online",
+      "is_online": true,
+      "date": "2026-11-18",
+      "time": "18:30",
+      "start_datetime": "2026-11-18T18:30:15+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-18T18:30:15+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-18T18:30:15+07:00",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "location": "Trực tuyến",
+      "source_type": "facebook",
+      "source_id": "1620898333414352",
+      "fanpage_id": 9,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:48:07.541988+07:00",
+      "updated_at": "2026-11-19T20:48:07.541988+07:00",
+      "description": "Cuộc thi sáng tạo clip ngắn \"Hiểu luật – Sống chất\" hưởng ứng Ngày Pháp luật Việt Nam 09/11 là sân chơi để sinh viên thể hiện sự sáng tạo, lan tỏa kiến thức pháp luật và chinh phục các giải thưởng hấp dẫn với tổng giá trị cao. Thí sinh cần hoàn thiện sản phẩm video đăng tải lên TikTok và gửi file gốc kèm liên kết về email ban tổ chức trước hạn chót.",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "registration_url": "youth@vnuhcm.edu.vn",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "cá nhân",
+        "đồng đội"
+      ],
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02NprRufLKCwt3fjEXjjNX12hiciyYu3PTj3NGMadm6YPzZMY5oboheWoCnxfPTUNdl",
+      "posted_at": "2026-11-18T18:30:15",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1620898333414352",
+          "fanpage_id": 9,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02NprRufLKCwt3fjEXjjNX12hiciyYu3PTj3NGMadm6YPzZMY5oboheWoCnxfPTUNdl",
+          "posted_at": "2026-11-18T18:30:15",
+          "seen_at": "2026-11-19T20:48:07.541988+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 24,
+      "title": "ENGLISH NETWORK GLOBAL 2026 | EXPERIENCE DAY",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-15",
+      "time": "23:59",
+      "start_datetime": "2026-11-15T23:59:00+07:00",
+      "end_datetime": "2026-11-15T23:59:00+07:00",
+      "event_start_datetime": "2026-11-15T23:59:00+07:00",
+      "event_end_datetime": "2026-11-15T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-09T20:00:05+07:00",
+      "reg_end_datetime": "2026-11-13T23:59:00+07:00",
+      "location": "Công viên Gia Định (Phường Hạnh Thông, TP.HCM)",
+      "source_type": "facebook",
+      "source_id": "1680938203818459",
+      "fanpage_id": 14,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:56:01.166111+07:00",
+      "updated_at": "2026-11-19T20:56:01.166111+07:00",
+      "description": "Tham gia Experience Day thuộc chuỗi chương trình English Network Global 2026 để gặp gỡ bạn bè mới, chinh phục các thử thách thú vị và tạo nên những kỷ niệm đáng nhớ cùng đồng đội tại công viên.",
+      "organizer": "BEE Club",
+      "registration_url": "https://tinyurl.com/bd4xvkr7",
+      "registration_status": "link",
+      "fee": "Vé cá nhân: 30.000 VNĐ/người, Vé nhóm (03 người): 90.000 VNĐ/nhóm",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "category": [
+        "ngày hội",
+        "cộng đồng",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân",
+        "đồng đội"
+      ],
+      "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02M3RxPjbk3RbXidEhv2AHddjBdPtXLjZSkwUZXwYKCojvDi8UmK9nyy8WWyLaUA7El",
+      "posted_at": "2026-11-09T20:00:05",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1680938203818459",
+          "fanpage_id": 14,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02M3RxPjbk3RbXidEhv2AHddjBdPtXLjZSkwUZXwYKCojvDi8UmK9nyy8WWyLaUA7El",
+          "posted_at": "2026-11-09T20:00:05",
+          "seen_at": "2026-11-19T20:56:01.166111+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 7,
+      "title": "NGÀY HỘI TRI ÂN VÀ KẾT NỐI NĂM 2026",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-11-14",
+      "time": "13:30",
+      "start_datetime": "2026-11-14T13:30:00+07:00",
+      "end_datetime": "2026-11-14T17:00:00+07:00",
+      "event_start_datetime": "2026-11-14T13:30:00+07:00",
+      "event_end_datetime": "2026-11-14T17:00:00+07:00",
+      "reg_start_datetime": "2026-11-11T16:58:05",
+      "reg_end_datetime": "2026-11-14T00:00:00+07:00",
+      "location": "Khuôn viên xung quanh Giảng đường 1 - Trường ĐH Khoa học tự nhiên, ĐHQG-HCM (Cơ sở Nguyễn Văn Cử)",
+      "source_type": "facebook",
+      "source_id": "1642883240970021",
+      "fanpage_id": 10,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T16:50:34.902298+07:00",
+      "updated_at": "2026-11-19T16:50:34.902298+07:00",
+      "description": "Ngày hội Tri ân và Kết nối 2026 là dịp để các thế hệ giảng viên và sinh viên Khoa Vật lý - Vật lý kỹ thuật hội ngộ nhân dịp 20/11 và kỷ niệm 85 năm truyền thống. Sinh viên tham gia sẽ được trải nghiệm không gian triển lãm, viết lời chúc tri ân, tham gia các gian hàng trò chơi và check-in tại photobooth, đồng thời có cơ hội nhận quà kỷ niệm và cộng điểm rèn luyện.",
+      "organizer": "Khoa Vật lý - Vật lý kỹ thuật, ĐH KHTN TP. HCM",
+      "registration_url": "https://forms.gle/CxXgUUFHdWczGzGfA",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0frmZfTCrWYAkmn2RQ4FXXicowKLdtzmmT5F2EBCP2U4k9vcn7MUGwgMrmZTWh7WVl",
+      "posted_at": "2026-11-11T16:58:05",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1642883240970021",
+          "fanpage_id": 10,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0frmZfTCrWYAkmn2RQ4FXXicowKLdtzmmT5F2EBCP2U4k9vcn7MUGwgMrmZTWh7WVl",
+          "posted_at": "2026-11-11T16:58:05",
+          "seen_at": "2026-11-19T16:50:34.902298+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 17,
+      "title": "Talkshow “Bẫy lừa không xa – Tỉnh táo để không sa”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-14",
+      "time": "08:30",
+      "start_datetime": "2026-11-14T08:30:00+07:00",
+      "end_datetime": "2026-11-14T11:30:00+07:00",
+      "event_start_datetime": "2026-11-14T08:30:00+07:00",
+      "event_end_datetime": "2026-11-14T11:30:00+07:00",
+      "reg_start_datetime": "2026-11-16T11:59:40+07:00",
+      "reg_end_datetime": "2026-11-14T08:30:00+07:00",
+      "location": "Hội trường B, cơ sở Đông Hòa",
+      "source_type": "facebook",
+      "source_id": "1158974969992018",
+      "fanpage_id": 11,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:50:53.578623+07:00",
+      "updated_at": "2026-11-19T20:50:53.578623+07:00",
+      "description": "Chương trình talkshow trang bị kỹ năng phòng tránh lừa đảo trực tuyến, nhận diện các thủ đoạn giả mạo học bổng, việc làm và cơ quan chức năng dành cho sinh viên, giúp nâng cao ý thức pháp luật và bảo vệ bản thân.",
+      "organizer": "Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "https://link.hcmus.edu.vn/talkshowBLKXTTDKS-1411",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên CNTT",
+        "sinh viên"
+      ],
+      "category": [
+        "tọa đàm",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02bqVf66YzF3Vdygf4AXceWKtzbtCoqkrZCyddyud1r1hr27MNHGVo1jwgk6iaWWNal",
+      "posted_at": "2026-11-16T11:59:40",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1158974969992018",
+          "fanpage_id": 11,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02bqVf66YzF3Vdygf4AXceWKtzbtCoqkrZCyddyud1r1hr27MNHGVo1jwgk6iaWWNal",
+          "posted_at": "2026-11-16T11:59:40",
+          "seen_at": "2026-11-19T20:50:53.578623+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 19,
+      "title": "[USCC | TEACHER APPRECIATION TOURNAMENT 2026]",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-12",
+      "time": "20:00",
+      "start_datetime": "2026-11-12T20:00:01+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-12T20:00:01+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-12T20:00:01+07:00",
+      "reg_end_datetime": "2026-11-13T23:59:00+07:00",
+      "location": "HCMUS",
+      "source_type": "facebook",
+      "source_id": "1475775401379207",
+      "fanpage_id": 12,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:52:49.857365+07:00",
+      "updated_at": "2026-11-19T20:52:49.857365+07:00",
+      "description": "USCC Teacher Appreciation Tournament 2026 là giải đấu cờ dành cho sinh viên giao lưu, thử sức và gửi lời tri ân đến các thầy cô nhân dịp Ngày Nhà giáo Việt Nam 20/11. Người tham gia có cơ hội tranh tài, thể hiện bản lĩnh qua từng nước cờ và nhận những trải nghiệm ý nghĩa.",
+      "organizer": "USCC - Câu lạc bộ Cờ Khoa Toán - Tin học HCMUS",
+      "registration_url": "https://go.hcmuschess.edu.vn/tat2026-register",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "thể thao",
+        "cộng đồng"
+      ],
+      "format": [
+        "cá nhân",
+        "thi",
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid034VN686Tw9qdZqjU98VRQSxQhaLStSSW2ubNmqLcGvhmcW6FGMR83FcFvKaAGQeS7l",
+      "posted_at": "2026-11-12T20:00:01",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1475775401379207",
+          "fanpage_id": 12,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid034VN686Tw9qdZqjU98VRQSxQhaLStSSW2ubNmqLcGvhmcW6FGMR83FcFvKaAGQeS7l",
+          "posted_at": "2026-11-12T20:00:01",
+          "seen_at": "2026-11-19T20:52:49.857365+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 2,
       "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
       "online_mode": "offline",
       "is_online": false,
@@ -267,8 +2325,8 @@
       "fanpage_id": null,
       "client_id": "client_team_1",
       "version": 1,
-      "created_at": "2026-11-10T18:00:42.870083+07:00",
-      "updated_at": "2026-11-10T18:00:42.870083+07:00",
+      "created_at": "2026-11-11T17:04:34.483336+07:00",
+      "updated_at": "2026-11-11T17:04:34.483336+07:00",
       "description": "Bạn đã nắm rõ các quy định pháp luật khi thuê trọ hay chưa? Bạn có thực sự hiểu đúng về thủ tục đăng ký thường trú, tạm trú? Nhằm hưởng ứng Ngày Pháp luật Việt Nam (09/11), Chi Hội 26TTH_DKD1 tổ chức cuộc thi “Hiểu đúng - Nắm chuẩn Luật cư ...",
       "organizer": null,
       "registration_url": "https://tinyurl.vn/LXBZ",
@@ -293,558 +2351,657 @@
           "client_id": "client_team_1",
           "post_url": null,
           "posted_at": "2026-11-10T18:00:42.422854+07:00",
-          "seen_at": "2026-11-10T18:00:42.870083+07:00"
+          "seen_at": "2026-11-11T17:04:34.483336+07:00"
         }
       ],
       "update_history": []
     },
     {
-      "event_id": 8,
-      "title": "🌿[GREEN DAY LẦN THỨ IX NĂM 2026] – VÌ MỘT TƯƠNG LAI LUÔN XANH 🌿",
+      "event_id": 37,
+      "title": "📑 TẬP HUẤN THỂ THỨC VĂN BẢN, TRUYỀN THÔNG VÀ EMAIL",
       "online_mode": "offline",
       "is_online": false,
-      "date": "2026-10-11",
-      "time": "13:00",
-      "start_datetime": "2026-10-11T13:00:00+07:00",
-      "end_datetime": "2026-10-11T16:30:00+07:00",
-      "event_start_datetime": "2026-10-11T13:00:00+07:00",
-      "event_end_datetime": "2026-10-11T16:30:00+07:00",
-      "reg_start_datetime": "2026-10-05T19:00:09+07:00",
-      "reg_end_datetime": "2026-10-11T00:00:00+07:00",
-      "location": "Trường Đại học Khoa học Tự nhiên, ĐHQG - HCM cơ sở Đông Hòa",
+      "date": "2026-11-05",
+      "time": "17:30",
+      "start_datetime": "2026-11-05T17:30:00+07:00",
+      "end_datetime": "2026-11-05T23:59:00+07:00",
+      "event_start_datetime": "2026-11-05T17:30:00+07:00",
+      "event_end_datetime": "2026-11-05T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-04T07:00:06",
+      "reg_end_datetime": "2026-11-05T00:00:00+07:00",
+      "location": "Hội quán Khoa học, tầng hầm Nhà điều hành, cơ sở 2, Trường Đại học Khoa học tự nhiên, ĐHQG - HCM",
       "source_type": "facebook",
-      "source_id": "1605294668062212",
+      "source_id": "1634708015120877",
       "fanpage_id": 10,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:14.137373+07:00",
-      "updated_at": "2026-11-15T21:48:14.137373+07:00",
-      "description": "Câu trả lời sẽ có tại Workshop GreenDay lần thứ IX: Opportunity cost. Tại đây, bạn sẽ được. Sau workshop, hãy đến các gian hàng sống xanh và tham gia vào nhiều hoạt động thú vị. Đặc biệt: Các bạn còn sẽ nhận được Giấy chứng nhận mảng Kỹ năng, tấm \"vé thông hành\" chất lượng hỗ trợ xét duyệt danh hiệu Sinh viên 5 tốt! 🌟.",
-      "organizer": "Đoàn khoa × Liên chi Hội Khoa Vật lý - Vật lý Kỹ thuật, ĐH KHTN TP. HCM",
-      "registration_url": "https://forms.gle/BxhS9XvoVDoPT3H56",
+      "created_at": "2026-11-22T14:25:01.874494+07:00",
+      "updated_at": "2026-11-22T14:25:01.874494+07:00",
+      "description": "Buổi tập huấn trang bị kiến thức và kỹ năng về thể thức văn bản, xây dựng kế hoạch, thiết kế ấn phẩm truyền thông và kỹ năng soạn thảo email chuyên nghiệp. Đây cũng là dịp để Ban Chấp hành các chi hội, CLB, Đội, Nhóm giao lưu, kết nối và nâng cao chất lượng vận hành công tác Đoàn - Hội.",
+      "organizer": "Liên chi Hội Khoa Vật lý - Vật lý Kỹ thuật, ĐH KHTN TP. HCM",
+      "registration_url": "null",
       "registration_status": "link",
-      "fee": "Hiểu rõ “Chi phí cơ hội” trong lĩnh vực môi trường",
+      "fee": null,
       "target_audience": [
-        "sinh viên"
+        "sinh viên",
+        "sinh viên K25, K26"
       ],
       "category": [
-        "workshop"
+        "workshop",
+        "học thuật"
       ],
       "format": [
         "offline"
       ],
-      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0p3q15UGNgSnAZiz8qyU7BAwVKSPEdjntHyPMiVV3iqbKN6kmWzLXYh48cVizaU7zl",
-      "posted_at": "2026-10-05T19:00:09+07:00",
+      "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0bXb1XM6GyxogKLsTVfShwoVEYVWexnX2Lh85uBZd4MaoFesNYzfsLa4nGi2tyu9tl",
+      "posted_at": "2026-11-04T07:00:06",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "1605294668062212",
+          "source_id": "1634708015120877",
           "fanpage_id": 10,
           "client_id": null,
-          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0p3q15UGNgSnAZiz8qyU7BAwVKSPEdjntHyPMiVV3iqbKN6kmWzLXYh48cVizaU7zl",
-          "posted_at": "2026-10-05T19:00:09+07:00",
-          "seen_at": "2026-11-15T21:48:14.137373+07:00"
+          "post_url": "https://www.facebook.com/doanhoikhoavatly/posts/pfbid0bXb1XM6GyxogKLsTVfShwoVEYVWexnX2Lh85uBZd4MaoFesNYzfsLa4nGi2tyu9tl",
+          "posted_at": "2026-11-04T07:00:06",
+          "seen_at": "2026-11-22T14:25:01.874494+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 14,
+      "title": "LET IT SHINE 2026 - KHÚC KHẢI HOÀN MÙA ĐÔNG",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-11-01",
+      "time": "16:00",
+      "start_datetime": "2026-11-01T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:30:00+07:00",
+      "event_start_datetime": "2026-11-01T16:00:00+07:00",
+      "event_end_datetime": "2026-11-22T20:30:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "reg_end_datetime": "2026-10-30T23:59:00+07:00",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "source_type": "facebook",
+      "source_id": "1563401929157198",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:46:02.369320+07:00",
+      "updated_at": "2026-11-19T20:46:02.369320+07:00",
+      "description": "Let IT Shine 2026 với chủ đề 'WINTER ARIA' là cuộc thi âm nhạc kỷ niệm 10 năm tổ chức dành cho sinh viên Khoa Công nghệ thông tin ĐH KHTN. Cuộc thi bao gồm vòng Sơ khảo và Vòng Chung kết với tổng giải thưởng hấp dẫn, tạo sân khấu để các giọng ca tài năng tỏa sáng.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "https://go.sabies.vn/lis26_dangky",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02soubTA2DrjXdxZtM3e29LmfqNmCJv5124QuBCzSPpvB6uZWKKig6QZC1nWRCmejpl",
+      "posted_at": "2026-10-19T20:00:01",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1563401929157198",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02soubTA2DrjXdxZtM3e29LmfqNmCJv5124QuBCzSPpvB6uZWKKig6QZC1nWRCmejpl",
+          "posted_at": "2026-10-19T20:00:01",
+          "seen_at": "2026-11-19T20:46:02.369320+07:00"
         }
       ],
       "update_history": []
     },
     {
       "event_id": 11,
-      "title": "💥 [BẢN LĨNH IT 2026] - MỞ FORM ĐĂNG KÝ 💥",
+      "title": "LET IT SHINE 2026 - WINTER ARIA: FINALE",
       "online_mode": "offline",
       "is_online": false,
-      "date": "2026-09-24",
+      "date": "2026-10-18",
+      "time": "16:00",
+      "start_datetime": "2026-10-18T00:00:00+07:00",
+      "end_datetime": "2026-12-31T23:59:00+07:00",
+      "event_start_datetime": "2026-10-18T00:00:00+07:00",
+      "event_end_datetime": "2026-12-31T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-18T00:00:00+07:00",
+      "reg_end_datetime": "2026-12-31T23:59:00+07:00",
+      "location": "HCMUS",
+      "source_type": "facebook",
+      "source_id": "1592933522870705",
+      "fanpage_id": 5,
+      "client_id": null,
+      "version": 3,
+      "created_at": "2026-11-19T20:31:36.639789+07:00",
+      "updated_at": "2026-11-19T20:46:13.073032+07:00",
+      "description": "LET IT SHINE 2026 – WINTER ARIA is back for a new season, promising explosive performances and impressive musical acts. Students can look forward to a vibrant stage to showcase their talents and enjoy wonderful winter performances.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "fb.com/sab.ctda",
+      "registration_status": "link",
+      "fee": "Miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "ca nhạc",
+        "cuộc thi",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02ti8KqSNXCavXFPVc9xoadtdjZrFrR8z6zo5jy2WkGArM5zACtRuAPSNB3D4wVNsUl",
+      "posted_at": "2026-11-15T20:00:44",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1592933522870705",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02ti8KqSNXCavXFPVc9xoadtdjZrFrR8z6zo5jy2WkGArM5zACtRuAPSNB3D4wVNsUl",
+          "posted_at": "2026-11-15T20:00:44",
+          "seen_at": "2026-11-19T20:31:36.639789+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1574832924680765",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0WMFFkdXGaH4mVoRJzuyTjZyd8nqUtsFTRcVpSvAoTCDin4LWwELYwiC9QZdRba5Yl",
+          "posted_at": "2026-10-30T20:00:02",
+          "seen_at": "2026-11-19T20:32:15.382492+07:00"
+        },
+        {
+          "source_type": "facebook",
+          "source_id": "1562396949257696",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/reel/1012266051886654",
+          "posted_at": "2026-10-18T20:00:42",
+          "seen_at": "2026-11-19T20:46:13.073032+07:00"
+        }
+      ],
+      "update_history": [
+        {
+          "updated_at": "2026-11-19T20:32:15.382492+07:00",
+          "source_type": "facebook",
+          "source_id": "1574832924680765",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-22",
+              "new": "2026-11-01"
+            },
+            "location": {
+              "old": "Giảng đường 1, cơ sở phường Chợ Quán.",
+              "new": "cơ sở phường Chợ Quán"
+            },
+            "reg_start_datetime": {
+              "old": "2026-11-15T20:00:44+07:00",
+              "new": "2026-10-19T00:00:00+07:00"
+            }
+          }
+        },
+        {
+          "updated_at": "2026-11-19T20:46:13.073032+07:00",
+          "source_type": "facebook",
+          "source_id": "1562396949257696",
+          "client_id": null,
+          "changes": {
+            "date": {
+              "old": "2026-11-01",
+              "new": "2026-10-18"
+            },
+            "location": {
+              "old": "cơ sở phường Chợ Quán",
+              "new": "HCMUS"
+            },
+            "reg_start_datetime": {
+              "old": "2026-10-19T00:00:00+07:00",
+              "new": "2026-10-18T00:00:00+07:00"
+            },
+            "reg_end_datetime": {
+              "old": "2026-11-22T00:00:00+07:00",
+              "new": "2026-12-31T23:59:00+07:00"
+            },
+            "organizer": {
+              "old": null,
+              "new": "SAB in HCMUS"
+            },
+            "fee": {
+              "old": null,
+              "new": "Miễn phí"
+            },
+            "target_audience": {
+              "old": null,
+              "new": [
+                "sinh viên"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "event_id": 29,
+      "title": "SAB FRESH 2026",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-10-11",
       "time": null,
-      "start_datetime": "2026-09-24T00:00:00+07:00",
-      "end_datetime": "2026-09-24T23:59:00+07:00",
-      "event_start_datetime": "2026-09-24T00:00:00+07:00",
-      "event_end_datetime": "2026-09-24T23:59:00+07:00",
-      "reg_start_datetime": "2026-09-12T20:00:02+07:00",
-      "reg_end_datetime": "2026-09-24T00:00:00+07:00",
-      "location": null,
+      "start_datetime": "2026-10-11T00:00:00+07:00",
+      "end_datetime": "2026-10-11T23:59:00+07:00",
+      "event_start_datetime": "2026-10-11T00:00:00+07:00",
+      "event_end_datetime": "2026-10-11T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-03T00:00:00+07:00",
+      "reg_end_datetime": "2026-10-09T23:59:00+07:00",
+      "location": "Khoa Công nghệ thông tin",
       "source_type": "facebook",
-      "source_id": "1097439089478940",
-      "fanpage_id": 11,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:25.209427+07:00",
-      "updated_at": "2026-11-15T21:48:25.209427+07:00",
-      "description": "Bản lĩnh IT là một cuộc thi kỹ năng thường niên do Đoàn khoa - Liên chi Hội khoa Công nghệ thông tin tổ chức. Trong suốt 13 năm qua, BLIT đã luôn là sân chơi hấp dẫn, thú vị để chào đón các bạn Tân sinh viên đến với khoa Công nghệ thông tin - Trường Đại học Khoa học tự nhiên, ĐHQG-HCM. Bắt đầu hành trình SH⇧FT cùng BLIT14.",
-      "organizer": "Đoàn khoa - Liên chi Hội CNTT KHTN",
-      "registration_url": "https://bit.ly/BLIT2026_DangKy.",
-      "registration_status": "link",
-      "fee": "20.000 đồng (cách thức đóng lệ phí xem trong form đăng ký)",
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "cuộc thi"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid026EAMa2b55JQkQAgd2fHVcysBJBWoMPwF3KXHj46tgzHFNg8RLnav9nJjmzDFBisUl",
-      "posted_at": "2026-09-12T20:00:02+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1097439089478940",
-          "fanpage_id": 11,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid026EAMa2b55JQkQAgd2fHVcysBJBWoMPwF3KXHj46tgzHFNg8RLnav9nJjmzDFBisUl",
-          "posted_at": "2026-09-12T20:00:02+07:00",
-          "seen_at": "2026-11-15T21:48:25.209427+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 12,
-      "title": "🔥 [ITogether] - MỞ LINK ĐĂNG KÝ 🔥",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-09-18",
-      "time": "07:30",
-      "start_datetime": "2026-09-18T07:30:00+07:00",
-      "end_datetime": "2026-09-18T12:00:00+07:00",
-      "event_start_datetime": "2026-09-18T07:30:00+07:00",
-      "event_end_datetime": "2026-09-18T12:00:00+07:00",
-      "reg_start_datetime": "2026-09-08T20:00:06+07:00",
-      "reg_end_datetime": "2026-09-18T23:59:00+07:00",
-      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (Cơ sở phường Đông Hòa)",
-      "source_type": "facebook",
-      "source_id": "1613804823872674",
-      "fanpage_id": 18,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:30.714269+07:00",
-      "updated_at": "2026-11-15T21:48:30.714269+07:00",
-      "description": "“ITogether” là hoạt động teambuilding ngoài trời sôi nổi dành riêng cho tân sinh viên, mang đến chuỗi thử thách gắn kết đồng đội cùng cơ hội làm quen với những người bạn mới. Đến với chương trình, bạn sẽ được trực tiếp giao lưu với các CLB/Đội/Nhóm và Đoàn khoa - Liên chi Hội khoa Công nghệ thông tin, kết nối cùng các anh chị khóa trên, đồng thời khám phá trọn vẹn khuôn viên trường đại học nơi bạn sẽ gắn bó suốt những năm tháng sắp tới.",
-      "organizer": "FIT HCMUS Kênh Hoạt động",
-      "registration_url": "https://bit.ly/ITogether_2026.",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "khác"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid0vZaxCVtouxWmUTc4qB8WJmUgRLPu2wzAbEnF4nuwN6M7eAfd6HKbBLWiy3ZiTwyYl",
-      "posted_at": "2026-09-08T20:00:06+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1613804823872674",
-          "fanpage_id": 18,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid0vZaxCVtouxWmUTc4qB8WJmUgRLPu2wzAbEnF4nuwN6M7eAfd6HKbBLWiy3ZiTwyYl",
-          "posted_at": "2026-09-08T20:00:06+07:00",
-          "seen_at": "2026-11-15T21:48:30.714269+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 9,
-      "title": "📣📣📣 Đăng ký tham gia Trường hè \"FIT@HCMUS Summer School on Intelligent Agents and Agentic AI\" năm 2026",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-07-27",
-      "time": "15:00",
-      "start_datetime": "2026-07-27T15:00:00+07:00",
-      "end_datetime": "2026-07-31T23:59:00+07:00",
-      "event_start_datetime": "2026-07-27T15:00:00+07:00",
-      "event_end_datetime": "2026-07-31T23:59:00+07:00",
-      "reg_start_datetime": "2026-07-16T16:58:39+07:00",
-      "reg_end_datetime": "2026-07-23T15:00:00+07:00",
-      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở 227 Nguyễn Văn Cừ, Phường Chợ Quán, TP.HCM (Phòng cụ thể sẽ thông báo sau)",
-      "source_type": "facebook",
-      "source_id": "1431439515685840",
-      "fanpage_id": 17,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:19.656515+07:00",
-      "updated_at": "2026-11-15T21:48:19.656515+07:00",
-      "description": "Năm 2026, Khoa Công nghệ Thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM tổ chức chương trình Trường hè “FIT@HCMUS Summer School on Intelligent Agents and Agentic AI”, quy tụ các chuyên gia nhằm cập nhật những tiến bộ mới nhất về Agentic AI. Chương trình mang đến các chuyên đề từ nền tảng lý thuyết đến ứng dụng thực tiễn, đồng thời tạo cơ hội kết nối, học hỏi và truyền cảm hứng cho sinh viên, học viên cao học, nghiên cứu sinh và các kỹ sư q...",
-      "organizer": "Information Technology - HCMUS",
-      "registration_url": "https://link.hcmus.edu.vn/SummerSchool_FITHCMUS_Schedule2026",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "hội nghị"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/fit.hcmus/posts/pfbid051qCWjSNdki2Xity9r1PSYDRAiq6QLHXYwsd37EmXtLSKzwsvfoHLbpeXyC8tYVRl",
-      "posted_at": "2026-07-16T16:58:39+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1431439515685840",
-          "fanpage_id": 17,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/fit.hcmus/posts/pfbid051qCWjSNdki2Xity9r1PSYDRAiq6QLHXYwsd37EmXtLSKzwsvfoHLbpeXyC8tYVRl",
-          "posted_at": "2026-07-16T16:58:39+07:00",
-          "seen_at": "2026-11-15T21:48:19.656515+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 10,
-      "title": "Đăng ký tham gia Seminar on Legal AI Beyond the Demo: Building systems that work in practice",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-06-29",
-      "time": "09:00",
-      "start_datetime": "2026-06-29T09:00:00+07:00",
-      "end_datetime": "2026-06-29T10:30:00+07:00",
-      "event_start_datetime": "2026-06-29T09:00:00+07:00",
-      "event_end_datetime": "2026-06-29T10:30:00+07:00",
-      "reg_start_datetime": "2026-06-14T12:15:47+07:00",
-      "reg_end_datetime": "2026-06-25T15:00:00+07:00",
-      "location": "Phòng I.23 - Cơ sở 227 Nguyễn Văn Cừ, phường Chợ Quán, Tp.HCM",
-      "source_type": "facebook",
-      "source_id": "1538504158069408",
-      "fanpage_id": 18,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:25.200053+07:00",
-      "updated_at": "2026-11-15T21:48:25.200053+07:00",
-      "description": "FIT.HCMUS thân mời Quý Thầy Cô và các bạn Học viên Cao học, Sinh viên tham gia Seminar on Legal AI Beyond the Demo: Building systems that work in practice với thông tin như sau. Diễn giả: Dr. Chia Chong Cher - Head of Digital Transformation at the Singapore Institute of Legal Education. 1. This talk examines both the opportunities and the practical realities of applying large language models in the legal domain.",
-      "organizer": "FIT HCMUS Kênh Hoạt động",
-      "registration_url": "https://www.fit.hcmus.edu.vn/tin-tuc/d/dang-ky-tham-gia-seminar-on-legal-ai-beyond-the-demo-building-systems-that-work-in-practice-17436",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "seminar",
-        "tọa đàm"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid02V7HMycVEnJVQdf4jnWsLugMapPg8o8JvtuBx136WdhN6dr6sSe5SQgZT8XxppMPGl",
-      "posted_at": "2026-06-14T12:15:47+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1538504158069408",
-          "fanpage_id": 18,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/fit.hcmus.hoatdong/posts/pfbid02V7HMycVEnJVQdf4jnWsLugMapPg8o8JvtuBx136WdhN6dr6sSe5SQgZT8XxppMPGl",
-          "posted_at": "2026-06-14T12:15:47+07:00",
-          "seen_at": "2026-11-15T21:48:25.200053+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 6,
-      "title": "✨ BƯỚC CHÂN YÊU THƯƠNG ✨ - TUYỂN CỘNG TÁC VIÊN TÌNH NGUYỆN",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-05-23",
-      "time": "04:00",
-      "start_datetime": "2026-05-23T04:00:00+07:00",
-      "end_datetime": "2026-05-23T23:59:00+07:00",
-      "event_start_datetime": "2026-05-23T04:00:00+07:00",
-      "event_end_datetime": "2026-05-23T23:59:00+07:00",
-      "reg_start_datetime": "2026-05-13T20:00:21+07:00",
-      "reg_end_datetime": "2026-05-23T00:00:00+07:00",
-      "location": "Trường THCS Phú Khánh, đường huyện 24, ấp Phú Lợi, xã Đại Điền, tỉnh Vĩnh Long",
-      "source_type": "facebook",
-      "source_id": "1418975406933185",
+      "source_id": "1553309656833092",
       "fanpage_id": 5,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:14.123801+07:00",
-      "updated_at": "2026-11-15T21:48:14.123801+07:00",
-      "description": "Tháng 5 này, Bước Chân Yêu Thương chính thức quay trở lại mang đến chuyến xe đầy ắp tiếng cười, những hoạt động ý nghĩa và cả một mùa hè được viết nên từ những điều tử tế. Nếu bạn đang tìm kiếm một mùa hè đáng nhớ, một hành trình được góp sức mình cho cộng đồng, thì hãy nhanh tay đăng ký để đồng hành cùng tụi mình nhé!. Trong hành trình lần này, tụi mình sẽ cùng nhau thực hiện những hoạt động. Thăm hỏi gia đình chính sách: Trao gửi những phần quà...",
+      "created_at": "2026-11-20T08:01:16.096055+07:00",
+      "updated_at": "2026-11-20T08:01:16.096055+07:00",
+      "description": "SAB MC is recruiting new members from K25 and K26 students of the Faculty of Information Technology. Participants can register via the online link before the deadline to join the upcoming interview round.",
       "organizer": "SAB in HCMUS",
-      "registration_url": "https://t.sab.edu.vn/bcyt26_form",
+      "registration_url": "https://go.sabies.vn/sabfresh26",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên K25, K26 Khoa Công nghệ thông tin"
+      ],
+      "category": [
+        "hướng nghiệp"
+      ],
+      "format": [
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/reel/1047126698321963",
+      "posted_at": "2026-10-09T13:57:54",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1553309656833092",
+          "fanpage_id": 5,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/reel/1047126698321963",
+          "posted_at": "2026-10-09T13:57:54",
+          "seen_at": "2026-11-20T08:01:16.096055+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 21,
+      "title": "[🕹️HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026”🕹️] TEAMFIGHT TACTICS (TFT) - ĐẤU TRƯỜNG CHÂN LÝ!",
+      "online_mode": "hybrid",
+      "is_online": false,
+      "date": "2026-08-08",
+      "time": null,
+      "start_datetime": "2026-08-08T00:00:00+07:00",
+      "end_datetime": "2026-08-09T23:59:00+07:00",
+      "event_start_datetime": "2026-08-08T00:00:00+07:00",
+      "event_end_datetime": "2026-08-09T23:59:00+07:00",
+      "reg_start_datetime": "2026-07-27T15:19:10+07:00",
+      "reg_end_datetime": "2026-08-08T00:00:00+07:00",
+      "location": "Cơ sở 1, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, Phường Chợ Quán, Tp.Hồ Chí Minh)",
+      "source_type": "facebook",
+      "source_id": "122153827005123302",
+      "fanpage_id": 13,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:54:21.211256+07:00",
+      "updated_at": "2026-11-19T20:54:21.211256+07:00",
+      "description": "Tham gia giải đấu thể thao điện tử 'LUNIX 2026' bộ môn Đấu Trường Chân Lý (TFT) để tranh tài chiến thuật, giành huy chương cùng các vật phẩm hấp dẫn từ nhà tài trợ. Vòng loại diễn ra trực tuyến và vòng chung kết tổ chức trực tiếp tại cơ sở Trường Đại học Khoa học Tự nhiên ĐHQG-HCM.",
+      "organizer": "Chi Đoàn - Chi Hội các lớp 25A02, 25C02, 25C03, 25C07, 25C09 và 25C10, Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG-TPHCM",
+      "registration_url": "https://tinyurl.com/LUNIX2026-LINKDANGKY",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cuộc thi",
+        "thể thao"
+      ],
+      "format": [
+        "đồng đội",
+        "cá nhân",
+        "online",
+        "offline"
+      ],
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid09xQKuecuEZkzztd9W6edbqL23egDuWaMFS7jTe7FxdRoZumwFZ1oCcaQL54jgcLcl&id=61583699079021",
+      "posted_at": "2026-07-27T15:19:10",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "122153827005123302",
+          "fanpage_id": 13,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid09xQKuecuEZkzztd9W6edbqL23egDuWaMFS7jTe7FxdRoZumwFZ1oCcaQL54jgcLcl&id=61583699079021",
+          "posted_at": "2026-07-27T15:19:10",
+          "seen_at": "2026-11-19T20:54:21.211256+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 20,
+      "title": "[🕹️ HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026” 🕹️] TETRIS - Cổ điển và tôn trọng",
+      "online_mode": "hybrid",
+      "is_online": true,
+      "date": "2026-08-08",
+      "time": null,
+      "start_datetime": "2026-08-08T00:00:00+07:00",
+      "end_datetime": "2026-08-08T23:59:00+07:00",
+      "event_start_datetime": "2026-08-08T00:00:00+07:00",
+      "event_end_datetime": "2026-08-08T23:59:00+07:00",
+      "reg_start_datetime": "2026-07-30T19:35:07",
+      "reg_end_datetime": "2026-08-08T00:00:00+07:00",
+      "location": "Cơ sở 1, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh)",
+      "source_type": "facebook",
+      "source_id": "122154329811123302",
+      "fanpage_id": 13,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:54:07.532986+07:00",
+      "updated_at": "2026-11-19T20:54:07.532986+07:00",
+      "description": "Tham gia bộ môn Tetris tại chuỗi hoạt động thể thao điện tử LUNIX 2026 để thử thách tư duy phản xạ, tranh tài giành huy chương và các phần thưởng hấp dẫn. Vòng loại diễn ra trực tuyến và vòng chung kết tổ chức trực tiếp tại cơ sở 1 Trường Đại học Khoa học Tự nhiên ĐHQG-HCM.",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "https://tinyurl.com/LUNIX2026-LINKDANGKY",
+      "registration_status": "link",
+      "fee": null,
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cuộc thi",
+        "thể thao"
+      ],
+      "format": [
+        "cá nhân",
+        "offline",
+        "online",
+        "thi"
+      ],
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tbaFS3SwfCLjzWrkRxq33ZhydzwfCFJu7AYE7hH2AYTYDTCF4E5ACzGKG2HR4vb1l&id=61583699079021",
+      "posted_at": "2026-07-30T19:35:07",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "122154329811123302",
+          "fanpage_id": 13,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tbaFS3SwfCLjzWrkRxq33ZhydzwfCFJu7AYE7hH2AYTYDTCF4E5ACzGKG2HR4vb1l&id=61583699079021",
+          "posted_at": "2026-07-30T19:35:07",
+          "seen_at": "2026-11-19T20:54:07.532986+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 33,
+      "title": "[🕹️HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026”🕹️]",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2026-08-01",
+      "time": null,
+      "start_datetime": "2026-08-01T00:00:00+07:00",
+      "end_datetime": "2026-08-02T23:59:00+07:00",
+      "event_start_datetime": "2026-08-01T00:00:00+07:00",
+      "event_end_datetime": "2026-08-02T23:59:00+07:00",
+      "reg_start_datetime": "2026-07-21T00:00:00+07:00",
+      "reg_end_datetime": "2026-08-01T00:00:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở Nguyễn Văn Cừ",
+      "source_type": "facebook",
+      "source_id": "122153148621123302",
+      "fanpage_id": 13,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-21T08:24:47.523920+07:00",
+      "updated_at": "2026-11-21T08:24:47.523920+07:00",
+      "description": "Tham gia giải đấu thể thao điện tử Liên Quân Mobile thuộc khuôn khổ LUNIX 2026 để trải nghiệm những trận đấu 5v5 kịch tính, giao lưu học hỏi và tranh tài giành giải thưởng hấp dẫn cùng cơ hội nhận quà từ minigame khán giả.",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "http://bit.ly/LUNIX2026-DieuLeChiTietAOV",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "thể thao",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline",
+        "đồng đội",
+        "cá nhân",
+        "thi"
+      ],
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tGF9Ye931stEEFavWc9hUq2vjMDcYhCfXn42ZohCaVvUWhUtKcZxZhVixtqrWBYNl&id=61583699079021",
+      "posted_at": "2026-07-21T21:20:41",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "122153148621123302",
+          "fanpage_id": 13,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tGF9Ye931stEEFavWc9hUq2vjMDcYhCfXn42ZohCaVvUWhUtKcZxZhVixtqrWBYNl&id=61583699079021",
+          "posted_at": "2026-07-21T21:20:41",
+          "seen_at": "2026-11-21T08:24:47.523920+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 32,
+      "title": "[🕹️HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026”🕹️] Cờ Caro (Tic-Tac-Toe)",
+      "online_mode": "offline",
+      "is_online": null,
+      "date": "2026-08-01",
+      "time": null,
+      "start_datetime": "2026-08-01T00:00:00+07:00",
+      "end_datetime": "2026-08-01T23:59:00+07:00",
+      "event_start_datetime": "2026-08-01T00:00:00+07:00",
+      "event_end_datetime": "2026-08-01T23:59:00+07:00",
+      "reg_start_datetime": "2026-07-22T19:41:56",
+      "reg_end_datetime": "2026-08-01T00:00:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở Nguyễn Văn Cừ",
+      "source_type": "facebook",
+      "source_id": "122153246373123302",
+      "fanpage_id": 13,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-21T08:24:41.437278+07:00",
+      "updated_at": "2026-11-21T08:24:41.437278+07:00",
+      "description": "LUNIX 2026 là sân chơi thể thao điện tử và đấu trí với bộ môn Cờ Caro dành cho sinh viên, nơi các kỳ thủ tranh tài chiến thuật để giành huy chương và giải thưởng tiền mặt hấp dẫn.",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "https://tinyurl.com/LUNIX2026-DieuLeChiTietCARO",
       "registration_status": "link",
       "fee": null,
       "target_audience": null,
       "category": [
-        "workshop",
-        "seminar"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ijCbGjPH7Pgs2sNZ1oh5rEmiVvNoZcobAdG4EADiKDuiSQ5tQDRbY4exfAWrFmSsl",
-      "posted_at": "2026-05-13T20:00:21+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "1418975406933185",
-          "fanpage_id": 5,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ijCbGjPH7Pgs2sNZ1oh5rEmiVvNoZcobAdG4EADiKDuiSQ5tQDRbY4exfAWrFmSsl",
-          "posted_at": "2026-05-13T20:00:21+07:00",
-          "seen_at": "2026-11-15T21:48:14.123801+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 13,
-      "title": "🚀 [BUILD ON STELLAR] — FROM ZERO TO YOUR FIRST WEB3 APP 💻",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-05-22",
-      "time": "13:30",
-      "start_datetime": "2026-05-22T13:30:00+07:00",
-      "end_datetime": "2026-05-22T18:00:00+07:00",
-      "event_start_datetime": "2026-05-22T13:30:00+07:00",
-      "event_end_datetime": "2026-05-22T18:00:00+07:00",
-      "reg_start_datetime": "2026-05-20T20:38:44+07:00",
-      "reg_end_datetime": "2026-05-22T00:00:00+07:00",
-      "location": "Trường ĐH Khoa học Tự nhiên, ĐHQG-HCM (cơ sở Chợ Quán)",
-      "source_type": "facebook",
-      "source_id": "1000608555828661",
-      "fanpage_id": 11,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:30.728736+07:00",
-      "updated_at": "2026-11-15T21:48:30.728736+07:00",
-      "description": "GDGoC - HCMUS phối hợp cùng Stellar và Rise In mang đến workshop \"Build On Stellar\" nơi bạn sẽ được hướng dẫn xây dựng và triển khai một dApp thực tế trên Stellar, từ ý tưởng ban đầu đến khi chạy trên devnet. 🔥. Tại workshop, bạn sẽ có cơ hội. Được ghi nhận điểm rèn luyện mục 1 theo quy định của nhà trường.",
-      "organizer": "Đoàn khoa - Liên chi Hội CNTT KHTN",
-      "registration_url": "https://gdg.community.dev/gdg-on-campus-vnu-hcm-university-of-science-ho-chi-minh-city-vietnam/",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "workshop",
+        "thể thao",
         "cuộc thi"
       ],
       "format": [
-        "offline"
+        "offline",
+        "cá nhân"
       ],
-      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02bDLpTtygPvNXAuJX5Xitfrghgg8sQUnf21VkhyHqPzhwktARLu5X46ZUiJ8hN15El",
-      "posted_at": "2026-05-20T20:38:44+07:00",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tjf2dWaU35KsYPnsq2dTCsbnKuCfZWn8uH3tJLxKkZs8tcd9q5jk5NxiHRL51q3rl&id=61583699079021",
+      "posted_at": "2026-07-22T19:41:56",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "1000608555828661",
-          "fanpage_id": 11,
+          "source_id": "122153246373123302",
+          "fanpage_id": 13,
           "client_id": null,
-          "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02bDLpTtygPvNXAuJX5Xitfrghgg8sQUnf21VkhyHqPzhwktARLu5X46ZUiJ8hN15El",
-          "posted_at": "2026-05-20T20:38:44+07:00",
-          "seen_at": "2026-11-15T21:48:30.728736+07:00"
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02tjf2dWaU35KsYPnsq2dTCsbnKuCfZWn8uH3tJLxKkZs8tcd9q5jk5NxiHRL51q3rl&id=61583699079021",
+          "posted_at": "2026-07-22T19:41:56",
+          "seen_at": "2026-11-21T08:24:41.437278+07:00"
         }
       ],
       "update_history": []
     },
     {
-      "event_id": 5,
-      "title": "🌸 MỞ ĐƠN ĐĂNG KÝ THAM GIA - [ TRAO YÊU THƯƠNG - ĐỔI HẠNH PHÚC ] 🌸",
+      "event_id": 22,
+      "title": "[🕹️ HOẠT ĐỘNG THỂ THAO ĐIỆN TỬ “LUNIX 2026” 🕹️] - MỞ FORM ĐĂNG KÝ THAM GIA",
       "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-05-19",
-      "time": "08:00",
-      "start_datetime": "2026-05-19T08:00:00+07:00",
-      "end_datetime": "2026-05-22T23:59:00+07:00",
-      "event_start_datetime": "2026-05-19T08:00:00+07:00",
-      "event_end_datetime": "2026-05-22T23:59:00+07:00",
-      "reg_start_datetime": "2026-05-19T00:00:00+07:00",
-      "reg_end_datetime": "2026-05-22T23:59:00+07:00",
-      "location": "Chùa Tân Hưng ( QL1K, Đông Hòa, Hồ Chí Minh, Việt Nam) - Bệnh Viện Ung Bướu Tp.HCM (12 Đ. Số 400, Tăng Nhơn Phú, Hồ Chí Minh, Việt Nam)",
+      "is_online": null,
+      "date": "2026-08-01",
+      "time": null,
+      "start_datetime": "2026-08-01T00:00:00+07:00",
+      "end_datetime": "2026-08-09T23:59:00+07:00",
+      "event_start_datetime": "2026-08-01T00:00:00+07:00",
+      "event_end_datetime": "2026-08-09T23:59:00+07:00",
+      "reg_start_datetime": "2026-08-01T00:00:00+07:00",
+      "reg_end_datetime": "2026-08-09T23:59:00+07:00",
+      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM - Cơ sở Nguyễn Văn Cừ.",
       "source_type": "facebook",
-      "source_id": "122125433139099060",
-      "fanpage_id": 16,
+      "source_id": "122153448123123302",
+      "fanpage_id": 13,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:14.118295+07:00",
-      "updated_at": "2026-11-15T21:48:14.118295+07:00",
-      "description": "Nhằm lan tỏa tinh thần tương thân tương ái, tạo môi trường để sinh viên rèn luyện kỹ năng và đóng góp sức trẻ, Chi hội 25KDL1 phối hợp cùng Chi hội 25TTH3 tổ chức hoạt động tình nguyện chuẩn bị tại Chùa Tân Hưng và phân phát suất ăn thiện nguyện tại Bệnh viện Ung Bướu Thành Phố Hồ Chí Minh. Khi tham gia cùng với chúng mình, các bạn sẽ có cơ hội. Trực tiếp tham gia vào đội ngũ phân phát, trao tận tay những suất ăn đến với các bệnh nhân tại bệnh vi...",
-      "organizer": "Chi Đoàn - Chi Hội 25 KDL HCMUS",
-      "registration_url": "https://forms.gle/N7VvumcP58MEBswd6",
-      "registration_status": "link",
-      "fee": "30.000 đồng",
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "khác"
-      ],
-      "format": [
-        "offline"
-      ],
-      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02vnufS159jwtqyzyCfQhM74KiYY6hPnVgBzVQCLu6hMNiLM4RAdh11ho6TfNqspwAl&id=61582971810895",
-      "posted_at": "2026-05-19T08:00:07+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "122125433139099060",
-          "fanpage_id": 16,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02vnufS159jwtqyzyCfQhM74KiYY6hPnVgBzVQCLu6hMNiLM4RAdh11ho6TfNqspwAl&id=61582971810895",
-          "posted_at": "2026-05-19T08:00:07+07:00",
-          "seen_at": "2026-11-15T21:48:14.118295+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 15,
-      "title": "📢 - NHẮC NHỞ DIỄN RA THI THỬ TOEIC CƠ SỞ PHƯỜNG CHỢ QUÁN 📢",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-04-16",
-      "time": "17:30",
-      "start_datetime": "2026-04-16T17:30:00+07:00",
-      "end_datetime": "2026-04-16T20:00:00+07:00",
-      "event_start_datetime": "2026-04-16T17:30:00+07:00",
-      "event_end_datetime": "2026-04-16T20:00:00+07:00",
-      "reg_start_datetime": "2026-04-15T20:00:13+07:00",
-      "reg_end_datetime": "2026-04-16T00:00:00+07:00",
-      "location": "Cơ sở phường Chợ Quán, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM.",
-      "source_type": "facebook",
-      "source_id": "972052285350955",
-      "fanpage_id": 11,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:36.234770+07:00",
-      "updated_at": "2026-11-15T21:48:36.234770+07:00",
-      "description": "Quyền lợi: Được công nhận tham gia hoạt động và giấy chứng nhận đạt mục Ngoại ngữ trong tiêu chí “Hội nhập tốt” khi đạt từ 450/990 điểm. Radar vũ trụ vừa xác nhận tọa độ: Trạm dừng chân Chợ Quán sắp chính thức được kích hoạt! Các \"Nhà Lữ Hành\" đã sẵn sàng bật hết công suất, tăng tốc bứt phá tại chặng đua TOEIC sắp tới chưa?.",
-      "organizer": "Đoàn khoa - Liên chi Hội CNTT KHTN",
+      "created_at": "2026-11-19T20:54:33.365067+07:00",
+      "updated_at": "2026-11-19T20:54:33.365067+07:00",
+      "description": "THÔNG TIN HOẠT ĐỘNG. Nội dung thi đấu: Tranh tài cực cháy tại 5 bộ môn: Liên quân Mobile, Cờ Caro, Tetris, Đấu Trường Chân Lý (TFT) và PUBG Mobile. QUYỀN LỢI THAM GIA. Giải thưởng hấp dẫn: Cơ hội rinh về những phần thưởng giá trị dành cho cá nhân và đội tuyển đạt thành tích xuất sắc nhất.",
+      "organizer": null,
       "registration_url": "free",
-      "registration_status": "free",
+      "registration_status": "unknown",
       "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
+      "target_audience": null,
       "category": [
-        "cuộc thi"
+        "cuộc thi",
+        "thể thao"
       ],
       "format": [
-        "offline"
+        "offline",
+        "đồng đội",
+        "cá nhân"
       ],
-      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid022uQWvKUrW34Cf5rDAgrDvY6nqje6w9ej8cZ5pUKzLb9yF232Mb5kLaSEcxiBwuUjl",
-      "posted_at": "2026-04-15T20:00:13+07:00",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02cV4cmpBTbsHNCyxMaks3ZVYgCau33YQbvxFSDEJsz3p2QCnQbGRG25gqAX1JRfpHl&id=61583699079021",
+      "posted_at": "2026-07-24T19:48:58",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "972052285350955",
-          "fanpage_id": 11,
+          "source_id": "122153448123123302",
+          "fanpage_id": 13,
           "client_id": null,
-          "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid022uQWvKUrW34Cf5rDAgrDvY6nqje6w9ej8cZ5pUKzLb9yF232Mb5kLaSEcxiBwuUjl",
-          "posted_at": "2026-04-15T20:00:13+07:00",
-          "seen_at": "2026-11-15T21:48:36.234770+07:00"
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02cV4cmpBTbsHNCyxMaks3ZVYgCau33YQbvxFSDEJsz3p2QCnQbGRG25gqAX1JRfpHl&id=61583699079021",
+          "posted_at": "2026-07-24T19:48:58",
+          "seen_at": "2026-11-19T20:54:33.365067+07:00"
         }
       ],
       "update_history": []
     },
     {
-      "event_id": 16,
-      "title": "🏛️ MỞ LINK ĐĂNG KÝ VÒNG ONLINE 1 - HÀNH TRÌNH HỒI SINH TÀN TÍCH 🏛️",
-      "online_mode": "online",
-      "is_online": true,
-      "date": "2026-04-11",
-      "time": "20:30",
-      "start_datetime": "2026-04-11T20:30:00+07:00",
-      "end_datetime": "2026-04-16T22:30:00+07:00",
-      "event_start_datetime": "2026-04-11T20:30:00+07:00",
-      "event_end_datetime": "2026-04-16T22:30:00+07:00",
-      "reg_start_datetime": "2026-04-11T00:00:00+07:00",
-      "reg_end_datetime": "2026-04-16T23:59:00+07:00",
-      "location": null,
-      "source_type": "facebook",
-      "source_id": "971003038789213",
-      "fanpage_id": 11,
-      "client_id": null,
-      "version": 1,
-      "created_at": "2026-11-15T21:48:37.147549+07:00",
-      "updated_at": "2026-11-15T21:48:37.147549+07:00",
-      "description": "Dưới ánh ban mai, những mảnh vỡ cổ xưa dần hé lộ một hệ thống hoàn chỉnh đã bị thời gian vùi lấp. Để khám phá vùng đất này, các nhà thám hiểm bước chân vào thử thách đầu tiên mang tên: PHOENIX. Lưu ý: Các vòng thi online là độc lập, thí sinh tham gia từ một vòng trở lên và đạt được tổng 100/vòng sẽ được ghi nhận hoạt động.",
-      "organizer": "Đoàn khoa - Liên chi Hội CNTT KHTN",
-      "registration_url": "https://bit.ly/DangKy_VongOnline01",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": [
-        "sinh viên"
-      ],
-      "category": [
-        "cuộc thi"
-      ],
-      "format": [
-        "online"
-      ],
-      "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02hscqSjUY38GUh19FMTmym85uXyeFj8ThvaqpYdFZw7NU5FqWzudQ1JyiAvi4qYdbl",
-      "posted_at": "2026-04-14T11:49:41+07:00",
-      "sources": [
-        {
-          "source_type": "facebook",
-          "source_id": "971003038789213",
-          "fanpage_id": 11,
-          "client_id": null,
-          "post_url": "https://www.facebook.com/DoanKhoaLienChiHoi.CNTT.KHTN/posts/pfbid02hscqSjUY38GUh19FMTmym85uXyeFj8ThvaqpYdFZw7NU5FqWzudQ1JyiAvi4qYdbl",
-          "posted_at": "2026-04-14T11:49:41+07:00",
-          "seen_at": "2026-11-15T21:48:37.147549+07:00"
-        }
-      ],
-      "update_history": []
-    },
-    {
-      "event_id": 4,
-      "title": "🌏 THI THỬ TOEIC - 2 KỸ NĂNG NGHE VÀ ĐỌC 🌏",
+      "event_id": 34,
+      "title": "HẠ XANH HY VỌNG - CHUYẾN ĐI THIỆN NGUYỆN",
       "online_mode": "offline",
       "is_online": false,
-      "date": "2025-11-22",
-      "time": "13:15",
-      "start_datetime": "2025-11-22T13:15:00+07:00",
-      "end_datetime": "2025-11-22T16:30:00+07:00",
-      "event_start_datetime": "2025-11-22T13:15:00+07:00",
-      "event_end_datetime": "2025-11-22T16:30:00+07:00",
-      "reg_start_datetime": "2025-11-11T20:49:33+07:00",
-      "reg_end_datetime": "2025-11-19T23:59:00+07:00",
-      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM cơ sở 2 (Khu đô thị ĐHQG-HCM).",
+      "date": "2026-07-20",
+      "time": "07:00",
+      "start_datetime": "2026-07-20T07:00:00+07:00",
+      "end_datetime": "2026-07-20T10:30:00+07:00",
+      "event_start_datetime": "2026-07-20T07:00:00+07:00",
+      "event_end_datetime": "2026-07-20T10:30:00+07:00",
+      "reg_start_datetime": "2026-07-12T20:00:09",
+      "reg_end_datetime": "2026-07-20T00:00:00+07:00",
+      "location": "Trường Nuôi Dạy Trẻ Mồ Côi Long Hoa, 1250/41 Huỳnh Tấn Phát, Phường Tân Mỹ, TP. Hồ Chí Minh",
       "source_type": "facebook",
-      "source_id": "1371604478085168",
-      "fanpage_id": 15,
+      "source_id": "122152074765123302",
+      "fanpage_id": 13,
       "client_id": null,
       "version": 1,
-      "created_at": "2026-11-15T21:48:08.587601+07:00",
-      "updated_at": "2026-11-15T21:48:08.587601+07:00",
-      "description": "Đã có CLB Sinh viên 5 Tốt, CLB Kỹ Năng cùng CLB Anh Văn BEE đồng hành với Trung tâm Anh ngữ Ehouse tổ chức. ''THI THỬ TOEIC - 2 KỸ NĂNG NGHE VÀ ĐỌC\"🎉. Lợi ích khi tham gia. Nhận Giấy Chứng Nhận (từ 450/990 điểm) để xét tiêu chí \"Hội nhập tốt\".",
-      "organizer": "BEE Club",
-      "registration_url": "https://forms.gle/F7c4CXvzdF4oBX3z7",
+      "created_at": "2026-11-21T08:24:53.076550+07:00",
+      "updated_at": "2026-11-21T08:24:53.076550+07:00",
+      "description": "Chương trình thiện nguyện 'Hạ Xanh Hy Vọng' tại Trường Nuôi Dạy Trẻ Mồ Côi Long Hoa nhằm trao gửi quà tặng, sự quan tâm và những khoảnh khắc ấm áp cho các em nhỏ có hoàn cảnh đặc biệt.",
+      "organizer": "Chi Đoàn - Chi Hội 25C10",
+      "registration_url": "null",
       "registration_status": "link",
-      "fee": "25.000 VNĐ/thí sinh",
+      "fee": "miễn phí",
       "target_audience": [
-        "sinh viên"
+        "sinh viên",
+        "cộng đồng"
       ],
       "category": [
-        "cuộc thi"
+        "thiện nguyện",
+        "cộng đồng"
       ],
       "format": [
         "offline"
       ],
-      "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02KZb3A5yswpw7nZZM9tRJXBWC4GPBe47eiyZM746t1GqAAvX4DKoYEmyVaGSGtquMl",
-      "posted_at": "2025-11-11T20:49:33+07:00",
+      "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02AkAN9NjNWZuTPLv2vswXXmBqzq4ucjqi1KNVV67Ru6Vbjn8RogdgkiLJLDiV2LQml&id=61583699079021",
+      "posted_at": "2026-07-12T20:00:09",
       "sources": [
         {
           "source_type": "facebook",
-          "source_id": "1371604478085168",
-          "fanpage_id": 15,
+          "source_id": "122152074765123302",
+          "fanpage_id": 13,
           "client_id": null,
-          "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02KZb3A5yswpw7nZZM9tRJXBWC4GPBe47eiyZM746t1GqAAvX4DKoYEmyVaGSGtquMl",
-          "posted_at": "2025-11-11T20:49:33+07:00",
-          "seen_at": "2026-11-15T21:48:08.587601+07:00"
+          "post_url": "https://www.facebook.com/permalink.php?story_fbid=pfbid02AkAN9NjNWZuTPLv2vswXXmBqzq4ucjqi1KNVV67Ru6Vbjn8RogdgkiLJLDiV2LQml&id=61583699079021",
+          "posted_at": "2026-07-12T20:00:09",
+          "seen_at": "2026-11-21T08:24:53.076550+07:00"
+        }
+      ],
+      "update_history": []
+    },
+    {
+      "event_id": 18,
+      "title": "HOẠT ĐỘNG “TÌM HIỂU GIỌT VÀNG DI SẢN”",
+      "online_mode": "offline",
+      "is_online": false,
+      "date": "2025-11-21",
+      "time": "08:00",
+      "start_datetime": "2025-11-21T08:00:00+07:00",
+      "end_datetime": "2025-11-21T11:45:00+07:00",
+      "event_start_datetime": "2025-11-21T08:00:00+07:00",
+      "event_end_datetime": "2025-11-21T11:45:00+07:00",
+      "reg_start_datetime": "2025-11-18T10:00:08+07:00",
+      "reg_end_datetime": "2025-11-21T08:00:00+07:00",
+      "location": "Nhà trưng bày Nước mắm Liên Thành - 231 Bến Vân Đồn, Vĩnh Hội, Thành phố Hồ Chí Minh",
+      "source_type": "facebook",
+      "source_id": "1484022483887832",
+      "fanpage_id": 12,
+      "client_id": null,
+      "version": 1,
+      "created_at": "2026-11-19T20:52:31.098606+07:00",
+      "updated_at": "2026-11-19T20:52:31.098606+07:00",
+      "description": "Hoạt động 'Tìm hiểu Giọt vàng di sản' tạo cơ hội cho sinh viên khám phá lịch sử Nhà trưng bày Nước mắm Liên Thành và tìm hiểu nghề làm nước mắm truyền thống. Sinh viên tham gia đầy đủ sẽ được ghi nhận hoạt động.",
+      "organizer": "Ban Chấp hành Liên chi Hội khoa Toán - Tin học",
+      "registration_url": "https://forms.gle/riz5uzPbYXTzv5a39",
+      "registration_status": "link",
+      "fee": "miễn phí",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "category": [
+        "cộng đồng",
+        "ngày hội"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid0PqAyELuEE6yxmBcswCvH5RGz3ALrPHBHdV4pWKmYpp2n2nab6avD4bzRNjbvRD8Tl",
+      "posted_at": "2026-11-18T10:00:08",
+      "sources": [
+        {
+          "source_type": "facebook",
+          "source_id": "1484022483887832",
+          "fanpage_id": 12,
+          "client_id": null,
+          "post_url": "https://www.facebook.com/DK.LCH.ToanTinHoc.HCMUS/posts/pfbid0PqAyELuEE6yxmBcswCvH5RGz3ALrPHBHdV4pWKmYpp2n2nab6avD4bzRNjbvRD8Tl",
+          "posted_at": "2026-11-18T10:00:08",
+          "seen_at": "2026-11-19T20:52:31.098606+07:00"
         }
       ],
       "update_history": []

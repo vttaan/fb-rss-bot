@@ -26,7 +26,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 
-from config import FEEDS_DIR, LOCAL_TIMEZONE, STORE_EMAIL_CONTENT
+from config import FEEDS_DIR, LOCAL_TIMEZONE
+from .classifier import classify_event
 from database import (
     EmailMessage,
     EventRecord,
@@ -513,10 +514,11 @@ def looks_event_related(content: str) -> bool:
 
 
 FALLBACK_GEMINI_MODELS = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
     "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
 ]
 _WORKING_GEMINI_MODEL: Optional[str] = None
 # In-memory registry of active Gemini cachedContents handles per model:
@@ -528,59 +530,136 @@ _CACHE_UNSUPPORTED_MODELS: set[str] = set()
 _CACHED_GEMINI_V2_MODELS: Dict[str, List[str]] = {}
 
 
+def _gemini_generate_url(model: str) -> str:
+    """Build generateContent URL for standard `models/...` or fine-tuned `tunedModels/...`."""
+    if model.startswith("tunedModels/"):
+        return f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent"
+    return GEMINI_URL.format(model=model)
+
+
+def _resolve_gemini_proxy_url() -> Optional[str]:
+    """Return proxy URL for Gemini API calls (GEMINI_PROXY_URL, falling back to FB_PROXY_URL).
+    Set GEMINI_PROXY_URL=direct or none to bypass proxy for Gemini."""
+    explicit = os.environ.get("GEMINI_PROXY_URL", "").strip()
+    if explicit.lower() in ("none", "direct", "off", "false"):
+        return None
+    raw = explicit or os.environ.get("FB_PROXY_URL", "").strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"http://{raw}"
+    return raw
+
+
+def _gemini_urlopen_json(
+    url: str,
+    *,
+    method: str = "GET",
+    headers: Optional[Dict[str, str]] = None,
+    data: Optional[bytes] = None,
+    timeout: float = 30.0,
+) -> Dict[str, Any]:
+    """Execute a Gemini HTTP request (routing via GEMINI_PROXY_URL/FB_PROXY_URL if set) and return parsed JSON."""
+    import io
+
+    req_headers = dict(headers or {})
+    proxy_url = _resolve_gemini_proxy_url()
+    if proxy_url:
+        try:
+            import httpx
+
+            with httpx.Client(proxy=proxy_url, timeout=timeout) as client:
+                resp = client.request(method, url, headers=req_headers, content=data)
+                if resp.status_code >= 400:
+                    raise urllib.error.HTTPError(
+                        url,
+                        resp.status_code,
+                        resp.reason_phrase or f"HTTP {resp.status_code}",
+                        resp.headers,  # type: ignore[arg-type]
+                        io.BytesIO(resp.content),
+                    )
+                return resp.json()
+        except ImportError as imp_exc:
+            if proxy_url.startswith("socks"):
+                raise RuntimeError(
+                    f"SOCKS proxy configured ({proxy_url}) but httpx[socks] is not installed. "
+                    "Run: pip install 'httpx[socks]'"
+                ) from imp_exc
+        except Exception as exc:
+            if isinstance(exc, urllib.error.HTTPError):
+                raise
+            if exc.__class__.__module__.startswith("httpx"):
+                raise urllib.error.URLError(str(exc)) from exc
+            raise
+
+    req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 def _fetch_gemini_models_v2(api_key: str = "") -> List[str]:
-    """Dynamically query Google Gemini API to fetch available models and select those starting with 2.
+    """Dynamically query Google Gemini API to fetch active Gemini 3.x / 2.5 / 2.x generateContent models.
 
     Prevents HTTP 404 (model not found) by ensuring we only request active models enabled for this key.
     """
     global _CACHED_GEMINI_V2_MODELS
     if not api_key:
-        return [m for m in FALLBACK_GEMINI_MODELS if "2" in m]
+        return list(FALLBACK_GEMINI_MODELS)
 
     key_hash = api_key[-8:] if len(api_key) > 8 else api_key
     if key_hash in _CACHED_GEMINI_V2_MODELS:
         return _CACHED_GEMINI_V2_MODELS[key_hash]
 
-    discovered_v2: List[str] = []
+    discovered: List[str] = []
+    excluded_tokens = ("-tts", "-image", "-audio", "robotics", "computer-use", "deep-research", "embedding")
     try:
-        req = urllib.request.Request(
+        data = _gemini_urlopen_json(
             GEMINI_LIST_MODELS_URL,
-            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
             method="GET",
+            headers={"x-goog-api-key": api_key, "User-Agent": "EventExtractor/2.0"},
+            timeout=8,
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
         for item in data.get("models", []):
             name = item.get("name") or ""
             model_id = name.replace("models/", "").strip()
             methods = item.get("supportedGenerationMethods") or []
             if "generateContent" not in methods:
                 continue
-
-            version = str(item.get("version") or "")
-            # Filter for models starting with 2 (e.g. gemini-2.*, version 2.*)
-            if model_id.startswith("gemini-2") or version.startswith("2") or model_id.startswith("2"):
-                discovered_v2.append(model_id)
+            low = model_id.lower()
+            if any(tok in low for tok in excluded_tokens):
+                continue
+            if low.startswith(("gemini-3", "gemini-2.5", "gemini-2")):
+                discovered.append(model_id)
     except Exception:
         pass
 
-    # Sort to prioritize flash-lite (lightweight/fast/reliable free tier), then flash, then others
-    def _rank_v2(m_name: str) -> int:
+    # Sort to prioritize 3.1 flash-lite, 2.5 flash-lite, 2.5 flash, then 2.0 fallbacks
+    def _rank_model(m_name: str) -> Tuple[int, int]:
         n = m_name.lower()
+        ver_rank = 3
+        if n.startswith("gemini-3.1"):
+            ver_rank = 0
+        elif n.startswith("gemini-3"):
+            ver_rank = 1
+        elif n.startswith("gemini-2.5"):
+            ver_rank = 2
+        elif n.startswith("gemini-2"):
+            ver_rank = 4
+
+        tier_rank = 2
         if "flash-lite" in n:
-            return 0
-        if "flash" in n:
-            return 1
-        return 2
+            tier_rank = 0
+        elif "flash" in n:
+            tier_rank = 1
+        return (ver_rank, tier_rank)
 
-    discovered_v2.sort(key=_rank_v2)
+    discovered.sort(key=_rank_model)
 
-    # Fallback to curated 2.x list if network discovery failed
-    if not discovered_v2:
-        discovered_v2 = [m for m in FALLBACK_GEMINI_MODELS if "2" in m] or FALLBACK_GEMINI_MODELS
+    if not discovered:
+        discovered = list(FALLBACK_GEMINI_MODELS)
 
-    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered_v2
-    return discovered_v2
+    _CACHED_GEMINI_V2_MODELS[key_hash] = discovered
+    return discovered
 
 
 def _candidate_gemini_models(api_key: str = "") -> List[str]:
@@ -598,6 +677,8 @@ def _candidate_gemini_models(api_key: str = "") -> List[str]:
     candidates: List[str] = []
     if raw and not raw.lower().startswith(retired_prefixes):
         candidates.append(raw)
+        if raw.lower() == "gemini-3.1-flash-lite" and "gemini-3.1-flash-lite-preview" not in candidates:
+            candidates.append("gemini-3.1-flash-lite-preview")
 
     for m in v2_models:
         if m not in candidates:
@@ -624,7 +705,12 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
     `system_instruction` without extra round-trips.
     """
     cache_key = _cache_scope_key(model, api_key)
-    if not GEMINI_ENABLE_CONTEXT_CACHE or not api_key or cache_key in _CACHE_UNSUPPORTED_MODELS:
+    if (
+        not GEMINI_ENABLE_CONTEXT_CACHE
+        or not api_key
+        or model.startswith("tunedModels/")
+        or cache_key in _CACHE_UNSUPPORTED_MODELS
+    ):
         return None
 
     now = time.time()
@@ -645,15 +731,14 @@ def _get_or_create_cached_regulations(model: str, api_key: str) -> Optional[str]
         }
     ).encode("utf-8")
 
-    req = urllib.request.Request(
-        GEMINI_CACHED_CONTENTS_URL,
-        data=payload_bytes,
-        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        data = _gemini_urlopen_json(
+            GEMINI_CACHED_CONTENTS_URL,
+            method="POST",
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            data=payload_bytes,
+            timeout=20,
+        )
         cache_name = data.get("name")
         if isinstance(cache_name, str) and cache_name.strip():
             _CACHED_SYSTEM_HANDLES[cache_key] = (cache_name.strip(), now + ttl_s)
@@ -958,15 +1043,14 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
             cache_key = _cache_scope_key(model, active_key)
             for attempt in range(GEMINI_MAX_RETRIES + 1):
                 body_bytes = _build_gemini_request_body(user_text, model, active_key)
-                req = urllib.request.Request(
-                    GEMINI_URL.format(model=model),
-                    data=body_bytes,
-                    headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
-                    method="POST",
-                )
                 try:
-                    with urllib.request.urlopen(req, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS) as resp:
-                        payload = json.loads(resp.read().decode("utf-8"))
+                    payload = _gemini_urlopen_json(
+                        _gemini_generate_url(model),
+                        method="POST",
+                        headers={"Content-Type": "application/json", "x-goog-api-key": active_key},
+                        data=body_bytes,
+                        timeout=GEMINI_REQUEST_TIMEOUT_SECONDS,
+                    )
                     _WORKING_GEMINI_MODEL = model
                     # Advance round-robin pointer so the next extraction uses the next key in the pool
                     pool.advance()
@@ -979,7 +1063,13 @@ def _execute_gemini_generate(user_text: str, api_key: str = "") -> Any:
                         _CACHE_UNSUPPORTED_MODELS.add(cache_key)
                         continue
                     if exc.code in (400, 404):
-                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}); trying next fallback model...")
+                        err_detail = ""
+                        try:
+                            err_detail = exc.read().decode("utf-8", errors="ignore").strip().replace("\n", " ")[:180]
+                        except Exception:
+                            pass
+                        detail_suffix = f" [{err_detail}]" if err_detail else ""
+                        print(f"[events] Gemini model '{model}' returned HTTP {exc.code} ({exc.reason}){detail_suffix}; trying next fallback model...")
                         break
                     if exc.code == 403:
                         print(f"[events] Gemini {pool.key_label(active_key)} returned HTTP 403 Forbidden ({exc.reason}).")
@@ -1114,7 +1204,7 @@ def call_gemini_batch(
     return None
 
 
-def call_gemini(post: Post, fanpage_name: str, api_key: str) -> Optional[Dict[str, Any]]:
+def call_gemini(post: Post, fanpage_name: str, api_key: str = "") -> Optional[Dict[str, Any]]:
     pub = post.published_at.isoformat() if post.published_at else "unknown"
     return call_gemini_text(post.content or "", pub, fanpage_name, api_key)
 
@@ -2007,6 +2097,47 @@ def _merge_registration_and_null_fields(
     return extra_changes
 
 
+def _format_source_type(session, source_type: str, fanpage_id: Optional[int]) -> str:
+    raw = (source_type or "facebook").strip()
+    if raw.lower() == "facebook" and fanpage_id:
+        fp = session.get(Fanpage, fanpage_id)
+        if fp:
+            label = (fp.name or fp.slug or "").strip()
+            if label:
+                return f"facebook: {label}"
+    return raw
+
+
+def _sync_event_columns(
+    record: EventRecord,
+    info: Dict[str, Any],
+    source_type_label: Optional[str] = None,
+    post_url: Optional[str] = None,
+) -> None:
+    """Run classification and synchronize structured EventRecord columns from info dict."""
+    classified = classify_event({**info, "title": record.title, "location": record.location, "is_online": record.is_online})
+    info.update(classified)
+    record.description = str(info.get("description") or record.description or "")
+    record.organizer = str(info.get("organizer") or record.organizer or "")
+    record.is_online = bool(classified["is_online"])
+    record.event_start_datetime = info.get("event_start_datetime") or record.start_datetime or record.event_start_datetime
+    record.event_end_datetime = info.get("event_end_datetime") or record.end_datetime or record.event_end_datetime
+    record.reg_start_datetime = info.get("reg_start_datetime") or record.reg_start_datetime
+    record.reg_end_datetime = info.get("reg_end_datetime") or record.reg_end_datetime
+    record.fee = str(info.get("fee") or record.fee or "")
+    record.target_audience = classified["target_audience"]
+    record.award = classified["award"]
+    record.registration = info.get("registration_url") or info.get("registration") or record.registration
+    record.category = classified["category"]
+    record.format = classified["format"]
+    if post_url:
+        record.post_url = post_url
+    elif info.get("post_url"):
+        record.post_url = info.get("post_url")
+    if source_type_label:
+        record.source_type = source_type_label
+
+
 def upsert_unified_event(
     session,
     raw_data: Dict[str, Any],
@@ -2088,6 +2219,7 @@ def upsert_unified_event(
             stored_info["update_history"] = history
             existing.version = (existing.version or 1) + 1
             existing.updated_at = now_dt
+            _sync_event_columns(existing, stored_info, post_url=post_url)
             existing.event_json = json.dumps(stored_info, ensure_ascii=False)
             session.flush()
             return "updated", existing, extra_changes
@@ -2150,6 +2282,7 @@ def upsert_unified_event(
 
         existing.version = (existing.version or 1) + 1
         existing.updated_at = now_dt
+        _sync_event_columns(existing, stored_info, post_url=post_url)
         existing.event_json = json.dumps(stored_info, ensure_ascii=False)
         session.flush()
         return "updated", existing, all_changes
@@ -2173,26 +2306,29 @@ def upsert_unified_event(
         "sources": [source_entry],
         "update_history": [],
     }
+    formatted_source_type = _format_source_type(session, source_type, fanpage_id)
     new_record = EventRecord(
         title=anchor["title"],
         normalized_title=anchor["normalized_title"],
         online_mode=anchor["online_mode"],
-        is_online=anchor["is_online"],
+        is_online=bool(anchor["is_online"]) if anchor["is_online"] is not None else False,
         event_date=anchor["date"],
         event_time=anchor["time"],
         start_datetime=anchor["start_datetime"],
         end_datetime=anchor["end_datetime"],
-        location=anchor["location"],
+        location=anchor["location"] or "",
         normalized_location=anchor["normalized_location"],
-        source_type=source_type,
+        source_type=formatted_source_type,
         source_id=source_id,
         fanpage_id=fanpage_id,
         client_id=client_id,
         event_json=json.dumps(full_info, ensure_ascii=False),
         version=1,
-        created_at=now_dt,
-        updated_at=now_dt,
+        created_at=now_dt.isoformat(),
+        updated_at=now_dt.isoformat(),
     )
+    _sync_event_columns(new_record, full_info, source_type_label=formatted_source_type, post_url=post_url)
+    new_record.event_json = json.dumps(full_info, ensure_ascii=False)
     session.add(new_record)
     session.flush()
     return "created", new_record, {}
@@ -2386,8 +2522,6 @@ def ingest_email_message(
     sender: Optional[str] = None,
     received_at: Optional[str] = None,
     media_urls: Optional[List[str]] = None,
-    content_hash: Optional[str] = None,
-    sync_folders: bool = True,
 ) -> Dict[str, Any]:
     """
     Receive an email entry from a client into the server Inbox, move it to the Unified Extractor,
@@ -2399,9 +2533,7 @@ def ingest_email_message(
     clean_client = (client_id or "anonymous").strip() or "anonymous"
     clean_subject = (subject or "").strip()
     clean_content = (content or "").strip()
-    clean_hash = (content_hash or "").strip().lower() or None
     media = [u.strip() for u in (media_urls or []) if u and str(u).strip()]
-    stored_content = clean_content if STORE_EMAIL_CONTENT else ""
 
     # Parse received_at timestamp
     rec_dt = datetime.now(LOCAL_TIMEZONE)
@@ -2410,12 +2542,7 @@ def ingest_email_message(
             parsed = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
             rec_dt = ensure_local_tz(parsed) or rec_dt
         except Exception:
-            try:
-                from email.utils import parsedate_to_datetime
-                parsed = parsedate_to_datetime(received_at)
-                rec_dt = ensure_local_tz(parsed) or rec_dt
-            except Exception:
-                pass
+            pass
 
     # Deterministic message_id if client didn't supply one
     if not message_id or not str(message_id).strip():
@@ -2427,19 +2554,10 @@ def ingest_email_message(
         clean_msg_id = str(message_id).strip()
 
     with get_session() as session:
-        # 1. EXACT-copy deduplication (before any LLM work): content_hash first, then message_id
-        existing_msg = None
-        dup_reason = "message_id_already_processed"
-        if clean_hash:
-            existing_msg = session.scalar(
-                select(EmailMessage).where(EmailMessage.content_hash == clean_hash)
-            )
-            if existing_msg:
-                dup_reason = "content_hash_already_processed"
-        if not existing_msg:
-            existing_msg = session.scalar(
-                select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
-            )
+        # 1. Message-ID level deduplication check
+        existing_msg = session.scalar(
+            select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
+        )
         if existing_msg:
             ev_record = (
                 session.get(EventRecord, existing_msg.event_id)
@@ -2448,7 +2566,7 @@ def ingest_email_message(
             )
             return {
                 "status": "duplicate",
-                "reason": dup_reason,
+                "reason": "message_id_already_processed",
                 "is_event": existing_msg.is_event,
                 "is_duplicate": True,
                 "is_updated": False,
@@ -2493,11 +2611,10 @@ def ingest_email_message(
         if not is_event:
             msg_row = EmailMessage(
                 message_id=clean_msg_id,
-                content_hash=clean_hash,
                 client_id=clean_client,
                 subject=clean_subject,
                 sender=sender,
-                content=stored_content,
+                content=clean_content,
                 media_urls_json=json.dumps(media, ensure_ascii=False),
                 received_at=rec_dt,
                 ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -2509,8 +2626,7 @@ def ingest_email_message(
             )
             session.add(msg_row)
             session.commit()
-            if sync_folders:
-                sync_all_event_folders(session)
+            sync_all_event_folders(session)
             return {
                 "status": "ignored",
                 "is_event": False,
@@ -2539,11 +2655,10 @@ def ingest_email_message(
         ev_dict = ev_record.to_dict()
         msg_row = EmailMessage(
             message_id=clean_msg_id,
-            content_hash=clean_hash,
             client_id=clean_client,
             subject=clean_subject,
             sender=sender,
-            content=stored_content,
+            content=clean_content,
             media_urls_json=json.dumps(media, ensure_ascii=False),
             received_at=rec_dt,
             ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -2555,8 +2670,7 @@ def ingest_email_message(
         )
         session.add(msg_row)
         session.commit()
-        if sync_folders:
-            sync_all_event_folders(session)
+        sync_all_event_folders(session)
 
         return {
             "status": upsert_status,
@@ -2574,13 +2688,21 @@ def analyze_fanpage_posts(
     fanpage_id: int,
     limit: Optional[int] = None,
     force_recheck: bool = False,
-) -> Dict[str, int]:
+) -> Dict[str, Any]:
     """
     Analyze remaining/unanalyzed posts of a fanpage (optionally scoped to the `limit` latest posts)
     and refresh its events.json. Blocking (run in a thread).
     """
     init_db()
-    stats = {"analyzed": 0, "llm_calls": 0, "events": 0, "updated": 0, "duplicates": 0, "errors": 0}
+    stats: Dict[str, Any] = {
+        "analyzed": 0,
+        "llm_calls": 0,
+        "events": 0,
+        "updated": 0,
+        "duplicates": 0,
+        "errors": 0,
+        "updated_events": [],
+    }
     _GLOBAL_KEY_POOL.load_from_env()
     has_gemini = _GLOBAL_KEY_POOL.has_keys()
     max_llm_calls = max(MAX_LLM_CALLS_PER_FANPAGE, limit) if (limit and limit > 0) else MAX_LLM_CALLS_PER_FANPAGE
@@ -2653,6 +2775,9 @@ def analyze_fanpage_posts(
                     data["updated_changes"] = changes
                 if upsert_status == "updated":
                     stats["updated"] += 1
+                    stats["updated_events"].append(
+                        {"event": ev_record.to_dict(), "changes": changes}
+                    )
                 elif upsert_status == "duplicate":
                     stats["duplicates"] += 1
 

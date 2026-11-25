@@ -1,48 +1,526 @@
 {
   "fanpage": {
-    "name": "SAB in HCMUS | Ho Chi Minh City",
+    "name": "SAB in HCMUS",
     "url": "https://www.facebook.com/sab.ctda",
     "slug": "sab.ctda"
   },
-  "updated_at": "2026-11-15T21:48:37.242883+07:00",
-  "count": 1,
+  "updated_at": "2026-11-24T09:35:09.045335+07:00",
+  "count": 15,
   "events": [
     {
-      "post_id": "1418975406933185",
-      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ijCbGjPH7Pgs2sNZ1oh5rEmiVvNoZcobAdG4EADiKDuiSQ5tQDRbY4exfAWrFmSsl",
-      "posted_at": "2026-05-13T20:00:21+07:00",
-      "is_event": true,
-      "title": "✨ BƯỚC CHÂN YÊU THƯƠNG ✨ - TUYỂN CỘNG TÁC VIÊN TÌNH NGUYỆN",
-      "online_mode": "offline",
-      "is_online": false,
-      "date": "2026-05-23",
-      "time": "04:00",
-      "start_datetime": "2026-05-23T04:00:00+07:00",
-      "end_datetime": "2026-05-23T23:59:00+07:00",
-      "reg_start_datetime": null,
-      "reg_end_datetime": null,
-      "location": "Trường THCS Phú Khánh, đường huyện 24, ấp Phú Lợi, xã Đại Điền, tỉnh Vĩnh Long",
-      "description": "Tháng 5 này, Bước Chân Yêu Thương chính thức quay trở lại mang đến chuyến xe đầy ắp tiếng cười, những hoạt động ý nghĩa và cả một mùa hè được viết nên từ những điều tử tế. Nếu bạn đang tìm kiếm một mùa hè đáng nhớ, một hành trình được góp sức mình cho cộng đồng, thì hãy nhanh tay đăng ký để đồng hành cùng tụi mình nhé!. Trong hành trình lần này, tụi mình sẽ cùng nhau thực hiện những hoạt động. Thăm hỏi gia đình chính sách: Trao gửi những phần quà...",
-      "organizer": "SAB in HCMUS",
-      "registration_url": "https://t.sab.edu.vn/bcyt26_form",
-      "registration_status": "link",
-      "fee": null,
-      "target_audience": null,
+      "post_id": "1600041702159887",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid029jJGFNZwxYMzY8zZPTbU57YV4G35JHUR1TnDx12V8keMdhQswjAvudV2JGS399Wvl",
+      "posted_at": "2026-11-21T20:00:27",
+      "reason": "The post announces the upcoming final round details, schedule, and venue of an ongoing student music competition.",
       "category": [
-        "workshop",
-        "seminar"
+        "ca nhạc",
+        "cuộc thi"
       ],
       "format": [
         "offline"
       ],
-      "input_url": "https://www.facebook.com/share/p/1EDnUf35ue/",
-      "fanpage_name": "SAB in HCMUS",
-      "fanpage_url": "https://www.facebook.com/sab.ctda",
-      "media_urls": [
-        "https://scontent.fsgn2-5.fna.fbcdn.net/v/t39.30808-6/698830219_1418968923600500_5130400885676014343_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x2048&ctp=p526x296&_nc_cat=107&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=NJwDYhj-UlEQ7kNvwEfCetC&_nc_oc=AdoleWTRw0N9wHT9C7PF6F-TorYKAgtYyAa2DodpOpdql00GG8AXd0ozb76LgxlYDMJAfHHoF34tuRExn8HcpdFa&_nc_zt=23&_nc_ht=scontent.fsgn2-5.fna&_nc_gid=yK7SUtyVQoLQo4SfNdwBgw&_nc_ss=78289&oh=00_AQSgXcQTwtbCgSLMYILUiVllJ-ztvmPgJQ71-xnJvdybbw&oe=6AFA394A"
+      "description": "Đêm Chung kết cuộc thi Let IT Shine 2026 với chủ đề 'Winter Aria' sẽ diễn ra vào ngày 22/11/2026 tại Giảng đường 1, cơ sở phường Chợ Quán. Sự kiện có sự tham gia của Hội đồng Ban Giám khảo chuyên môn và các giải thưởng giá trị dành cho thí sinh xuất sắc nhất.",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-11-22T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-21T20:00:27+07:00",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên"
       ],
-      "extraction_method": "heuristic",
-      "scraped_at": "2026-11-11T19:37:26.857402+07:00"
+      "title": "❄️ LET IT SHINE 2026 ❄️ - CHUNG KẾT 'WINTER ARIA'",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1598950125602378",
+      "post_url": "https://www.facebook.com/reel/2392597504878112",
+      "posted_at": "2026-11-20T20:16:42",
+      "reason": "The post provides complete details including time, venue, and structure for the upcoming final round of the Let IT Shine 2026 competition.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "The Final Night of the Let IT Shine 2026 music competition is an opportunity for IT students at the University of Science to showcase their performances, compete for attractive prizes including a 3,000,000 VND Grand Prize, and enjoy a vibrant musical atmosphere.",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T20:16:42+07:00",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "title": "LET IT SHINE 2026 - ĐÊM CHUNG KẾT",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "format": {
+          "old": null,
+          "new": "offline"
+        },
+        "location": {
+          "old": "cơ sở phường Chợ Quán",
+          "new": "Giảng đường 1, cơ sở phường Chợ Quán"
+        },
+        "reg_start_datetime": {
+          "old": "2026-10-19T00:00:00+07:00",
+          "new": "2026-11-20T20:16:42+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-11-22T16:00:00+07:00"
+        },
+        "organizer": {
+          "old": null,
+          "new": "SAB in HCMUS"
+        },
+        "fee": {
+          "old": null,
+          "new": "miễn phí"
+        },
+        "target_audience": {
+          "old": null,
+          "new": [
+            "sinh viên CNTT"
+          ]
+        }
+      }
+    },
+    {
+      "post_id": "1568433875320670",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0roA1akiEs9i47AQ5NVC4VFrtFexgES5MCWEyW3mTfdEppTFnSYA3CcpLUCidpFz2l",
+      "posted_at": "2026-10-24T20:00:02",
+      "reason": "The post is an active announcement for an upcoming music competition, providing registration links, competition rounds, and specific event timelines.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Let It Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, offering participants the chance to showcase their talents with the guidance of experienced mentors. The competition includes a preliminary round and a grand finale, with cash prizes for the winners.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "https://go.sabies.vn/lis26_dangky",
+      "title": "LET IT SHINE 2026",
+      "location": "cơ sở phường Chợ Quán",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_end_datetime": null,
+      "dedup_status": "duplicate"
+    },
+    {
+      "post_id": "1571561958341195",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid032PujPg1XcmaULzFJqrn2pGt1JRoVYVteaKj775mTZqWTYFamCryxSKEvRjSp5WCml",
+      "posted_at": "2026-10-27T20:00:10",
+      "reason": "The post is an active call for registration for an upcoming music competition with specific dates, prizes, and a registration link.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, offering a platform to showcase vocal talent and passion. Participants compete for various prizes including a Grand Prize, Runner-up, Second Runner-up, and a Popularity Award.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "https://go.sabies.vn/lis26_dangky",
+      "title": "LET IT SHINE 2026",
+      "location": "cơ sở phường Chợ Quán",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_end_datetime": null,
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "location": {
+          "old": "Giảng đường 1, cơ sở phường Chợ Quán.",
+          "new": "cơ sở phường Chợ Quán"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-19T20:00:01",
+          "new": "2026-10-19T00:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1576992477798143",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02KrqWz3uxiWHpZjWHK9UF48M6jqqTsffPNzcFjVm8zY87fy4QRVFwNLV5ARderJ3dl",
+      "posted_at": "2026-11-01T20:00:06",
+      "reason": "The post announces the results of the preliminary round and confirms the upcoming final round of the Let IT Shine 2026 competition, providing specific date, time, and venue details for the final.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, offering cash prizes for the top winners and the most voted contestant. The event culminates in a final round where selected participants will perform to showcase their musical talent.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "null",
+      "title": "LET IT SHINE 2026 — VÒNG CHUNG KẾT",
+      "location": "cơ sở phường Chợ Quán",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1581496077347783",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0ULPu4tiKn2Jj7fh1pXASftbroTzdkcKtTPJQ94P3YAyrXmd3285Y1DAWuUcWwk1xl",
+      "posted_at": "2026-11-05T21:00:05",
+      "reason": "The post announces the upcoming Final Round of the Let IT Shine 2026 music competition, providing specific date, time, and venue details for student attendance.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, where participants showcase their musical talents before mentors. The event culminates in a Final Round featuring top contestants competing for cash prizes.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "null",
+      "title": "LET IT SHINE 2026 — ECHOES OF WINTER (Vòng Chung kết) ❄️",
+      "location": "cơ sở phường Chợ Quán",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1584629080367816",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02vjQsSaMxgEmrwcnn1h523oa3cQUzAKLtvv2AeXvJ9VgooVNvM1mavyDuvaiNdtYVl",
+      "posted_at": "2026-11-08T20:00:09",
+      "reason": "The post announces the upcoming final round of the Let IT Shine 2026 competition, providing specific date, time, and venue details for student participation.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, featuring a final round where contestants perform to win prizes. The event provides a professional stage for students to showcase their musical talents with support from professional mentors.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "target_audience": [
+        "sinh viên Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên, ĐHQG - HCM"
+      ],
+      "title": "LET IT SHINE 2026",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "dedup_status": "duplicate"
+    },
+    {
+      "post_id": "1589377503226307",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid023tRD6TrDWDoTpJVsUsu587nqS4wSS5nk6oLqj8tEbpWrp7GyPsrqtyBVtbrmscwZl",
+      "posted_at": "2026-11-12T20:00:10",
+      "reason": "The post announces the upcoming final round of the Let IT Shine 2026 competition, providing specific date, time, and venue details for student attendance.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a talent competition for students of the Faculty of Information Technology at HCMUS. The final round will feature performances and award ceremonies for the top contestants, promising a high-quality artistic experience with professional sound and lighting.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán.",
+      "organizer": "SAB in HCMUS",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "title": "LET IT SHINE 2026",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "dedup_status": "duplicate"
+    },
+    {
+      "post_id": "1592933522870705",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02ti8KqSNXCavXFPVc9xoadtdjZrFrR8z6zo5jy2WkGArM5zACtRuAPSNB3D4wVNsUl",
+      "posted_at": "2026-11-15T20:00:44",
+      "reason": "The post announces the upcoming Finale of the 'Let IT Shine 2026' singing competition and invites students to register for attendance.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a singing competition for students at the University of Science, VNU-HCM. The Finale will feature top contestants competing for prizes, and attendees are invited to support the performers and enjoy the musical performances.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-15T20:00:44+07:00",
+      "registration_url": "https://go.sabies.vn/lis26_cket",
+      "title": "LET IT SHINE 2026 - WINTER ARIA: FINALE",
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán.",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1597755775721813",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02F8Bdfz7C1p3LRpjKrrh32FjEzNJxs4edpuH65tGwMko1tKkwpAjApKucaaLNk6qul",
+      "posted_at": "2026-11-19T20:00:01",
+      "reason": "The post announces the upcoming final round of the 'Let IT Shine 2026' music competition and provides a registration link for students to attend.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS. The final round features top contestants mentored by experts, competing for prizes including a 3,000,000 VND grand prize.",
+      "event_start_datetime": "2026-11-22T16:00:00+07:00",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán.",
+      "organizer": "SAB in HCMUS",
+      "registration_url": "https://go.sabies.vn/lis26_cket",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "title": "LET IT SHINE 2026",
+      "event_end_datetime": "2026-11-22T20:00:00+07:00",
+      "start_datetime": "2026-11-22T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:01",
+      "reg_end_datetime": "2026-11-22T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1593744126122978",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02wPeCx37bCZVuZwiqdzb1EWKdrKMzbGCG5HY6FsnbUsKR3Msj4iteG86uWgTrnW2Dl",
+      "posted_at": "2026-11-16T10:00:14",
+      "reason": "The post announces an upcoming workshop with specific dates, times, location, and a registration link for students to participate.",
+      "category": [
+        "workshop",
+        "thiện nguyện"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Nặn một chút thương là một workshop làm đồ thủ công từ đất sét tự khô, nơi sinh viên có thể thư giãn và sáng tạo sản phẩm cá nhân. Toàn bộ phí tham gia sẽ được đóng góp vào quỹ thiện nguyện Ấm áp mùa đông để hỗ trợ các em nhỏ tại Chùa Kỳ Quang 2.",
+      "event_start_datetime": "2026-11-21T08:30:00+07:00",
+      "reg_start_datetime": "2026-11-16T10:00:14+07:00",
+      "registration_url": "https://go.sabies.vn/amd26_workshop",
+      "title": "NẶN MỘT CHÚT THƯƠNG - WORKSHOP GÂY QUỸ THIỆN NGUYỆN ẤM ÁP MÙA ĐÔNG 2026",
+      "location": "Sảnh I, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM,  227 Nguyễn Văn Cừ, Phường Chợ Quán, TP. HCM",
+      "fee": "30.000 VNĐ/1 người/1 buổi",
+      "event_end_datetime": "2026-11-21T11:30:00+07:00",
+      "start_datetime": "2026-11-21T08:30:00+07:00",
+      "end_datetime": "2026-11-21T11:30:00+07:00",
+      "reg_end_datetime": "2026-11-21T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563401929157198",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid02soubTA2DrjXdxZtM3e29LmfqNmCJv5124QuBCzSPpvB6uZWKKig6QZC1nWRCmejpl",
+      "posted_at": "2026-10-19T20:00:01",
+      "reason": "The post announces an upcoming music competition with open registration, clear timelines, and rounds for students.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Let IT Shine 2026 với chủ đề 'WINTER ARIA' là cuộc thi âm nhạc kỷ niệm 10 năm tổ chức dành cho sinh viên Khoa Công nghệ thông tin ĐH KHTN. Cuộc thi bao gồm vòng Sơ khảo và Vòng Chung kết với tổng giải thưởng hấp dẫn, tạo sân khấu để các giọng ca tài năng tỏa sáng.",
+      "event_end_datetime": "2026-11-22T20:30:00+07:00",
+      "event_start_datetime": "2026-11-01T16:00:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, cơ sở phường Chợ Quán",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-10-30T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "https://go.sabies.vn/lis26_dangky",
+      "target_audience": [
+        "sinh viên CNTT"
+      ],
+      "title": "LET IT SHINE 2026 - KHÚC KHẢI HOÀN MÙA ĐÔNG",
+      "start_datetime": "2026-11-01T16:00:00+07:00",
+      "end_datetime": "2026-11-22T20:30:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1574832924680765",
+      "post_url": "https://www.facebook.com/sab.ctda/posts/pfbid0WMFFkdXGaH4mVoRJzuyTjZyd8nqUtsFTRcVpSvAoTCDin4LWwELYwiC9QZdRba5Yl",
+      "posted_at": "2026-10-30T20:00:02",
+      "reason": "The post provides specific details for upcoming competition rounds (Sơ khảo and Chung kết) for the Let IT Shine 2026 music contest.",
+      "category": [
+        "cuộc thi",
+        "ca nhạc"
+      ],
+      "format": [
+        "cá nhân",
+        "thi"
+      ],
+      "description": "Let IT Shine 2026 is a music competition for students of the Faculty of Information Technology at HCMUS, featuring a preliminary round and a grand finale. Participants compete for cash prizes and the opportunity to showcase their musical talent on stage.",
+      "event_start_datetime": "2026-11-01T16:00:00+07:00",
+      "reg_start_datetime": "2026-10-19T00:00:00+07:00",
+      "registration_url": "null",
+      "title": "LET IT SHINE 2026 - WINTER ARIA",
+      "location": "cơ sở phường Chợ Quán",
+      "event_end_datetime": "2026-10-30T20:30:00+07:00",
+      "start_datetime": "2026-11-01T16:00:00+07:00",
+      "end_datetime": "2026-10-30T20:30:00+07:00",
+      "reg_end_datetime": null,
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-22",
+          "new": "2026-11-01"
+        },
+        "location": {
+          "old": "Giảng đường 1, cơ sở phường Chợ Quán.",
+          "new": "cơ sở phường Chợ Quán"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-15T20:00:44+07:00",
+          "new": "2026-10-19T00:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1562396949257696",
+      "post_url": "https://www.facebook.com/reel/1012266051886654",
+      "posted_at": "2026-10-18T20:00:42",
+      "reason": "The post announces the official launch and upcoming season of the 'LET IT SHINE 2026' student music and talent event, inviting students to participate and attend.",
+      "category": [
+        "ca nhạc",
+        "cuộc thi",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "LET IT SHINE 2026 – WINTER ARIA is back for a new season, promising explosive performances and impressive musical acts. Students can look forward to a vibrant stage to showcase their talents and enjoy wonderful winter performances.",
+      "event_end_datetime": "2026-12-31T23:59:00+07:00",
+      "event_start_datetime": "2026-10-18T00:00:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "HCMUS",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-12-31T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-18T00:00:00+07:00",
+      "registration_url": "fb.com/sab.ctda",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "❄️ LET IT SHINE 2026 ❄️ – WINTER ARIA",
+      "start_datetime": "2026-10-18T00:00:00+07:00",
+      "end_datetime": "2026-12-31T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-01",
+          "new": "2026-10-18"
+        },
+        "location": {
+          "old": "cơ sở phường Chợ Quán",
+          "new": "HCMUS"
+        },
+        "reg_start_datetime": {
+          "old": "2026-10-19T00:00:00+07:00",
+          "new": "2026-10-18T00:00:00+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-12-31T23:59:00+07:00"
+        },
+        "organizer": {
+          "old": null,
+          "new": "SAB in HCMUS"
+        },
+        "fee": {
+          "old": null,
+          "new": "Miễn phí"
+        },
+        "target_audience": {
+          "old": null,
+          "new": [
+            "sinh viên"
+          ]
+        }
+      }
+    },
+    {
+      "post_id": "1553309656833092",
+      "post_url": "https://www.facebook.com/reel/1047126698321963",
+      "posted_at": "2026-10-09T13:57:54",
+      "reason": "The post announces an active recruitment drive for a student organization with specified application timelines and an interview schedule.",
+      "category": [
+        "hướng nghiệp"
+      ],
+      "format": [
+        "cá nhân"
+      ],
+      "description": "SAB MC is recruiting new members from K25 and K26 students of the Faculty of Information Technology. Participants can register via the online link before the deadline to join the upcoming interview round.",
+      "event_end_datetime": "2026-10-11T23:59:00+07:00",
+      "event_start_datetime": "2026-10-11T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Khoa Công nghệ thông tin",
+      "organizer": "SAB in HCMUS",
+      "reg_end_datetime": "2026-10-09T23:59:00+07:00",
+      "reg_start_datetime": "2026-10-03T00:00:00+07:00",
+      "registration_url": "https://go.sabies.vn/sabfresh26",
+      "target_audience": [
+        "sinh viên K25, K26 Khoa Công nghệ thông tin"
+      ],
+      "title": "SAB FRESH 2026",
+      "start_datetime": "2026-10-11T00:00:00+07:00",
+      "end_datetime": "2026-10-11T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
     }
   ]
 }

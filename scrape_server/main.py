@@ -200,6 +200,38 @@ def cmd_export_rss() -> None:
         console.print(f"  - {p.name}")
 
 
+@app.command("test-proxy")
+def cmd_test_proxy(
+    proxy_url: Optional[str] = typer.Option(
+        None,
+        "--proxy",
+        "-p",
+        help="Optional proxy URL (e.g. http://user:pass@host:port). If omitted, uses FB_PROXY_URL from .env.",
+    ),
+) -> None:
+    """Test residential proxy connectivity, check outbound IP, and verify Facebook reachability."""
+    from scraper import test_facebook_proxy
+
+    console.print("[cyan]Testing proxy connection for Facebook scraper...[/cyan]")
+    res = asyncio.run(test_facebook_proxy(proxy_url))
+    if res.get("success"):
+        console.print("[bold green]✓ Proxy test passed successfully![/bold green]")
+        if res.get("proxy_server"):
+            console.print(f"  - [bold]Proxy Server:[/bold] {res.get('proxy_server')}")
+        console.print(f"  - [bold]Outbound Public IP:[/bold] [green]{res.get('public_ip')}[/green]")
+        console.print(f"  - [bold]Facebook HTTP Status:[/bold] {res.get('fb_status')}")
+        console.print(f"  - [bold]Roundtrip Latency:[/bold] {res.get('latency_ms')} ms")
+    else:
+        console.print(f"[bold red]✗ Proxy test failed:[/bold red] {res.get('error')}")
+        if res.get("proxy_server"):
+            console.print(f"  - [dim]Attempted Server:[/dim] {res.get('proxy_server')}")
+        console.print(
+            "\n[yellow]Tip:[/yellow] Set [bold]FB_PROXY_URL[/bold] in your [cyan].env[/cyan] file:\n"
+            "  FB_PROXY_URL=http://username:password@host:port\n"
+            "Or run: [cyan]python main.py test-proxy --proxy http://username:password@host:port[/cyan]"
+        )
+
+
 @app.command("extract")
 def cmd_extract(
     limit: int = typer.Option(

@@ -4,36 +4,826 @@
     "url": "https://www.facebook.com/nvhsvtphcm",
     "slug": "nvhsvtphcm"
   },
-  "updated_at": "2026-11-15T21:48:37.278245+07:00",
-  "count": 1,
+  "updated_at": "2026-11-24T09:35:09.067766+07:00",
+  "count": 25,
   "events": [
     {
-      "post_id": "1555862486566713",
-      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid027nGBZQSeBCE4EXAZPhHGpk5oNf6VaQt65VLh5zSY3gbEg9cRiMrEUcLqZqGcACqLl",
-      "posted_at": "2026-11-15T19:30:10",
-      "reason": "qualified:strong_event_signal (ngay hoi van hoa)",
-      "title": "🇻🇳 [CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [6]: VĨNH LONG",
-      "description": "Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Vĩnh Long (bao gồm: thưởng thức âm vang Đờn ca tài tử Nam Bộ, hương vị thanh ngọt của Bưởi Năm Roi, món cá tai tượng chiên xù trứ danh, sự đa dạng bởi các món được làm từ dừa đặc biệt là kẹo dừa Bến Tre, đời sống gắn kết của đồng bào dân tộc Kinh và Khmer, không gian linh thiêng tại Lễ hội Vu lan Thắng hội và Chùa Âng, cùng vẻ đẹp hữu tình của Cù lao An Bình) và chia sẻ những thông tin, hiểu biế...",
-      "event_start_datetime": "2026-11-15T00:00:00+07:00",
-      "event_end_datetime": "2026-11-15T23:59:00+07:00",
-      "start_datetime": "2026-11-15T00:00:00+07:00",
-      "end_datetime": "2026-11-15T23:59:00+07:00",
-      "reg_start_datetime": null,
-      "reg_end_datetime": null,
-      "location": null,
+      "post_id": "1563444215808540",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0RynNkrUF4H3iFpWnZKkiestkAchNefM3K4exsxzCKbbQG8XfucvG5Zozgrme3ro1l",
+      "posted_at": "2026-11-22T20:01:23",
+      "reason": "The post announces an upcoming annual music festival with scheduled dates, time, and venue, and invites students to register.",
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Đại nhạc hội Bcons Bestival 2026 - Nhạc đa tầng, sống đa best với 3 đêm âm nhạc bùng nổ quy tụ nhiều nghệ sĩ nổi tiếng, cùng các hoạt động giải trí và ẩm thực hấp dẫn.",
+      "event_end_datetime": "2026-11-29T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "BCONS CITY MALL, 38 Thống Nhất, phường Đông Hòa, Tp.HCM",
+      "organizer": "Tập đoàn Bcons & Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-29T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T20:01:23+07:00",
+      "registration_url": "https://bit.ly/3zY62oN",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "ĐẠI NHẠC HỘI BCONS BESTIVAL 2026 - NHẠC ĐA TẦNG, SỐNG ĐA BEST!",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-29T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559625076190454",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029LULvz3zCuU53PHQdrFqf9kCvEsH8trJhdxjk8nttkPguna6YHbAgeCkRzHJgwX2l",
+      "posted_at": "2026-11-19T13:00:08",
+      "reason": "The post announces an upcoming career-oriented unitour event series at three universities with specific dates, locations, and a registration link for students to participate in 1:1 career counseling and skill-building activities.",
+      "category": [
+        "hướng nghiệp",
+        "ngày hội"
+      ],
+      "format": [
+        "offline",
+        "chạy trạm"
+      ],
+      "title": "UNITOUR BẢN NHÁP PHÁC NGHỀ 2026 | ĐO ĐỎ CHÍNH THỨC KHỞI ĐỘNG BƯỚC XUẤT NHÁP 📁",
+      "description": "Chuỗi sự kiện tương tác \"Bản Nháp Phác Nghề\" chính thức cập bến 3 trường Đại học tại TP.HCM với 5 trạm trải nghiệm thực tế. Trạm 2 – Trải nghiệm Web-App: Test CRI và hoàn thiện profile để đối thoại cùng các nhà cố vấn.",
+      "location": "20 Cộng Hòa, Bảy Hiền, TP.HCM.",
+      "event_start_datetime": "2026-11-25T11:00:00+07:00",
+      "event_end_datetime": "2026-11-25T15:00:00+07:00",
+      "start_datetime": "2026-11-25T11:00:00+07:00",
+      "end_datetime": "2026-11-25T15:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T13:00:08",
+      "reg_end_datetime": "2026-11-25T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564260075726954",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid021d3Jm9xc5XgY7MqV6HUjZGLH5GrnNX8n7KHvn1TygtDs4neQcVPV1PYTqd7Dqd1Cl",
+      "posted_at": "2026-11-23T14:00:02",
+      "reason": "The post is a reminder for an upcoming workshop, providing event details, a registration link, and participation benefits.",
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Workshop 'Người trẻ có văn hóa – Từ cách nghĩ đến cách sống' là không gian để sinh viên thảo luận về nhân cách, văn hóa ứng xử và lối sống văn minh trong thời đại số. Người tham gia sẽ có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP.HCM và nhiều phần quà hấp dẫn.",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "reg_start_datetime": "2026-11-23T14:00:02+07:00",
+      "registration_url": "https://forms.gle/4jTCvJgBMBLdZ2KU7",
+      "title": "Workshop “Người trẻ có văn hóa – Từ cách nghĩ đến cách sống”",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559710036181958",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid07RJChtdaZSZo9btUAPq292y3g1xgB1zMTz3DwYcYLNxhXbi7BmguqBecPp2yP1eRl",
+      "posted_at": "2026-11-19T15:00:17",
+      "reason": "The post announces an upcoming workshop for students with a specific date, time, location, and registration link.",
+      "category": [
+        "workshop",
+        "tọa đàm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "title": "Workshop “Văn hóa của người trẻ trong bối cảnh số – Từ cách nghĩ đến cách sống”",
+      "description": "Tham gia Workshop, bạn sẽ được. Khám phá những biểu hiện của văn hóa trong suy nghĩ, lời nói, thái độ và hành động thường ngày. Trong thời đại số, văn hóa không chỉ thể hiện qua trang phục, lễ hội hay các loại hình nghệ thuật, mà còn hiện diện trong từng lời nói, thái độ và cách chúng ta tương tác với thế giới xung quanh. Từ cách bình luận trên mạng xã hội, ứng xử nơi công cộng đến sự tôn trọng những khác biệt, liệu người trẻ đã thực sự ý thức đư...",
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "event_start_datetime": "2026-11-24T13:30:00+07:00",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "start_datetime": "2026-11-24T13:30:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T15:00:17",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_url": "https://q.me-qr.com/fvc8fqlm",
+      "registration_status": "qr",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564487712370857",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02NjBCcrnQAtggu4m8hQT5aYerKiwMug15W9qrPFHveQt2qj7GsrxgjjhhbnmcoTfRl",
+      "posted_at": "2026-11-23T19:00:03",
+      "reason": "The post is an active invitation for students to register and attend an upcoming workshop and exhibition on Vietnamese calligraphy.",
+      "category": [
+        "workshop",
+        "triển lãm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "The 'Nét chữ - Nét người' event is a workshop and exhibition dedicated to Vietnamese calligraphy, offering participants the chance to explore traditional art, learn about the stories behind calligraphy, and practice creating their own works. This event aims to foster an appreciation for cultural heritage and provides a relaxing space for creative expression.",
+      "event_start_datetime": "2026-11-24T09:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T19:00:03+07:00",
+      "registration_url": "https://tinyurl.com/NHVanhoaVietNam2026",
+      "title": "TRIỂN LÃM VÀ GIỚI THIỆU VỀ THƯ PHÁP VIỆT - WORKSHOP “NÉT CHỮ - NÉT NGƯỜI”",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM (Số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "start_datetime": "2026-11-24T09:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1565125212307107",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02nxVXz2MQGeYvhk8JMvkuD9DQtSd2bxv4iMYKQUetx2Yg4zWxqJKBus5tbZtuQtLil",
+      "posted_at": "2026-11-24T08:30:55",
+      "reason": "The post launches an active online cultural challenge with specific participation steps, a form link, and a submission deadline.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia series 'Bản đồ Văn hóa' số 15 để khám phá nét đẹp văn hóa, lịch sử, kiến trúc và ẩm thực của TP. Hồ Chí Minh thông qua việc chia sẻ hiểu biết dưới bài viết và điền form xác thực. Người tham gia hoàn thành đủ số lượng bài viết quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-26T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:55+07:00",
+      "fee": "Miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
       "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
-      "registration_url": "https://forms.gle/sEFX9qDcgjnVfRGQ9",
-      "fee": null,
-      "is_online": null,
+      "reg_end_datetime": "2026-11-26T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-24T08:30:55+07:00",
+      "registration_url": "https://forms.gle/8ZhDbuyPLcRJbepU7",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [15]: TP. HỒ CHÍ MINH",
+      "start_datetime": "2026-11-24T08:30:55+07:00",
+      "end_datetime": "2026-11-26T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-22",
+          "new": "2026-11-24"
+        },
+        "time": {
+          "old": "11:03",
+          "new": "08:30"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-22T00:00:00+07:00",
+          "new": "2026-11-24T08:30:55+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-24T24:00:00+07:00",
+          "new": "2026-11-26T24:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1563558635797098",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0sSJaGvVCca7Tv8sSAf97p2S39TgfCPPzmz5CUCD2owNfRLcrajGJm2tNMD2VghdAl",
+      "posted_at": "2026-11-22T22:01:21",
+      "reason": "The post announces the schedule, time, and venue for the upcoming final round of a traditional music festival, inviting students and audiences to attend and support the contestants.",
+      "category": [
+        "ca nhạc",
+        "ngày hội"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Vòng Chung kết Liên hoan Vọng cổ và các ca khúc mang âm hưởng dân ca năm 2026 để thưởng thức những màn trình diễn nghệ thuật truyền thống đặc sắc, giàu cảm xúc từ các thí sinh tài năng.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tại Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hoà, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:30:00+07:00",
+      "reg_start_datetime": "2026-11-22T22:01:21+07:00",
+      "registration_url": "nhavanhoasinhvien.vn",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "LIÊN HOAN VỌNG CỔ VÀ CÁC CA KHÚC MANG ÂM HƯỞNG DÂN CA NĂM 2026",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559865309499764",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02LiKVqWAHR14s6ey3AipLV76tN8WYqnJfkSAtw2RSRxAfPKQRVLWCfA3zovVztWuLl",
+      "posted_at": "2026-11-19T18:00:04",
+      "reason": "The post announces an upcoming talkshow with a specific schedule, location, and registration link for students.",
+      "category": [
+        "tọa đàm",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Talkshow “Từ bản làng đến giảng đường” để lắng nghe những chia sẻ về hành trình gắn bó với giáo dục, văn hóa và cộng đồng, giúp người trẻ hiểu rõ hơn về giá trị của tri thức và cội nguồn. Người tham gia sẽ được cấp Giấy chứng nhận và có cơ hội nhận quà hấp dẫn từ Ban Tổ chức.",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Phòng Hội trường lầu 3, Nhà Văn hóa Sinh viên (Số 1, đường Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T18:00:04+07:00",
+      "registration_url": "https://forms.gle/TaHKwk9MkbW5vwXS7",
       "target_audience": [
         "sinh viên"
       ],
+      "title": "TALKSHOW “TỪ BẢN LÀNG ĐẾN GIẢNG ĐƯỜNG”",
+      "start_datetime": "2026-11-24T08:30:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564574392362189",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0nwQFdDhpRHuz7hBbmneCjTr8gfw4pNehZJig4xETGNDk6vmQnBPc3m5WnoY9rPmVl",
+      "posted_at": "2026-11-23T20:30:39",
+      "reason": "The post announces an upcoming cultural exploration event with specific time, venue, and registration instructions.",
       "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Khám phá Không gian Văn hóa Trống đồng là chương trình giúp sinh viên tìm hiểu về các hoa văn, giá trị lịch sử và bản sắc văn hóa dân tộc Việt Nam qua hình tượng trống đồng Đông Sơn. Sự kiện mang đến cơ hội nuôi dưỡng lòng tự hào dân tộc và góp phần gìn giữ di sản văn hóa trong thời1 đại hiện đại.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T20:30:39+07:00",
+      "registration_url": "https://www.facebook.com/nhavanhoasinhvien",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "KHÁM PHÁ KHÔNG GIAN VĂN HÓA TRỐNG ĐỒNG – CHẠM VÀO HỒN CỐT VĂN HÓA VIỆT!",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564219732397655",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02P2Kh9uv7mLaseibUaXVXugxMkZBh8aZk5qk4cGN4aMDsfTFuB1SxmkY7LMgvWg7Hl",
+      "posted_at": "2026-11-23T13:00:04",
+      "reason": "The post announces an upcoming arts festival with a specific date, venue, and registration link for participants.",
+      "category": [
+        "ca nhạc",
+        "cuộc thi"
+      ],
+      "format": [
+        "offline",
+        "cá nhân",
+        "đồng đội",
+        "thi"
+      ],
+      "description": "Liên hoan văn nghệ là sân chơi nghệ thuật dành cho cá nhân và tập thể yêu văn hóa, nhằm tôn vinh bản sắc Việt Nam qua các tiết mục biểu diễn. Chương trình có tổng giá trị giải thưởng lên đến 18.000.000 đồng, tạo cơ hội cho sinh viên thể hiện tài năng và lan tỏa các giá trị truyền thống.",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "title": "LIÊN HOAN VĂN NGHỆ “CON NGƯỜI VIỆT NAM - BẢN SẮC VIỆT NAM” NĂM 2026 🇻🇳",
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hòa, TP. Hồ Chí Minh).",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "reg_start_datetime": null,
+      "reg_end_datetime": null,
+      "dedup_status": "duplicate"
+    },
+    {
+      "post_id": "1564367475716214",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02y1yZ5jrNF2czFVRB7F3Hm5Ct3SdtBwhG1mBa1RqduJr1pT4gPdVVDVcKt6cRUbdl",
+      "posted_at": "2026-11-23T16:29:47",
+      "reason": "The post announces an upcoming cultural performance festival with a specific date, venue, and an active registration link for participants.",
+      "category": [
+        "ca nhạc",
         "ngày hội"
       ],
-      "format": [],
+      "format": [
+        "offline"
+      ],
+      "description": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026 là chương trình nghệ thuật nhằm tôn vinh các tiết mục đặc sắc, lan tỏa giá trị văn hóa và bản sắc dân tộc. Sự kiện quy tụ các chuyên gia nghệ thuật trong vai trò giám khảo để đánh giá và tìm ra những màn trình diễn ấn tượng nhất.",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "title": "Liên hoan Văn nghệ “Con người Việt Nam - Bản sắc Việt Nam” năm 2026",
+      "location": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, Khu đô thị ĐHQG-HCM (01 Lưu Hữu Phước, phường Đông Hòa, TP. Hồ Chí Minh).",
+      "event_end_datetime": "2026-11-24T11:00:00+07:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T16:29:47",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_url": "https://q.me-qr.com/vo76o3na",
+      "registration_status": "qr",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564389272380701",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02W47X7STUTbkXmzYwxS9C8KTNQ9sQyGmijyDd8Kg9Q2fttVWiky8PLpKgCTPVytzKl",
+      "posted_at": "2026-11-23T17:00:03",
+      "reason": "The post announces an upcoming cultural festival with specific activities, date, and venue, inviting students to participate.",
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Ngày hội Văn hóa 2026 mang đến không gian trải nghiệm các làng nghề truyền thống như nặn tò he, vẽ gốm Lái Thiêu và đan giỏ trạc. Sinh viên tham gia sẽ được tự tay sáng tạo sản phẩm thủ công và mang thành phẩm về nhà hoàn toàn miễn phí.",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_start_datetime": "2026-11-24T08:00:00+07:00",
+      "registration_url": "null",
+      "title": "NGÀY HỘI VĂN HÓA 2026| KHÁM PHÁ KHÔNG GIAN LÀNG NGHỀ – TỰ TAY SÁNG TẠO, MANG THÀNH PHẨM VỀ NHÀ!",
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM).",
+      "fee": "miễn phí",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
       "registration_status": "link",
-      "dedup_status": "duplicate"
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563618719124423",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0wAkvzcNWeCt2PWiuWBvUskN34396PLSDWbM1Y8ES29Si9tyQtJQNQW2z5ZJD87UEl",
+      "posted_at": "2026-11-22T23:00:41",
+      "reason": "The post announces an upcoming cultural festival event featuring traditional Vietnamese food booths with a specific date, time, and location.",
+      "category": [
+        "ngày hội",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia Ngày hội Văn hóa 2026 để khám phá và thưởng thức không gian ẩm thực với các gian hàng bánh dân gian truyền thống của Việt Nam. Sinh viên sẽ có dịp tìm hiểu về hương vị, màu sắc và câu chuyện văn hóa phía sau những món bánh quen thuộc cùng bạn bè.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên tại Khu Đô thị ĐHQG-HCM. (số 01 Lưu Hữu Phước, phường Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "NGÀY HỘI VĂN HÓA 2026 | KHÔNG GIAN ẨM THỰC – GIAN HÀNG BÁNH DÂN GIAN VIỆT NAM",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T23:00:41",
+      "reg_end_datetime": "2026-11-24T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563108279175467",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02HzWfzgM1eEdVDHd6hc4jyxQuaB6Am1oCfyMTtheCW3puxSEukS2fdvZYVigN5kS8l",
+      "posted_at": "2026-11-22T13:00:03",
+      "reason": "The post announces an upcoming cultural and workshop event with an explicit schedule, location, and registration link.",
+      "category": [
+        "workshop",
+        "ngày hội",
+        "học thuật"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Ngày hội Văn hóa năm 2026 để trải nghiệm không gian VR Art 'Di sản số' kết hợp công nghệ thực tế ảo và workshop 'Từ di sản truyền thống đến nghệ thuật số' cùng nghệ sĩ VR Minh Hằng. Sự kiện mang đến cơ hội tìm hiểu về số hóa nghệ thuật, nâng cao tư duy thẩm mỹ và biến các giá trị văn hóa truyền thống thành tác phẩm nghệ thuật số độc đáo qua công nghệ VR.",
+      "event_end_datetime": "2026-11-24T16:00:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM (01 Lưu Hữu Phước, P. Đông Hòa, TP.HCM)",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T08:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T13:00:03+07:00",
+      "registration_url": "https://tinyurl.com/DK-VRArtxWorkshop-NHVH2026",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "title": "[NGÀY HỘI VĂN HÓA NĂM 2026] BẬT MÍ KHÔNG GIAN VR ART “DI SẢN SỐ” VÀ WORKSHOP “TỪ DI SẢN TRUYỀN THỐNG ĐẾN NGHỆ THUẬT SỐ”",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T16:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1563152869171008",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02yb6GzafeKuFiUoSd5MrdkpVUVWxhstkcsfNMAgUx5YQNnYtY2FfNyp8uotKgiXpsl",
+      "posted_at": "2026-11-22T14:00:07",
+      "reason": "The post announces an upcoming cultural exhibition and check-in event with registration details, a clear schedule, and movie ticket gifts for participants.",
+      "category": [
+        "ngày hội",
+        "triển lãm"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Tham gia không gian trưng bày và trải nghiệm trang phục dân tộc, trang phục truyền thống để khám phá sự đa dạng văn hóa của 54 dân tộc Việt Nam, mặc thử trang phục, check-in lưu giữ khoảnh khắc và nhận 01 vé xem phim miễn phí cho 100 bạn đầu tiên.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-24T08:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà Văn hóa Sinh viên TP. HCM tại Khu đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-22T14:00:07+07:00",
+      "registration_url": "https://forms.gle/qkQSBZ2sWBRSiAwz6",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "Không gian trưng bày, giới thiệu và trải nghiệm trang phục dân tộc và trang phục truyền thống",
+      "start_datetime": "2026-11-24T08:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1564601895692772",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0svbBHtF2k4d5Vb7ggYTxT2SWPbDLEaWmxKTkyjSSXKp2UwBU5VLceMdY3J7eZCZhl",
+      "posted_at": "2026-11-23T21:00:04",
+      "reason": "The post announces an active online cultural exploration challenge with a participation form, clear timeline, and specific guidelines for students to earn certification.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 14 khám phá vùng đất Đắk Lắk bằng cách tìm hiểu và bình luận về các địa danh, món ăn, nét văn hóa đặc sắc. Học sinh sinh viên tham gia hoàn thành thử thách sẽ tích lũy điểm và có cơ hội nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-25T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T21:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-25T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T21:00:00+07:00",
+      "registration_url": "https://forms.gle/7f8Trg1PPW8jktd3A",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [14]: ĐẮK LẮK",
+      "start_datetime": "2026-11-23T21:00:00+07:00",
+      "end_datetime": "2026-11-25T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-24",
+          "new": "2026-11-23"
+        },
+        "time": {
+          "old": "08:30",
+          "new": "21:00"
+        },
+        "location": {
+          "old": "Trực tuyến",
+          "new": "Trực tuyến qua Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-24T08:30:55+07:00",
+          "new": "2026-11-23T21:00:00+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-26T24:00:00+07:00",
+          "new": "2026-11-25T24:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1563025289183766",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02mYh9xX8uQVHFefPzEvwtNmfGWHvJRuRw4KZofyCVWZPeKp3KMy7gsSiJGeuAdB2vl",
+      "posted_at": "2026-11-22T11:03:01",
+      "reason": "The post announces an active online cultural challenge with specific participation rules, form submission, and a clear deadline window.",
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động khám phá văn hóa Cà Mau qua hình ảnh gợi ý, bình luận chia sẻ hiểu biết và điền form để ghi nhận dấu mốc tham gia. Người tham gia tích lũy đủ số bài theo quy định sẽ nhận được Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T11:03:01+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T11:03:01+07:00",
+      "registration_url": "https://forms.gle/rHd3PrhqiYMQa2EJ9",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [12]: CÀ MAU",
+      "start_datetime": "2026-11-22T11:03:01+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "date": {
+          "old": "2026-11-19",
+          "new": "2026-11-22"
+        },
+        "time": {
+          "old": "20:00",
+          "new": "11:03"
+        },
+        "location": {
+          "old": "Online",
+          "new": "Trực tuyến"
+        },
+        "reg_start_datetime": {
+          "old": "2026-11-19T20:00:04+07:00",
+          "new": "2026-11-22T11:03:01+07:00"
+        },
+        "reg_end_datetime": {
+          "old": "2026-11-21T24:00:00+07:00",
+          "new": "2026-11-24T24:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1564136432405985",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02eDeYxCzFsF3xYDquNpTWjqmGCwxTVS5HQJvedL3mw1kkD2S8vC6iD8sCiBVa35iVl",
+      "posted_at": "2026-11-23T11:00:01",
+      "reason": "The post announces an active online cultural exploration challenge with an open registration form and a specific participation window.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 13 về Điện Biên để chia sẻ kiến thức, di sản và ẩm thực vùng cao nhằm tích lũy dấu mốc nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-24T23:59:00+07:00",
+      "event_start_datetime": "2026-11-22T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-24T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-22T00:00:00+07:00",
+      "registration_url": "https://forms.gle/MrBTXuydAyhSVZTM7",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [13]: ĐIỆN BIÊN",
+      "start_datetime": "2026-11-22T00:00:00+07:00",
+      "end_datetime": "2026-11-24T23:59:00+07:00",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "reg_start_datetime": {
+          "old": "2026-11-22T11:03:01+07:00",
+          "new": "2026-11-22T00:00:00+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1561162162703412",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid034QZQiQtx9Fvzd6V4dSQJJcbzF8yXecfxzdADphKc9wDBEbb24KN4X8MXGCnVpRkNl",
+      "posted_at": "2026-11-20T20:00:56",
+      "reason": "The post announces an upcoming workshop on circular economy with clear schedule, location, registration link, and benefits for students.",
+      "category": [
+        "workshop",
+        "học thuật",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia workshop 'Kinh tế tuần hoàn – Khi rác thải thành tài nguyên' để khám phá tư duy sống xanh, cập nhật xu hướng kinh tế tuần hoàn từ các chuyên gia. Người tham gia có cơ hội nhận vé xem phim, túi tote giới hạn và giấy chứng nhận điểm rèn luyện.",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "reg_start_datetime": "2026-11-20T20:00:56+07:00",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "target_audience": [
+        "học sinh",
+        "sinh viên"
+      ],
+      "title": "[SCG SHARING THE DREAM 2026] WORKSHOP 'KINH TẾ TUẦN HOÀN – KHI RÁC THẢI TRỞ THÀNH TÀI NGUYÊN'",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559917579494537",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid02zDZpYEyJgZkksYYJ3NEguJChmoHppF2uwayADKfgoEGBhNh5h1nb3waxsG71MLZvl",
+      "posted_at": "2026-11-19T19:00:05",
+      "reason": "The post announces an upcoming workshop with explicit time, venue, registration link, and participation benefits.",
+      "category": [
+        "workshop",
+        "học thuật",
+        "hướng nghiệp"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên” để cập nhật kiến thức thực tiễn về kinh tế tuần hoàn và nhận ngay vé xem phim, túi tote giới hạn cùng giấy chứng nhận điểm rèn luyện.",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "fee": "Miễn phí",
+      "is_online": false,
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "reg_start_datetime": "2026-11-19T19:00:05+07:00",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "target_audience": [
+        "sinh viên",
+        "học sinh"
+      ],
+      "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1560725289413766",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0LuTfndgZP1RhTbBAK3WiNVCZQFo9AHfzMBfKFGxnr6DRCvosRAubGoueHWfCdxe8l",
+      "posted_at": "2026-11-20T12:00:02",
+      "reason": "The post announces an upcoming scholarship award ceremony with specific date, time, and venue details for students to attend.",
+      "category": [
+        "học thuật",
+        "cộng đồng"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Lễ trao học bổng Power On năm học 2026-2027 (Đợt 1) là dịp hội ngộ quan trọng để vinh danh sinh viên, nhìn lại hành trình đã qua và tiếp thêm động lực cho chặng đường mới. Sự kiện diễn ra vào sáng ngày 21/11/2026 tại Bảo tàng Tôn Đức Thắng.",
+      "event_end_datetime": "2026-11-21T11:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Hội trường lầu 3 - Bảo tàng Tôn Đức Thắng (Số 05 Tôn Đức Thắng, phường Sài Gòn, TP. Hồ Chí Minh)",
+      "organizer": "Power On",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T12:00:02+07:00",
+      "registration_url": "https://forms.gle/placeholder",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "LỄ TRAO HỌC BỔNG POWER ON NĂM HỌC 2026-2027 (ĐỢT 1)",
+      "start_datetime": "2026-11-21T07:00:00+07:00",
+      "end_datetime": "2026-11-21T11:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1561286209357674",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid05qEXsqXXpsedRGifyRfortAYdcQ9r4Teo5TG6yttKm5XHhgAXrdvQpN53Jq1dBUDl",
+      "posted_at": "2026-11-20T22:00:03",
+      "reason": "The post announces an active online cultural exploration challenge with a specific submission window, participation instructions, and form link for students.",
+      "category": [
+        "cộng đồng",
+        "học thuật"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỞNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - 🗺️ SỐ [11]: HÀ TĨNHMỗi vùng đất đi qua là một mảnh ghép rực rỡ của bản sắc Việt! Hành trình khám phá \"Bản đồ Văn hóa\" sẽ dừng chân tại Hà Tĩnh – mảnh đất miền Trung giàu truyền thống hiếu học, nơi lưu giữ những di sản văn hóa - lịch sử hào hùng, danh thắng thiên nhiên kỳ thú cùng nền ẩm thực dân dã đậm đà nghĩa tình. Liệu bạn đã sẵn sàng chia sẻ những hiểu biết thú vị của mình về vùng đất này chưa?🎯 THỬ THÁCH CỦA BẠN Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Hà Tĩnh (bao gồm: thăm Khu di tích Đại thi hào Nguyễn Du, tưởng niệm tại Ngã ba Đồng Lộc, hành hương về Chùa Hương Tích, khám phá thiên nhiên tại Vườn quốc gia Vũ Quang, hòa mình vào không gian Lễ hội Hải Thượng Lãn Ông, cùng thưởng thức hương vị trứ danh của Kẹo cu đơ, Bánh bèo Hà Tĩnh và Gỏi cá đục Xuân Nghi) và chia sẻ những thông tin, hiểu biết của bạn về các địa danh, món ăn hoặc nét văn hóa xuất hiện trong hình!📝 CÁCH THAM GIABước 1: Theo dõi Fanpage Nhà Văn hóa Sinh viên TP. Hồ Chí Minh, đồng thời thả ❤️ và chia sẻ 🔄 bài viết ở chế độ công khai.Bước 2: Bình luận dưới bài viết những hiểu biết, thông tin thú vị hoặc cảm nhận của bạn về các nét văn hóa, di sản, ẩm thực của tỉnh Hà Tĩnh theo hình ảnh gợi ý.Bước 3: Cú pháp bình luận: [Chia sẻ thông tin/hiểu biết của bạn] kèm theo việc tag 03 người bạn cùng tham gia.(Ví dụ: Mình rất ấn tượng với Khu di tích Đại thi hào Nguyễn Du, lịch sử hào hùng tại Ngã ba Đồng Lộc và đặc sản kẹo cu đơ giòn tan đậm vị... @BạnA @BạnB @BạnC)Bước 4: Truy cập biểu mẫu và điền đầy đủ thông tin theo yêu cầu để Ban Tổ chức ghi nhận minh chứng. 🔗 Link form: https://forms.gle/jV3Qxcceask8uAvn7 📌 LƯU Ý VỀ GIẤY CHỨNG NHẬN: Mỗi bài đăng trong series hoàn thành hợp lệ sẽ được Ban Tổ chức ghi nhận là 01 dấu mốc trên hành trình. Người tham gia hoàn thành từ 18/35 bài đăng sẽ đủ điều kiện nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.⏰ Thời gian tham gia: Từ ngày 20/11/2026 đến 24h00 ngày 22/11/2026.Cùng xách ba lô lên, khám phá văn hóa ba miền và lan tỏa niềm tự hào dân tộc cùng chuỗi hoạt động hướng đến Ngày hội Văn hóa Việt Nam nhé các bạn ơi!#NgayHoiVanHoa2026 #BanDoVanHoa #HaTinh #NgaBaDongLoc #NhaVanHoaSinhVienTPHCM #NVHSV #NgayVanHoaVietNam",
+      "description": "Mỗi vùng đất đi qua là một mảnh ghép rực rỡ của bản sắc Việt! Hành trình khám phá \"Bản đồ Văn hóa\" sẽ dừng chân tại Hà Tĩnh – mảnh đất miền Trung giàu truyền thống hiếu học, nơi lưu giữ những di sản văn hóa - lịch sử hào hùng, danh thắng thiên nhiên kỳ thú cùng nền ẩm thực dân dã đậm đà nghĩa tình. Liệu bạn đã sẵn sàng chia sẻ những hiểu biết thú vị của mình về vùng đất này chưa?. Quan sát thật kỹ hình ảnh \"Bản đồ Văn hóa\" của tỉnh Hà Tĩnh (bao g...",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-20T22:00:03",
+      "reg_end_datetime": "2026-11-20T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1560590859427209",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0tUNJWMpBVq94XMPs34AWc4hHgmv2SAzrvRA1DKDXWCCq5McGF7BhWRGfUWQBQ1Xsl",
+      "posted_at": "2026-11-20T09:00:04",
+      "reason": "The post announces an active online minigame for November 20th with a participation link and clear deadline.",
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh tổ chức minigame nhân Ngày Nhà giáo Việt Nam 20/11, tạo cơ hội cho sinh viên gửi gắm những lời chúc tốt đẹp và lời tri ân chân thành đến các thầy cô giáo.",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Online",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-20T00:00:00+07:00",
+      "registration_url": "https://forms.gle/6AM7hvtBPpRorRxs5",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[MINIGAME 20/11] GỬI NGÀN LỜI TRI ÂN - TRAO TRỌN YÊU THƯƠNG",
+      "start_datetime": "2026-11-20T00:00:00+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559974292822199",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid029omtdejeJSGJ8z6x1iDFgZvpj9feV61epp7HtACiVGUsRswZSvszHppnNxYZhFNal",
+      "posted_at": "2026-11-19T20:00:04",
+      "reason": "The post announces an active online cultural exploration and sharing challenge with specific participation instructions, form submission, and a set timeline.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân"
+      ],
+      "description": "Tham gia chuỗi hoạt động 'Bản đồ Văn hóa' số 10 khám phá tỉnh Quảng Ninh bằng cách bình luận những hiểu biết, thông tin hoặc cảm nhận về địa danh, di sản và ẩm thực của địa phương. Người tham gia hoàn thành từ 18/35 bài đăng trong series sẽ đủ điều kiện nhận Giấy chứng nhận từ Nhà Văn hóa Sinh viên TP. Hồ Chí Minh.",
+      "event_end_datetime": "2026-11-21T23:59:00+07:00",
+      "event_start_datetime": "2026-11-19T20:00:04+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Online",
+      "organizer": "Nhà Văn hóa Sinh viên TP. Hồ Chí Minh",
+      "reg_end_datetime": "2026-11-21T24:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T20:00:04+07:00",
+      "registration_url": "https://forms.gle/yg9dTNf6e1nyQx9s9",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "[CHUỖI HOẠT ĐỘNG HƯỚNG ỨNG NGÀY HỘI VĂN HÓA VIỆT NAM] SERIES “BẢN ĐỒ VĂN HÓA” - SỐ [10]: QUẢNG NINH",
+      "start_datetime": "2026-11-19T20:00:04+07:00",
+      "end_datetime": "2026-11-21T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1559666996186262",
+      "post_url": "https://www.facebook.com/nvhsvtphcm/posts/pfbid0TGbCER3hS3ifyVxoQKzoRsEztjm3mfram1vW4bECJ7YdGppYfqmhQTMF4zqaCaXWl",
+      "posted_at": "2026-11-19T14:00:14",
+      "reason": "The post launches an active online minigame challenge with specific participation requirements, a registration form, and a deadline for students to participate.",
+      "category": [
+        "cộng đồng",
+        "cuộc thi"
+      ],
+      "format": [
+        "online",
+        "cá nhân",
+        "thi"
+      ],
+      "description": "This is the second minigame in a series organized by the Student Cultural House of Ho Chi Minh City to celebrate Vietnamese Cultural Day. Participants will test their knowledge of traditional Vietnamese folk dances through a series of questions, with the opportunity to receive an electronic certificate upon completing all three minigames in the series.",
+      "event_start_datetime": "2026-11-19T00:00:00+07:00",
+      "reg_start_datetime": "2026-11-19T00:00:00+07:00",
+      "registration_url": "https://forms.gle/8xPT8pRyZdQFtj5K8",
+      "title": "[MINIGAME 02 | CHÀO MỪNG NGÀY HỘI VĂN HÓA VIỆT NAM] LAN TỎA TINH HOA - KHÁM PHÁ VẺ ĐẸP NGHỆ THUẬT TRUYỀN THỐNG 🇻🇳",
+      "event_end_datetime": "2026-11-19T23:59:00+07:00",
+      "start_datetime": "2026-11-19T00:00:00+07:00",
+      "end_datetime": "2026-11-19T23:59:00+07:00",
+      "reg_end_datetime": "2026-11-19T00:00:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
     }
   ]
 }

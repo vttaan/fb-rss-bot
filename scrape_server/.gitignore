@@ -7,7 +7,5 @@ env/
 .env
 .vscode/
 .idea/
-
-# Never commit raw SQLite database or client email inbox logs
-rss_bot.db
-feeds/inbox/
+/feeds
+/feeds

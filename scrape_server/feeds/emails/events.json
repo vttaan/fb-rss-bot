@@ -1,35 +1,35 @@
 {
   "folder": "emails",
   "description": "Events extracted from client email submissions",
-  "updated_at": "2026-11-15T21:48:37.238667+07:00",
+  "updated_at": "2026-11-24T09:35:09.036000+07:00",
   "count": 2,
   "events": [
     {
-      "event_id": 2,
+      "event_id": 1,
       "title": "NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT",
-      "online_mode": "offline",
-      "is_online": false,
+      "online_mode": null,
+      "is_online": null,
       "date": "2026-11-20",
       "time": "14:00",
       "start_datetime": "2026-11-20T14:00:00+07:00",
-      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "end_datetime": null,
       "event_start_datetime": "2026-11-20T14:00:00+07:00",
-      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_end_datetime": null,
       "reg_start_datetime": null,
       "reg_end_datetime": null,
-      "location": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau).",
+      "location": null,
       "source_type": "email",
       "source_id": "email_dcc51d42aa11b354b3cd",
       "fanpage_id": null,
       "client_id": "anonymous",
-      "version": 2,
-      "created_at": "2026-11-11T13:34:53.183204+07:00",
-      "updated_at": "2026-11-15T21:48:14.132400+07:00",
-      "description": "Đến với NÉT SON, bạn sẽ có cơ hội. Workshop vẽ quạt: Tự tay phối màu, sáng tạo họa tiết và thổi dấu ấn cá nhân vào những chiếc quạt mang hơi thở văn hóa Việt. Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật lý kỹ thuật tổ chức Workshop “NÉT SON” – một không gian trải nghiệm, sáng tạo nghệ thuật dân gian và lan tỏa...",
-      "organizer": "BEE Club",
+      "version": 1,
+      "created_at": "2026-11-11T17:04:11.668475+07:00",
+      "updated_at": "2026-11-11T17:04:11.668475+07:00",
+      "description": "🇻🇳 NÉT SON – CHẠM NÉT TRUYỀN THỐNG, TÔ ĐẬM SẮC VIỆT 🇻🇳 🌸 Hòa chung không khí hưởng ứng Ngày Văn hóa Việt Nam lần thứ I năm 2026, Câu lạc bộ Anh văn BEE phối hợp cùng Đoàn Khoa Sinh học – Công nghệ Sinh học và Liên chi Hội Khoa Vật lý – Vật ...",
+      "organizer": null,
       "registration_url": "https://forms.gle/yuczTRTEM4S4FxH2A",
       "registration_status": "link",
-      "fee": "25.000 VNĐ/sinh viên",
+      "fee": null,
       "target_audience": [
         "sinh viên"
       ],
@@ -37,9 +37,7 @@
         "workshop",
         "tọa đàm"
       ],
-      "format": [
-        "offline"
-      ],
+      "format": [],
       "post_url": null,
       "posted_at": "2026-11-11T13:34:52.858441+07:00",
       "sources": [
@@ -50,57 +48,22 @@
           "client_id": "anonymous",
           "post_url": null,
           "posted_at": "2026-11-11T13:34:52.858441+07:00",
-          "seen_at": "2026-11-11T13:34:53.183204+07:00"
+          "seen_at": "2026-11-11T17:04:11.668475+07:00"
         },
         {
           "source_type": "facebook",
           "source_id": "1682172040361742",
-          "fanpage_id": 15,
+          "fanpage_id": 14,
           "client_id": null,
           "post_url": "https://www.facebook.com/beeclub.khtn/posts/pfbid02xELytqgy1vTdoXiKYMZM1a5zxEFQA1Dytd9y1JQkbigGMcUnTzteVuNVNiSd2CVKl",
           "posted_at": "2026-11-10T20:30:12+07:00",
-          "seen_at": "2026-11-15T21:48:14.132400+07:00"
+          "seen_at": "2026-11-11T17:06:58.809320+07:00"
         }
       ],
-      "update_history": [
-        {
-          "updated_at": "2026-11-15T21:48:14.132400+07:00",
-          "source_type": "facebook",
-          "source_id": "1682172040361742",
-          "client_id": null,
-          "changes": {
-            "format": {
-              "old": [],
-              "new": [
-                "offline"
-              ]
-            },
-            "location": {
-              "old": null,
-              "new": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, phường Chợ Quán, TP. Hồ Chí Minh) (phòng sẽ thông báo sau)."
-            },
-            "event_start_datetime": {
-              "old": null,
-              "new": "2026-11-20T14:00:00+07:00"
-            },
-            "event_end_datetime": {
-              "old": null,
-              "new": "2026-11-20T23:59:00+07:00"
-            },
-            "organizer": {
-              "old": null,
-              "new": "BEE Club"
-            },
-            "fee": {
-              "old": null,
-              "new": "25.000 VNĐ/sinh viên"
-            }
-          }
-        }
-      ]
+      "update_history": []
     },
     {
-      "event_id": 3,
+      "event_id": 2,
       "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
       "online_mode": "offline",
       "is_online": false,
@@ -118,8 +81,8 @@
       "fanpage_id": null,
       "client_id": "client_team_1",
       "version": 1,
-      "created_at": "2026-11-10T18:00:42.870083+07:00",
-      "updated_at": "2026-11-10T18:00:42.870083+07:00",
+      "created_at": "2026-11-11T17:04:34.483336+07:00",
+      "updated_at": "2026-11-11T17:04:34.483336+07:00",
       "description": "Bạn đã nắm rõ các quy định pháp luật khi thuê trọ hay chưa? Bạn có thực sự hiểu đúng về thủ tục đăng ký thường trú, tạm trú? Nhằm hưởng ứng Ngày Pháp luật Việt Nam (09/11), Chi Hội 26TTH_DKD1 tổ chức cuộc thi “Hiểu đúng - Nắm chuẩn Luật cư ...",
       "organizer": null,
       "registration_url": "https://tinyurl.vn/LXBZ",
@@ -144,7 +107,7 @@
           "client_id": "client_team_1",
           "post_url": null,
           "posted_at": "2026-11-10T18:00:42.422854+07:00",
-          "seen_at": "2026-11-10T18:00:42.870083+07:00"
+          "seen_at": "2026-11-11T17:04:34.483336+07:00"
         }
       ],
       "update_history": []

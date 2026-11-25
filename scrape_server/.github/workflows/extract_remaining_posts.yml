@@ -34,6 +34,7 @@ jobs:
       GEMINI_MAX_RETRIES: "3"
       NGROK_DOMAIN: ${{ secrets.NGROK_DOMAIN }}
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+      FB_PROXY_URL: ${{ secrets.FB_PROXY_URL }}
 
     steps:
       - name: Checkout repository

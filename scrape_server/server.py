@@ -1,5 +1,4 @@
 import asyncio
-import hmac
 import json
 import os
 from contextlib import asynccontextmanager
@@ -8,17 +7,24 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
+
+from auth import (
+    USER_SESSION_COOKIE,
+    clear_session_cookie,
+    create_session_token,
+    get_current_user_optional,
+    hash_password,
+    require_current_user,
+    set_session_cookie,
+    verify_password,
+)
 
 from config import (
     DEFAULT_INTERVAL_SECONDS,
-    INGEST_MAX_BATCH_SIZE,
-    INGEST_MAX_CONTENT_CHARS,
-    INGEST_MAX_HASHES_PER_CHECK,
-    INGEST_RATE_LIMIT_PER_MINUTE,
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
     FEEDS_DIR,
@@ -29,19 +35,26 @@ from config import (
 )
 from database import (
     Fanpage,
-    get_known_content_hashes,
     Post,
+    User,
+    create_user,
     get_all_events,
     get_all_recent_posts,
+    get_event_by_id,
     get_inbox_messages,
     get_or_create_user,
     get_posts_for_user,
     get_subscribers_for_fanpage,
+    get_user_by_username,
+    get_user_event_subscriptions,
     get_user_subscriptions,
     init_db,
     list_fanpages,
+    subscribe_user_to_event,
     subscribe_user_to_fanpages,
+    unsubscribe_user_from_event,
     unsubscribe_user_from_fanpage,
+    update_event_subscription,
 )
 from events import extract_single_post_url, ingest_email_message, sync_all_event_folders
 from rss import generate_user_rss_xml
@@ -59,7 +72,6 @@ class ExtractPostRequest(BaseModel):
 class EmailIngestRequest(BaseModel):
     client_id: str = Field("anonymous", description="Client or user identifier submitting the email")
     message_id: Optional[str] = Field(None, description="Unique Email Message-ID header or UID")
-    content_hash: Optional[str] = Field(None, description="SHA-256 fingerprint computed by the client")
     subject: str = Field("", description="Email subject line")
     sender: Optional[str] = Field(None, description="Sender email address or display name")
     received_at: Optional[str] = Field(None, description="ISO 8601 timestamp when email was received")
@@ -71,27 +83,29 @@ class BatchEmailIngestRequest(BaseModel):
     emails: List[EmailIngestRequest]
 
 
-class HashCheckRequest(BaseModel):
-    hashes: List[str] = Field(..., description="List of client-computed SHA-256 content_hash strings to check")
+class UserRegisterRequest(BaseModel):
+    username: str = Field(..., min_length=2, max_length=64)
+    password: str = Field(..., min_length=4, max_length=128)
+    start_year: int = Field(2024, ge=2000, le=2035)
 
 
-_ingest_rate_buckets: Dict[str, Deque[float]] = defaultdict(deque)
+class UserLoginRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=64)
+    password: str = Field(..., min_length=1, max_length=128)
 
 
-def guard_ingest(request: Request, x_ingest_token: str = Header(default="")) -> None:
-    expected_key = os.environ.get("INGEST_API_KEY", "").strip()
-    if expected_key:
-        if not x_ingest_token or not hmac.compare_digest(x_ingest_token.encode(), expected_key.encode()):
-            raise HTTPException(status_code=401, detail="Invalid or missing X-Ingest-Token.")
+class EventSubscriptionRequest(BaseModel):
+    audience: str = Field("", max_length=255)
+    progress: str = Field("interested", max_length=64)
+    evidence: str = Field("", max_length=2000)
+    credit: int = Field(0, ge=0, le=1000)
 
-    client_ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")).split(",")[0].strip()
-    now = time.monotonic()
-    bucket = _ingest_rate_buckets[client_ip]
-    while bucket and now - bucket[0] > 60.0:
-        bucket.popleft()
-    if len(bucket) >= INGEST_RATE_LIMIT_PER_MINUTE:
-        raise HTTPException(status_code=429, detail="Rate limit exceeded for email ingestion.")
-    bucket.append(now)
+
+class EventSubscriptionUpdateRequest(BaseModel):
+    audience: Optional[str] = Field(None, max_length=255)
+    progress: Optional[str] = Field(None, max_length=64)
+    evidence: Optional[str] = Field(None, max_length=2000)
+    credit: Optional[int] = Field(None, ge=0, le=1000)
 
 
 class ConnectionManager:
@@ -144,6 +158,32 @@ class ConnectionManager:
                 generate_user_rss_xml(client_id)
                 await self.send_to_user(client_id, payload)
 
+    async def broadcast_event_updated(
+        self,
+        event_data: Dict[str, Any],
+        changes: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Broadcast an updated event's JSON payload to all connected WebSocket clients."""
+        payload = {
+            "event": "event_updated",
+            "event_id": event_data.get("event_id"),
+            "event_data": event_data,
+            "changes": changes or {},
+            "refresh_tree": True,
+        }
+        await self.broadcast_to_all(payload)
+
+    async def on_events_updated(
+        self,
+        fanpage: Fanpage,
+        updated_events: List[Dict[str, Any]],
+    ) -> None:
+        """Callback invoked when fanpage post analysis updates existing EventRecord entries."""
+        for item in updated_events:
+            ev_data = item.get("event")
+            if ev_data:
+                await self.broadcast_event_updated(ev_data, item.get("changes"))
+
 
 manager = ConnectionManager()
 scheduler = AsyncIOScheduler(timezone=SCRAPE_TIMEZONE)
@@ -158,7 +198,10 @@ async def scheduled_scrape_task() -> None:
         return
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Running scheduled fanpage scrape & extractor..."})
-        new_count = await run_scrape_cycle(on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(
+            on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
+        )
         await asyncio.to_thread(backup_state_to_git, "scheduled VM crawl")
         await manager.broadcast_to_all(
             {
@@ -177,6 +220,7 @@ async def trigger_background_scrape(target_slug_or_id: str | None = None) -> Non
         new_count = await run_scrape_cycle(
             target_slug_or_id=target_slug_or_id,
             on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
         )
         await asyncio.to_thread(backup_state_to_git, "manual VM crawl")
         await manager.broadcast_to_all(
@@ -420,44 +464,8 @@ def api_get_schedule():
     }
 
 
-@app.get("/api/inbox/filter-config", dependencies=[Depends(guard_ingest)])
-def api_get_filter_config(client_version: Optional[int] = Query(None)):
-    """Return shared filter_config.json for client-side privacy & keyword gate synchronization."""
-    cfg_path = FEEDS_DIR / "config" / "filter_config.json"
-    if not cfg_path.exists():
-        raise HTTPException(status_code=404, detail="filter_config.json not initialized on server.")
-    try:
-        data = json.loads(cfg_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to read filter_config.json: {exc}")
-
-    server_version = int(data.get("version", 1))
-    if client_version is not None and client_version == server_version:
-        return {"up_to_date": True, "version": server_version}
-
-    return {"up_to_date": False, **data}
-
-
-@app.post("/api/inbox/check", dependencies=[Depends(guard_ingest)])
-def api_check_inbox_hashes(body: HashCheckRequest):
-    """Pre-flight hash check so clients only upload email bodies the server has not seen yet."""
-    if len(body.hashes) > INGEST_MAX_HASHES_PER_CHECK:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Too many hashes in one check (max {INGEST_MAX_HASHES_PER_CHECK}).",
-        )
-    cleaned = [h.strip().lower() for h in body.hashes if h and h.strip()]
-    known = get_known_content_hashes(cleaned)
-    unknown = [h for h in cleaned if h not in known]
-    return {
-        "checked": len(cleaned),
-        "known": sorted(known),
-        "unknown": unknown,
-    }
-
-
-@app.post("/api/inbox", dependencies=[Depends(guard_ingest)])
-@app.post("/api/events/ingest-email", dependencies=[Depends(guard_ingest)])
+@app.post("/api/inbox")
+@app.post("/api/events/ingest-email")
 async def api_ingest_email(body: EmailIngestRequest):
     """
     Inbox endpoint to receive an event-related email entry from a client, move it to the
@@ -466,18 +474,12 @@ async def api_ingest_email(body: EmailIngestRequest):
     """
     if not body.content or not body.content.strip():
         raise HTTPException(status_code=400, detail="Email content must not be empty.")
-    if len(body.content) > INGEST_MAX_CONTENT_CHARS:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
-        )
 
     try:
         get_or_create_user(body.client_id or "anonymous")
         result = await asyncio.to_thread(
             ingest_email_message,
             content=body.content,
-            content_hash = body.content_hash,
             subject=body.subject,
             client_id=body.client_id,
             message_id=body.message_id,
@@ -497,27 +499,18 @@ async def api_ingest_email(body: EmailIngestRequest):
             "refresh_tree": True,
         }
     )
+    if result.get("is_updated") and result.get("event"):
+        await manager.broadcast_event_updated(result["event"], result.get("changes"))
     return result
 
 
-@app.post("/api/inbox/batch", dependencies=[Depends(guard_ingest)])
+@app.post("/api/inbox/batch")
 async def api_ingest_email_batch(body: BatchEmailIngestRequest):
     """Batch upload endpoint for clients submitting multiple filtered emails at once."""
-    if len(body.emails) > INGEST_MAX_BATCH_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Batch size exceeds {INGEST_MAX_BATCH_SIZE} emails.",
-        )
     results = []
-    any_mutated = False
     for item in body.emails:
         if not item.content or not item.content.strip():
             continue
-        if len(item.content) > INGEST_MAX_CONTENT_CHARS:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
-            )
         get_or_create_user(item.client_id or "anonymous")
         res = await asyncio.to_thread(
             ingest_email_message,
@@ -525,20 +518,16 @@ async def api_ingest_email_batch(body: BatchEmailIngestRequest):
             subject=item.subject,
             client_id=item.client_id,
             message_id=item.message_id,
-            content_hash=item.content_hash,
             sender=item.sender,
             received_at=item.received_at,
             media_urls=item.media_urls,
-            sync_folders=False,
         )
-        if res.get("status") in ("created", "updated", "ignored"):
-            any_mutated = True
         results.append(res)
 
-    if any_mutated:
-        await asyncio.to_thread(sync_all_event_folders)
-
     await manager.broadcast_to_all({"event": "inbox_updated", "refresh_tree": True})
+    for res in results:
+        if res.get("is_updated") and res.get("event"):
+            await manager.broadcast_event_updated(res["event"], res.get("changes"))
     return {
         "processed": len(results),
         "created": sum(1 for r in results if r["status"] == "created"),
@@ -568,15 +557,147 @@ def api_list_unified_events(
     source_type: Optional[str] = Query(None, description="Filter by 'facebook' or 'email'"),
     client_id: Optional[str] = Query(None, description="Filter by client_id"),
     fanpage_id: Optional[int] = Query(None, description="Filter by fanpage_id"),
+    category: Optional[str] = Query(None, description="Filter by category tag"),
+    format: Optional[str] = Query(None, description="Filter by format tag"),
+    is_online: Optional[bool] = Query(None, description="Filter by online/offline mode"),
+    q: Optional[str] = Query(None, description="Search title, description, organizer, or location"),
     limit: int = Query(100, ge=1, le=500),
 ):
-    """Return deduplicated & updated events from the unified EventRecord table."""
+    """Return deduplicated, classified & updated events from the unified EventRecord table."""
     rows = get_all_events(source_type=source_type, client_id=client_id, fanpage_id=fanpage_id, limit=limit)
     items = [r.to_dict() for r in rows]
+    if category:
+        cat_l = category.strip().lower()
+        items = [e for e in items if any(cat_l == str(c).lower() for c in (e.get("category") or []))]
+    if format:
+        fmt_l = format.strip().lower()
+        items = [e for e in items if any(fmt_l == str(f).lower() for f in (e.get("format") or []))]
+    if is_online is not None:
+        items = [e for e in items if bool(e.get("is_online")) == is_online]
+    if q and q.strip():
+        needle = q.strip().lower()
+        items = [
+            e
+            for e in items
+            if needle in (e.get("title") or "").lower()
+            or needle in (e.get("description") or "").lower()
+            or needle in (e.get("organizer") or "").lower()
+            or needle in (e.get("location") or "").lower()
+        ]
     return {
         "count": len(items),
         "events": items,
     }
+
+
+# --- Client User Session & Event Subscription Endpoints ---
+
+
+@app.post("/api/auth/register")
+def api_auth_register(body: UserRegisterRequest, response: Response):
+    """Register a new client user account and start an HTTP-only user session."""
+    try:
+        hashed = hash_password(body.password)
+        user = create_user(username=body.username, hashed_password=hashed, start_year=body.start_year)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    token = create_session_token({"role": "user", "user_id": user.user_id, "username": user.username})
+    set_session_cookie(response, USER_SESSION_COOKIE, token)
+    return {"ok": True, "user": user.to_dict()}
+
+
+@app.post("/api/auth/login")
+def api_auth_login(body: UserLoginRequest, response: Response):
+    """Authenticate a client user and set an HTTP-only user session cookie."""
+    user = get_user_by_username(body.username)
+    if not user or not user.password or not verify_password(body.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+
+    token = create_session_token({"role": "user", "user_id": user.user_id, "username": user.username})
+    set_session_cookie(response, USER_SESSION_COOKIE, token)
+    return {"ok": True, "user": user.to_dict()}
+
+
+@app.post("/api/auth/logout")
+def api_auth_logout(response: Response):
+    """End the current client user session."""
+    clear_session_cookie(response, USER_SESSION_COOKIE)
+    return {"ok": True}
+
+
+@app.get("/api/auth/me")
+def api_auth_me(user: Optional[User] = Depends(get_current_user_optional)):
+    """Return the currently authenticated client user, or null if not logged in."""
+    if not user:
+        return {"authenticated": False, "user": None}
+    return {"authenticated": True, "user": user.to_dict()}
+
+
+@app.get("/api/me/event-subscriptions")
+def api_get_my_event_subscriptions(user: User = Depends(require_current_user)):
+    """Return all events the logged-in user is subscribed to, plus total earned credits."""
+    subs = get_user_event_subscriptions(user.user_id)
+    total_credit = sum(int(s.get("credit") or 0) for s in subs)
+    return {
+        "user": user.to_dict(),
+        "count": len(subs),
+        "total_credit": total_credit,
+        "subscriptions": subs,
+    }
+
+
+@app.post("/api/events/{event_id}/subscribe")
+def api_subscribe_to_event(
+    event_id: int,
+    body: Optional[EventSubscriptionRequest] = None,
+    user: User = Depends(require_current_user),
+):
+    """Subscribe the logged-in user to an event."""
+    if not get_event_by_id(event_id):
+        raise HTTPException(status_code=404, detail=f"Event {event_id} not found.")
+    req = body or EventSubscriptionRequest()
+    sub = subscribe_user_to_event(
+        user_id=user.user_id,
+        event_id=event_id,
+        audience=req.audience,
+        progress=req.progress,
+        evidence=req.evidence,
+        credit=req.credit,
+    )
+    return {"ok": True, "subscription": sub.to_dict()}
+
+
+@app.patch("/api/events/{event_id}/subscribe")
+def api_update_event_subscription(
+    event_id: int,
+    body: EventSubscriptionUpdateRequest,
+    user: User = Depends(require_current_user),
+):
+    """Update audience, progress, evidence, or credit for a subscribed event."""
+    sub = update_event_subscription(
+        user_id=user.user_id,
+        event_id=event_id,
+        audience=body.audience,
+        progress=body.progress,
+        evidence=body.evidence,
+        credit=body.credit,
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail=f"Subscription for event {event_id} not found.")
+    return {"ok": True, "subscription": sub.to_dict()}
+
+
+@app.delete("/api/events/{event_id}/subscribe")
+def api_unsubscribe_from_event(
+    event_id: int,
+    user: User = Depends(require_current_user),
+):
+    """Unsubscribe the logged-in user from an event."""
+    removed = unsubscribe_user_from_event(user.user_id, event_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"Subscription for event {event_id} not found.")
+    return {"ok": True, "event_id": event_id}
 
 
 @app.get("/api/fanpages")
@@ -607,7 +728,11 @@ async def api_run_scrape_now(target: Optional[str] = Query(None, description="Op
 
     async with manager.scrape_lock:
         await manager.broadcast_to_all({"event": "status", "message": "Scraping fanpages for new posts..."})
-        new_count = await run_scrape_cycle(target_slug_or_id=target, on_new_posts=manager.on_new_posts_scraped)
+        new_count = await run_scrape_cycle(
+            target_slug_or_id=target,
+            on_new_posts=manager.on_new_posts_scraped,
+            on_events_updated=manager.on_events_updated,
+        )
         await asyncio.to_thread(backup_state_to_git, "API VM crawl")
         await manager.broadcast_to_all(
             {
@@ -643,6 +768,8 @@ async def process_single_post_url(url: str) -> Dict[str, Any]:
             msg = f"Event found: '{ev_title}' (fanpage link could not be resolved)."
 
         await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
+        if result.get("status") == "updated" and result.get("event"):
+            await manager.broadcast_event_updated(result["event"], result.get("changes"))
         if result.get("post") and fp:
             await manager.send_to_user(
                 "__public__",
@@ -1124,8 +1251,45 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="scheduleBadge" class="badge sky">Schedule: 08:00, 14:00, 20:00 ICT</span>
         <span id="wsBadge" class="badge">Disconnected</span>
+        <span id="userSessionBadge" class="badge mint" style="display:none;"></span>
+        <button id="userAuthBtn" class="secondary" onclick="openUserAuth()">👤 User Login / Register</button>
+        <button id="userLogoutBtn" class="ghost" onclick="logoutUser()" style="display:none;">Logout</button>
         <button onclick="openAdminLogin()">🔐 Admin Login</button>
       </div>
+    </div>
+
+    <!-- Classified Events Explorer & Client User Subscriptions -->
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h3 style="margin:0;">📅 Events &amp; My Subscriptions</h3>
+          <button id="tabAllEventsBtn" onclick="switchEventsTab('all')">All Events (<span id="allEventsCount">0</span>)</button>
+          <button id="tabMyEventsBtn" class="ghost" onclick="switchEventsTab('mine')">My Subscribed Events (<span id="myEventsCount">0</span> · <span id="myTotalCredits">0</span> credits)</button>
+        </div>
+        <button class="ghost" onclick="loadUnifiedEvents(); loadMySubscriptions();">↻ Refresh Events</button>
+      </div>
+
+      <div id="eventsFilterBar" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <input id="evSearch" placeholder="Search title, organizer, location..." style="flex:2; min-width:200px;" oninput="renderEventsPanel()" />
+        <select id="evCategory" style="flex:1; min-width:140px;" onchange="renderEventsPanel()">
+          <option value="">All Categories</option>
+        </select>
+        <select id="evFormat" style="flex:1; min-width:130px;" onchange="renderEventsPanel()">
+          <option value="">All Formats</option>
+        </select>
+        <select id="evOnline" style="flex:1; min-width:120px;" onchange="renderEventsPanel()">
+          <option value="">Online &amp; Offline</option>
+          <option value="true">Online Only</option>
+          <option value="false">Offline Only</option>
+        </select>
+        <select id="evSource" style="flex:1; min-width:130px;" onchange="renderEventsPanel()">
+          <option value="">All Sources</option>
+          <option value="facebook">Facebook</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+
+      <div id="eventsPanelGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:14px; max-height:560px; overflow-y:auto; padding-right:4px;"></div>
     </div>
 
     <!-- Main 2-Column Grid: Directory Tree (Left) + Email Inbox (Right) -->
@@ -1229,6 +1393,27 @@ ngrok-skip-browser-warning: true
 
     <h3>Latest Scraped Posts (<span id="postCount">0</span> posts)</h3>
     <div id="postsContainer"></div>
+  </div>
+
+  <!-- Client User Login / Register Modal -->
+  <div id="userAuthModal" onclick="if(event.target.id==='userAuthModal') closeUserAuth()" style="display:none; position:fixed; inset:0; background:rgba(25,20,45,0.55); z-index:1000; align-items:center; justify-content:center; padding:24px;">
+    <div class="modal-card" style="width:min(460px, 94vw);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <strong style="font-size:17px;">👤 Client User Session</strong>
+        <button class="ghost" onclick="closeUserAuth()">✕ Close</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button id="authTabLogin" onclick="setAuthMode('login')" style="flex:1;">Login</button>
+        <button id="authTabRegister" class="ghost" onclick="setAuthMode('register')" style="flex:1;">Register</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input id="authUsername" placeholder="Username (e.g. alice)" onkeydown="if(event.key==='Enter') submitUserAuth()" />
+        <input id="authPassword" type="password" placeholder="Password" onkeydown="if(event.key==='Enter') submitUserAuth()" />
+        <input id="authStartYear" type="number" min="2000" max="2035" value="2024" placeholder="Start Year (e.g. 2024)" style="display:none;" onkeydown="if(event.key==='Enter') submitUserAuth()" />
+        <button id="userAuthSubmitBtn" onclick="submitUserAuth()">Login</button>
+      </div>
+      <div id="userAuthMsg" style="margin-top:10px; font-size:13.5px; min-height:20px;"></div>
+    </div>
   </div>
 
   <!-- Admin Login Modal -->
@@ -1472,10 +1657,21 @@ ngrok-skip-browser-warning: true
     }
 
     async function openAdminLogin() {
+      try {
+        const sess = await fetchJson('/api/admin/session');
+        if (sess.authenticated) {
+          window.location.href = '/admin';
+          return;
+        }
+      } catch (e) {}
       const saved = sessionStorage.getItem('adminToken');
       if (saved) {
         try {
-          await fetchJson('/api/admin/verify', { headers: { 'X-Admin-Token': saved } });
+          await fetchJson('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: saved })
+          });
           window.location.href = '/admin';
           return;
         } catch (e) {}
@@ -1501,9 +1697,13 @@ ngrok-skip-browser-warning: true
       }
       btn.disabled = true;
       msgEl.style.color = '#7e7896';
-      msgEl.textContent = 'Verifying admin token...';
+      msgEl.textContent = 'Starting admin session...';
       try {
-        await fetchJson('/api/admin/verify', { headers: { 'X-Admin-Token': token } });
+        await fetchJson('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
         sessionStorage.setItem('adminToken', token);
         window.location.href = '/admin';
       } catch (err) {
@@ -1549,6 +1749,11 @@ ngrok-skip-browser-warning: true
           loadFanpages();
           loadDirectoryTree();
         } else if (msg.event === 'inbox_updated') {
+          loadInboxMessages();
+          loadDirectoryTree();
+        } else if (msg.event === 'event_updated') {
+          const title = (msg.event_data && msg.event_data.title) || `Event #${msg.event_id || ''}`;
+          document.getElementById('status').textContent = `Event updated: ${title}`;
           loadInboxMessages();
           loadDirectoryTree();
         } else if (msg.event === 'status' || msg.event === 'error') {
@@ -1650,7 +1855,304 @@ ngrok-skip-browser-warning: true
       `).join('');
     }
 
+    let currentUser = null;
+    let allEvents = [];
+    let mySubscriptions = [];
+    let eventsTab = 'all';
+    let authMode = 'login';
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const isReg = mode === 'register';
+      document.getElementById('authStartYear').style.display = isReg ? 'block' : 'none';
+      document.getElementById('userAuthSubmitBtn').textContent = isReg ? 'Create Account' : 'Login';
+      document.getElementById('authTabLogin').className = isReg ? 'ghost' : '';
+      document.getElementById('authTabRegister').className = isReg ? '' : 'ghost';
+      document.getElementById('userAuthMsg').textContent = '';
+    }
+
+    function openUserAuth() {
+      setAuthMode('login');
+      document.getElementById('userAuthModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('authUsername').focus(), 50);
+    }
+
+    function closeUserAuth() {
+      document.getElementById('userAuthModal').style.display = 'none';
+    }
+
+    async function submitUserAuth() {
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const start_year = parseInt(document.getElementById('authStartYear').value || '2024', 10) || 2024;
+      const msgEl = document.getElementById('userAuthMsg');
+      const btn = document.getElementById('userAuthSubmitBtn');
+      if (!username || !password) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = 'Username and password are required.';
+        return;
+      }
+      btn.disabled = true;
+      msgEl.style.color = '#7e7896';
+      msgEl.textContent = authMode === 'register' ? 'Registering...' : 'Logging in...';
+      try {
+        const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+        const payload = authMode === 'register' ? { username, password, start_year } : { username, password };
+        const data = await fetchJson(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        currentUser = data.user;
+        updateUserSessionUI();
+        closeUserAuth();
+        await loadMySubscriptions();
+        renderEventsPanel();
+      } catch (err) {
+        msgEl.style.color = '#b83b5e';
+        msgEl.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function logoutUser() {
+      try { await fetchJson('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+      currentUser = null;
+      mySubscriptions = [];
+      updateUserSessionUI();
+      if (eventsTab === 'mine') switchEventsTab('all');
+      else renderEventsPanel();
+    }
+
+    function updateUserSessionUI() {
+      const badge = document.getElementById('userSessionBadge');
+      const authBtn = document.getElementById('userAuthBtn');
+      const logoutBtn = document.getElementById('userLogoutBtn');
+      if (currentUser) {
+        badge.style.display = 'inline-block';
+        badge.textContent = `👤 ${currentUser.username} (Start ${currentUser.start_year})`;
+        authBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+        authBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+      }
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const data = await fetchJson('/api/auth/me');
+        currentUser = data.authenticated ? data.user : null;
+        updateUserSessionUI();
+        if (currentUser) await loadMySubscriptions();
+      } catch (e) {}
+    }
+
+    async function loadUnifiedEvents() {
+      try {
+        const data = await fetchJson('/api/events?limit=200');
+        allEvents = data.events || [];
+        document.getElementById('allEventsCount').textContent = allEvents.length;
+        populateEventFilterOptions();
+        renderEventsPanel();
+      } catch (e) {}
+    }
+
+    async function loadMySubscriptions() {
+      if (!currentUser) {
+        mySubscriptions = [];
+        document.getElementById('myEventsCount').textContent = '0';
+        document.getElementById('myTotalCredits').textContent = '0';
+        return;
+      }
+      try {
+        const data = await fetchJson('/api/me/event-subscriptions');
+        mySubscriptions = data.subscriptions || [];
+        document.getElementById('myEventsCount').textContent = mySubscriptions.length;
+        document.getElementById('myTotalCredits').textContent = data.total_credit ?? 0;
+        renderEventsPanel();
+      } catch (e) {}
+    }
+
+    function populateEventFilterOptions() {
+      const cats = new Set();
+      const fmts = new Set();
+      allEvents.forEach(ev => {
+        (ev.category || []).forEach(c => cats.add(c));
+        (ev.format || []).forEach(f => fmts.add(f));
+      });
+      const catSel = document.getElementById('evCategory');
+      const fmtSel = document.getElementById('evFormat');
+      const prevCat = catSel.value;
+      const prevFmt = fmtSel.value;
+      catSel.innerHTML = '<option value="">All Categories</option>' + [...cats].sort().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      fmtSel.innerHTML = '<option value="">All Formats</option>' + [...fmts].sort().map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      if ([...cats].includes(prevCat)) catSel.value = prevCat;
+      if ([...fmts].includes(prevFmt)) fmtSel.value = prevFmt;
+    }
+
+    function switchEventsTab(tab) {
+      eventsTab = tab;
+      document.getElementById('tabAllEventsBtn').className = tab === 'all' ? '' : 'ghost';
+      document.getElementById('tabMyEventsBtn').className = tab === 'mine' ? '' : 'ghost';
+      document.getElementById('eventsFilterBar').style.display = tab === 'all' ? 'flex' : 'none';
+      renderEventsPanel();
+    }
+
+    async function subscribeEvent(eventId) {
+      if (!currentUser) {
+        openUserAuth();
+        return;
+      }
+      try {
+        await fetchJson(`/api/events/${eventId}/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audience: `Start ${currentUser.start_year}`, progress: 'interested', evidence: '', credit: 0 })
+        });
+        await loadMySubscriptions();
+        renderEventsPanel();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function saveSubscription(eventId) {
+      const audience = document.getElementById(`subAud_${eventId}`).value;
+      const progress = document.getElementById(`subProg_${eventId}`).value;
+      const evidence = document.getElementById(`subEvid_${eventId}`).value;
+      const credit = parseInt(document.getElementById(`subCred_${eventId}`).value || '0', 10) || 0;
+      try {
+        await fetchJson(`/api/events/${eventId}/subscribe`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audience, progress, evidence, credit })
+        });
+        await loadMySubscriptions();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function unsubscribeEvent(eventId) {
+      try {
+        await fetchJson(`/api/events/${eventId}/subscribe`, { method: 'DELETE' });
+        await loadMySubscriptions();
+        renderEventsPanel();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderEventsPanel() {
+      const grid = document.getElementById('eventsPanelGrid');
+      const subMap = new Map(mySubscriptions.map(s => [s.event_id, s]));
+
+      if (eventsTab === 'mine') {
+        if (!currentUser) {
+          grid.innerHTML = '<div style="color:var(--muted); font-size:14px;">Please <a href="#" onclick="openUserAuth(); return false;">log in or register</a> to manage your event subscriptions and credits.</div>';
+          return;
+        }
+        if (!mySubscriptions.length) {
+          grid.innerHTML = '<div style="color:var(--muted); font-size:14px;">You have not subscribed to any events yet. Switch to "All Events" to subscribe!</div>';
+          return;
+        }
+        grid.innerHTML = mySubscriptions.map(s => {
+          const ev = s.event || {};
+          return `
+            <div class="inbox-item" style="background:#fff;">
+              <div class="inbox-meta">
+                <span><strong>#${ev.event_id}</strong> · ${esc(ev.source_type || '')}</span>
+                <span class="badge mint">${esc(s.credit)} credits</span>
+              </div>
+              <div style="font-weight:700; font-size:15px; margin-bottom:6px;">${esc(ev.title || 'Event')}</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-bottom:10px;">
+                ${ev.event_start_datetime ? `🗓 ${esc(new Date(ev.event_start_datetime).toLocaleString())}` : ''}
+                ${ev.location ? ` · 📍 ${esc(ev.location)}` : ''}
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <input id="subAud_${s.event_id}" value="${esc(s.audience)}" placeholder="Audience (e.g. sinh viên K24)" />
+                <div style="display:flex; gap:8px;">
+                  <select id="subProg_${s.event_id}" style="flex:1;">
+                    ${['interested', 'registered', 'participated', 'completed'].map(p => `<option value="${p}" ${s.progress === p ? 'selected' : ''}>${p}</option>`).join('')}
+                  </select>
+                  <input id="subCred_${s.event_id}" type="number" min="0" value="${esc(s.credit)}" placeholder="Credit" style="width:95px; flex:none;" />
+                </div>
+                <input id="subEvid_${s.event_id}" value="${esc(s.evidence)}" placeholder="Evidence URL or note" />
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                  <button onclick="saveSubscription(${s.event_id})">💾 Save</button>
+                  <button class="ghost" onclick="unsubscribeEvent(${s.event_id})">Remove</button>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+        return;
+      }
+
+      const q = (document.getElementById('evSearch').value || '').trim().toLowerCase();
+      const cat = document.getElementById('evCategory').value.toLowerCase();
+      const fmt = document.getElementById('evFormat').value.toLowerCase();
+      const onlineVal = document.getElementById('evOnline').value;
+      const srcVal = document.getElementById('evSource').value.toLowerCase();
+
+      const filtered = allEvents.filter(ev => {
+        if (cat && !(ev.category || []).some(c => String(c).toLowerCase() === cat)) return false;
+        if (fmt && !(ev.format || []).some(f => String(f).toLowerCase() === fmt)) return false;
+        if (onlineVal === 'true' && !ev.is_online) return false;
+        if (onlineVal === 'false' && ev.is_online) return false;
+        if (srcVal && !(ev.source_type || '').toLowerCase().startsWith(srcVal)) return false;
+        if (q) {
+          const hay = [ev.title, ev.description, ev.organizer, ev.location, ev.award].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      if (!filtered.length) {
+        grid.innerHTML = '<div style="color:var(--muted); font-size:14px;">No events match your filters.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(ev => {
+        const isSub = subMap.has(ev.event_id);
+        const cats = (ev.category || []).map(c => `<span class="badge">${esc(c)}</span>`).join(' ');
+        const fmts = (ev.format || []).map(f => `<span class="badge sky">${esc(f)}</span>`).join(' ');
+        return `
+          <div class="inbox-item" style="background:#fff; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+            <div>
+              <div class="inbox-meta">
+                <span>${esc(ev.source_type || 'facebook')}</span>
+                <span class="badge ${ev.is_online ? 'sky' : 'mint'}">${ev.is_online ? 'Online' : 'Offline'}</span>
+              </div>
+              <div style="font-weight:700; font-size:15px; margin-bottom:4px;">${esc(ev.title)}</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-bottom:6px;">
+                ${ev.organizer ? `🏢 ${esc(ev.organizer)}<br>` : ''}
+                ${ev.event_start_datetime ? `🗓 ${esc(new Date(ev.event_start_datetime).toLocaleString())}` : ''}
+                ${ev.location ? ` · 📍 ${esc(ev.location)}` : ''}
+                ${ev.reg_end_datetime ? `<br>⏳ Reg deadline: ${esc(new Date(ev.reg_end_datetime).toLocaleString())}` : ''}
+                ${ev.fee ? ` · 💸 ${esc(ev.fee)}` : ''}
+                ${ev.award ? `<br>🏆 ${esc(ev.award)}` : ''}
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${cats} ${fmts}</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:8px;">
+              <div style="display:flex; gap:8px; font-size:12.5px;">
+                ${ev.registration ? `<a href="${esc(ev.registration)}" target="_blank">Register ↗</a>` : ''}
+                ${ev.post_url ? `<a href="${esc(ev.post_url)}" target="_blank">Source ↗</a>` : ''}
+              </div>
+              ${isSub
+                ? `<button class="ghost" onclick="unsubscribeEvent(${ev.event_id})">✓ Subscribed</button>`
+                : `<button class="secondary" onclick="subscribeEvent(${ev.event_id})">+ Subscribe</button>`}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
     loadScheduleBadge();
+    loadCurrentUser();
+    loadUnifiedEvents();
     loadDirectoryTree();
     loadInboxMessages();
     connectWS();

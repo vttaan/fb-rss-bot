@@ -1,11 +1,11 @@
 {
   "folder": "emails/client_team_1",
   "client_id": "client_team_1",
-  "updated_at": "2026-11-15T21:48:37.238667+07:00",
+  "updated_at": "2026-11-24T09:35:09.036000+07:00",
   "count": 1,
   "events": [
     {
-      "event_id": 3,
+      "event_id": 2,
       "title": "CUỘC THI “HIỂU ĐÚNG - NẮM CHUẨN LUẬT CƯ TRÚ”",
       "online_mode": "offline",
       "is_online": false,
@@ -23,8 +23,8 @@
       "fanpage_id": null,
       "client_id": "client_team_1",
       "version": 1,
-      "created_at": "2026-11-10T18:00:42.870083+07:00",
-      "updated_at": "2026-11-10T18:00:42.870083+07:00",
+      "created_at": "2026-11-11T17:04:34.483336+07:00",
+      "updated_at": "2026-11-11T17:04:34.483336+07:00",
       "description": "Bạn đã nắm rõ các quy định pháp luật khi thuê trọ hay chưa? Bạn có thực sự hiểu đúng về thủ tục đăng ký thường trú, tạm trú? Nhằm hưởng ứng Ngày Pháp luật Việt Nam (09/11), Chi Hội 26TTH_DKD1 tổ chức cuộc thi “Hiểu đúng - Nắm chuẩn Luật cư ...",
       "organizer": null,
       "registration_url": "https://tinyurl.vn/LXBZ",
@@ -49,7 +49,7 @@
           "client_id": "client_team_1",
           "post_url": null,
           "posted_at": "2026-11-10T18:00:42.422854+07:00",
-          "seen_at": "2026-11-10T18:00:42.870083+07:00"
+          "seen_at": "2026-11-11T17:04:34.483336+07:00"
         }
       ],
       "update_history": []

@@ -9,20 +9,30 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from auth import (
+    ADMIN_SESSION_COOKIE,
+    clear_session_cookie,
+    create_session_token,
+    is_admin_authenticated,
+    require_admin_session,
+    set_session_cookie,
+)
 from config import FEEDS_DIR, SCROLL_COUNT
 from database import (
     add_fanpage,
     ensure_local_tz,
+    list_all_event_subscriptions,
     list_fanpages,
+    list_users,
     remove_fanpage,
     save_posts,
     update_fanpage_metadata,
 )
-from events import analyze_fanpage_posts, purge_fanpage_events, sync_all_event_folders
+from events import analyze_fanpage_posts, purge_fanpage_events, reclassify_all_events, sync_all_event_folders
 from rss import generate_all_rss, generate_fanpage_rss
 from scheduler import backup_state_to_git
 from scraper import is_facebook_post_url, scrape_fanpage
@@ -61,12 +71,16 @@ class RefetchExtractRequest(BaseModel):
     force_recheck: bool = Field(True, description="Re-evaluate posts previously marked non-event within the limit")
 
 
-def require_admin(x_admin_token: str = Header(default="")) -> None:
-    expected = os.environ.get("ADMIN_TOKEN", "")
-    if not expected:
-        raise HTTPException(status_code=503, detail="Admin is disabled: ADMIN_TOKEN is not configured on the server.")
-    if not hmac.compare_digest(x_admin_token.encode(), expected.encode()):
-        raise HTTPException(status_code=401, detail="Invalid admin token.")
+class AdminLoginRequest(BaseModel):
+    token: str = Field(..., description="Server ADMIN_TOKEN")
+
+
+class ClassifyRequest(BaseModel):
+    event_ids: Optional[List[int]] = Field(None, description="Optional list of event_ids to reclassify; omit for all")
+
+
+def require_admin(request: Request, x_admin_token: str = Header(default="")) -> None:
+    require_admin_session(request, x_admin_token=x_admin_token)
 
 
 def _event_count(slug: str) -> int:
@@ -79,10 +93,63 @@ def _event_count(slug: str) -> int:
         return 0
 
 
+@router.get("/api/admin/session")
+def admin_session_status(request: Request):
+    """Check whether server ADMIN_TOKEN is configured and if the current cookie/session is authenticated."""
+    expected = os.environ.get("ADMIN_TOKEN", "")
+    return {
+        "configured": bool(expected),
+        "authenticated": is_admin_authenticated(request),
+    }
+
+
+@router.post("/api/admin/login")
+def admin_login(body: AdminLoginRequest, response: Response):
+    """Authenticate an admin session via ADMIN_TOKEN and set an HTTP-only session cookie."""
+    expected = os.environ.get("ADMIN_TOKEN", "")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Admin is disabled: ADMIN_TOKEN is not configured on the server.")
+    if not hmac.compare_digest(body.token.strip().encode("utf-8"), expected.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Invalid admin token.")
+    token = create_session_token({"role": "admin"})
+    set_session_cookie(response, ADMIN_SESSION_COOKIE, token)
+    return {"ok": True, "authenticated": True}
+
+
+@router.post("/api/admin/logout")
+def admin_logout(response: Response):
+    """Clear the admin session cookie."""
+    clear_session_cookie(response, ADMIN_SESSION_COOKIE)
+    return {"ok": True, "authenticated": False}
+
+
 @router.get("/api/admin/verify", dependencies=[Depends(require_admin)])
 def admin_verify_token():
-    """Verify X-Admin-Token from main-page login before redirecting to /admin."""
+    """Verify admin session or X-Admin-Token before redirecting to /admin."""
     return {"ok": True}
+
+
+@router.post("/api/admin/classify", dependencies=[Depends(require_admin)])
+async def admin_classify_events(body: Optional[ClassifyRequest] = None):
+    """Run the classification module on all (or selected) events in the database."""
+    event_ids = body.event_ids if body else None
+    result = await asyncio.to_thread(reclassify_all_events, event_ids)
+    await asyncio.to_thread(sync_all_event_folders)
+    return {"status": "ok", **result}
+
+
+@router.get("/api/admin/users", dependencies=[Depends(require_admin)])
+def admin_list_users():
+    """List registered client users with event subscription counts and total credits."""
+    users = list_users()
+    return {"count": len(users), "users": users}
+
+
+@router.get("/api/admin/subscriptions", dependencies=[Depends(require_admin)])
+def admin_list_subscriptions(limit: int = Query(200, ge=1, le=1000)):
+    """List event subscriptions across all users."""
+    subs = list_all_event_subscriptions(limit=limit)
+    return {"count": len(subs), "subscriptions": subs}
 
 
 @router.post("/api/admin/scrape", dependencies=[Depends(require_admin)])
@@ -104,12 +171,17 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
     rows = list_fanpages(active_only=True)
     target = (body.fanpage or "all").strip()
     if target and target.lower() != "all":
-        rows = [
+        exact_rows = [
             (fp, cnt)
             for fp, cnt in rows
             if str(fp.id) == target
             or fp.slug.lower() == target.lower()
-            or target.lower() in fp.url.lower()
+            or fp.url.lower().rstrip("/") == target.lower().rstrip("/")
+        ]
+        rows = exact_rows or [
+            (fp, cnt)
+            for fp, cnt in rows
+            if not target.isdigit() and target.lower() in fp.url.lower()
         ]
     if not rows:
         raise HTTPException(status_code=404, detail=f"No active fanpage matching '{target}'.")
@@ -121,6 +193,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
     total_llm = 0
     total_updated = 0
     total_errors = 0
+    error_details: List[str] = []
 
     async with manager.scrape_lock:
         await manager.broadcast_to_all(
@@ -152,12 +225,18 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
                 total_events += int(ev_stats.get("events", 0))
                 total_llm += int(ev_stats.get("llm_calls", 0))
                 total_updated += int(ev_stats.get("updated", 0))
-                total_errors += int(ev_stats.get("errors", 0))
+                ev_err_count = int(ev_stats.get("errors", 0))
+                total_errors += ev_err_count
+                if ev_err_count > 0:
+                    error_details.append(f"{fp.slug}: {ev_err_count} LLM/extraction error(s)")
 
                 if new_posts:
                     await manager.on_new_posts_scraped(fp, new_posts)
+                if ev_stats.get("updated_events"):
+                    await manager.on_events_updated(fp, ev_stats["updated_events"])
             except Exception as exc:
                 total_errors += 1
+                error_details.append(f"{fp.slug}: {exc}")
                 print(f"[admin] Error refetching {fp.url}: {exc}")
 
             if idx < len(rows) - 1:
@@ -172,6 +251,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
         + (f", {total_updated} updated" if total_updated else "")
         + (f", {total_errors} error(s)" if total_errors else "")
         + "."
+        + (f" Details: {' | '.join(error_details)}" if error_details else "")
     )
     await manager.broadcast_to_all({"event": "status", "message": msg, "refresh_tree": True})
     asyncio.create_task(asyncio.to_thread(backup_state_to_git, "admin refetch & extract"))
@@ -185,6 +265,7 @@ async def admin_refetch_and_extract(body: RefetchExtractRequest):
         "events_found": total_events,
         "updated": total_updated,
         "errors": total_errors,
+        "error_details": error_details,
         "message": msg,
     }
 
@@ -245,6 +326,8 @@ async def admin_import_crawl(body: ImportCrawlRequest):
 
         if new_posts:
             await manager.on_new_posts_scraped(fp, new_posts)
+        if ev_stats.get("updated_events"):
+            await manager.on_events_updated(fp, ev_stats["updated_events"])
 
     generate_all_rss()
     await asyncio.to_thread(sync_all_event_folders)
@@ -436,16 +519,40 @@ ADMIN_HTML = """<!DOCTYPE html>
           <tbody id="rows"></tbody>
         </table>
       </div>
+
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <h3 style="margin:0;">Event Classification Module</h3>
+            <div style="font-size:13.5px; color:var(--muted); margin-top:4px;">Classify &amp; normalize category, format, target audience, award, and online mode across all events</div>
+          </div>
+          <button id="classifyBtn" class="secondary" onclick="runClassify()">✦ Run Classification Module</button>
+        </div>
+        <div id="classifyMsg" style="margin-top:10px; font-size:14px; color:var(--muted);"></div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-top:0;">Client Users (<span id="userCount">0</span>)</h3>
+        <table>
+          <thead><tr><th>Username</th><th>Start Year</th><th>Subscribed Events</th><th>Total Credit</th><th>Created</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <script>
     const msg = (t, bad, id = 'msg') => { const m = document.getElementById(id); if (!m) return; m.textContent = t; m.style.color = bad ? '#c2476b' : '#2f8f6b'; };
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const headers = () => ({ 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'X-Admin-Token': sessionStorage.getItem('adminToken') || '' });
+    const headers = () => {
+      const h = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' };
+      const tok = sessionStorage.getItem('adminToken');
+      if (tok) h['X-Admin-Token'] = tok;
+      return h;
+    };
 
     async function api(method, path, body) {
-      const res = await fetch(path, { method, headers: headers(), body: body ? JSON.stringify(body) : undefined });
+      const res = await fetch(path, { method, credentials: 'same-origin', headers: headers(), body: body ? JSON.stringify(body) : undefined });
       const rawText = await res.text();
       let data = {};
       try {
@@ -460,14 +567,20 @@ ADMIN_HTML = """<!DOCTYPE html>
       return data;
     }
 
-    function saveToken() {
+    async function saveToken() {
       const tok = document.getElementById('token').value.trim();
       if (!tok) return;
-      sessionStorage.setItem('adminToken', tok);
-      load();
+      try {
+        await api('POST', '/api/admin/login', { token: tok });
+        sessionStorage.setItem('adminToken', tok);
+        load();
+      } catch (e) {
+        msg(e.message, true);
+      }
     }
 
-    function logoutAdmin() {
+    async function logoutAdmin() {
+      try { await api('POST', '/api/admin/logout'); } catch (e) {}
       sessionStorage.removeItem('adminToken');
       window.location.href = '/';
     }
@@ -497,12 +610,43 @@ ADMIN_HTML = """<!DOCTYPE html>
             <td>${esc(f.last_checked_at ? new Date(f.last_checked_at).toLocaleString() : '-')}</td>
             <td><button class="danger" data-id="${f.id}" data-name="${esc(f.name)}" onclick="removeFanpage(this)">Remove</button></td>
           </tr>`).join('');
+        loadUsers();
       } catch (e) {
         document.getElementById('unlockPanel').style.display = 'block';
         document.getElementById('adminContent').style.display = 'none';
         document.getElementById('scrapeAllBtn').style.display = 'none';
         document.getElementById('logoutBtn').style.display = 'none';
-        msg(e.message, true);
+        if (e.message && !e.message.includes('Invalid admin')) msg(e.message, true);
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const data = await api('GET', '/api/admin/users');
+        const users = data.users || [];
+        document.getElementById('userCount').textContent = users.length;
+        document.getElementById('userRows').innerHTML = users.map(u => `
+          <tr>
+            <td><strong>${esc(u.username)}</strong></td>
+            <td>${esc(u.start_year)}</td>
+            <td>${esc(u.subscribed_events_count)}</td>
+            <td><span class="pill">${esc(u.total_credit)}</span></td>
+            <td>${esc(u.created_at ? new Date(u.created_at).toLocaleDateString() : '-')}</td>
+          </tr>`).join('');
+      } catch (e) {}
+    }
+
+    async function runClassify() {
+      const btn = document.getElementById('classifyBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Classifying...'; }
+      msg('Running classification module across all events...', false, 'classifyMsg');
+      try {
+        const r = await api('POST', '/api/admin/classify', {});
+        msg(`Classification complete: scanned ${r.scanned} event(s), updated ${r.updated}.`, false, 'classifyMsg');
+      } catch (e) {
+        msg(e.message, true, 'classifyMsg');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '✦ Run Classification Module'; }
       }
     }
 
@@ -581,7 +725,7 @@ ADMIN_HTML = """<!DOCTYPE html>
       } catch (e) { msg(e.message, true, 'actionMsg'); }
     }
 
-    if (sessionStorage.getItem('adminToken')) load();
+    load();
   </script>
 </body>
 </html>
@@ -591,50 +735,3 @@ ADMIN_HTML = """<!DOCTYPE html>
 @router.get("/admin", response_class=HTMLResponse)
 def serve_admin_page():
     return HTMLResponse(content=ADMIN_HTML)
-
-
-class UpdateFilterConfigRequest(BaseModel):
-    allowed_senders: Optional[List[str]] = None
-    keywords: Optional[List[str]] = None
-    excluded_keywords: Optional[List[str]] = None
-    newer_than_days: Optional[int] = None
-    max_results: Optional[int] = None
-
-
-@router.put("/api/admin/filter-config", dependencies=[Depends(require_admin)])
-def admin_update_filter_config(body: UpdateFilterConfigRequest):
-    """Update shared feeds/config/filter_config.json live, incrementing version."""
-    import json
-    from datetime import datetime
-    from config import FEEDS_DIR, LOCAL_TIMEZONE
-
-    cfg_dir = FEEDS_DIR / "config"
-    cfg_dir.mkdir(parents=True, exist_ok=True)
-    cfg_path = cfg_dir / "filter_config.json"
-
-    data = {}
-    if cfg_path.exists():
-        try:
-            data = json.loads(cfg_path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-
-    current_ver = int(data.get("version", 0))
-    new_ver = current_ver + 1
-
-    if body.allowed_senders is not None:
-        data["allowed_senders"] = body.allowed_senders
-    if body.keywords is not None:
-        data["keywords"] = body.keywords
-    if body.excluded_keywords is not None:
-        data["excluded_keywords"] = body.excluded_keywords
-    if body.newer_than_days is not None:
-        data["newer_than_days"] = body.newer_than_days
-    if body.max_results is not None:
-        data["max_results"] = body.max_results
-
-    data["version"] = new_ver
-    data["updated_at"] = datetime.now(LOCAL_TIMEZONE).isoformat()
-
-    cfg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"status": "success", "version": new_ver, "config": data}

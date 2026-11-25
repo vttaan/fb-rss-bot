@@ -4,7 +4,7 @@ import subprocess
 import sys
 import threading
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -40,6 +40,7 @@ from scraper import scrape_fanpage
 
 console = Console()
 NewPostsCallback = Callable[[Fanpage, List[Post]], Awaitable[None]]
+EventsUpdatedCallback = Callable[[Fanpage, List[Dict[str, Any]]], Awaitable[None]]
 _GIT_BACKUP_LOCK = threading.Lock()
 
 
@@ -113,6 +114,7 @@ def backup_state_to_git(reason: str = "scheduled crawl") -> bool:
 async def run_scrape_cycle(
     target_slug_or_id: Optional[str] = None,
     on_new_posts: Optional[NewPostsCallback] = None,
+    on_events_updated: Optional[EventsUpdatedCallback] = None,
 ) -> int:
     """
     Execute one full scrape & RSS generation cycle across active fanpages.
@@ -178,6 +180,11 @@ async def run_scrape_cycle(
                     f"[magenta]   Events: {ev['events']} found, {ev['llm_calls']} LLM call(s), "
                     f"{ev['analyzed']} post(s) analyzed[/magenta]"
                 )
+                if ev.get("updated_events") and on_events_updated is not None:
+                    try:
+                        await on_events_updated(fp, ev["updated_events"])
+                    except Exception as cb_exc:
+                        console.print(f"[yellow]   Warning in event-update push callback: {cb_exc}[/yellow]")
             except Exception as ev_exc:
                 console.print(f"[yellow]   Event analysis skipped: {ev_exc}[/yellow]")
             if new_posts and on_new_posts is not None:

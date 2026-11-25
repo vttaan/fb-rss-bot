@@ -1,10 +1,201 @@
 {
   "fanpage": {
-    "name": "Tuổi trẻ Trường Đại học Khoa học tự nhiên | Ho Chi Minh City",
+    "name": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
     "url": "https://www.facebook.com/DoanHoiHCMUS",
     "slug": "DoanHoiHCMUS"
   },
-  "updated_at": "2026-11-15T21:48:37.250867+07:00",
-  "count": 0,
-  "events": []
+  "updated_at": "2026-11-24T09:35:09.050179+07:00",
+  "count": 6,
+  "events": [
+    {
+      "post_id": "1625997896237729",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid08pYxhBDAfVgfQv91FU8ghLaam71xDec93Udw9dsgW5TSgpz1ncV7WA4i2ULRBGRRl",
+      "posted_at": "2026-11-23T09:44:20",
+      "reason": "The post announces an upcoming conference summarizing student scientific research with a specific time, venue, and invitation for student attendance.",
+      "category": [
+        "hội nghị",
+        "khoa học",
+        "học thuật"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Hội nghị tổng kết chương trình sinh viên nghiên cứu khoa học - công nghệ năm 2026 là sự kiện thường niên nhằm nhìn nhận, đánh giá và tổng kết các hoạt động nghiên cứu khoa học của sinh viên trong năm. Sự kiện diễn ra trực tiếp tại Giảng đường 1, Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM, mở cửa đón chào các bạn sinh viên tham gia.",
+      "event_end_datetime": "2026-11-27T23:59:00+07:00",
+      "event_start_datetime": "2026-11-27T17:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1 - Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ)",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "reg_end_datetime": "2026-11-27T17:30:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:44:20+07:00",
+      "registration_url": "https://khunghinh.net/p/hntksvnckh2026",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "HỘI NGHỊ TỔNG KẾT CHƯƠng TRÌNH SINH VIÊN NGHIÊN CỨU KHOA HỌC - CÔNG NGHỆ NĂM 2026",
+      "start_datetime": "2026-11-27T17:30:00+07:00",
+      "end_datetime": "2026-11-27T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1625997439571108",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02VYjd8vS6jA1D6GrqpkVDfsxWRBW4FgcYEcgdo5NrYWxkTvGa4Zj83dbVXTedgYiGl",
+      "posted_at": "2026-11-23T09:43:43",
+      "reason": "The post announces a mandatory periodic health checkup drive for students with scheduled times, making it an active administrative student event.",
+      "category": [
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Nhà trường tổ chức đợt khám sức khỏe định kỳ cho sinh viên đủ điều kiện với các khung giờ buổi sáng và buổi chiều. Sinh viên tham gia đầy đủ để đảm bảo quyền lợi và tuân thủ quy định của nhà trường.",
+      "event_start_datetime": "2026-11-23T07:30:00+07:00",
+      "title": "TỔ CHỨC KHÁM SỨC KHỎE ĐỊNH KỲ CHO SINH VIÊN ĐỢT 3 NĂM 2026]",
+      "location": "trường phải tham gia",
+      "fee": "miễn phí",
+      "event_end_datetime": "2026-11-23T11:00:00+07:00",
+      "start_datetime": "2026-11-23T07:30:00+07:00",
+      "end_datetime": "2026-11-23T11:00:00+07:00",
+      "reg_start_datetime": "2026-11-23T09:43:43",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "registration_url": "free",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1626045062899679",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02gqZNztBfPYRBQzZHfv2CqfAj5TPm321obbfdvhgrW8DkXLZ16bVv4VCAAHksWzJDl",
+      "posted_at": "2026-11-23T10:51:22",
+      "reason": "The post announces an upcoming campus health activity providing free deworming medication with a clear schedule and locations for students and staff.",
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM tổ chức chương trình phát thuốc tẩy giun Albendazol 400mg miễn phí đợt 2 năm 2026 nhằm chăm sóc sức khỏe và nâng cao ý thức phòng bệnh cho người học và viên chức.",
+      "event_end_datetime": "2026-12-12T23:59:00+07:00",
+      "event_start_datetime": "2026-11-23T00:00:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Trạm y tế cơ sở phường Chợ Quán (E.001) và Trạm y tế cơ sở phường Đông Hòa (E.103)",
+      "organizer": "Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "registration_url": "free",
+      "target_audience": [
+        "sinh viên",
+        "giảng viên",
+        "nhân viên"
+      ],
+      "title": "PHÁT THUỐC TẨY GIUN ĐỢT 2 NĂM 2026",
+      "start_datetime": "2026-11-23T00:00:00+07:00",
+      "end_datetime": "2026-12-12T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-23T10:51:22",
+      "reg_end_datetime": "2026-11-23T00:00:00+07:00",
+      "registration_status": "unknown",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1622645323239653",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid07x6Sf3U2Mmt4uAJTG41xYVvkZUTnAUT9XhX9LNDBrM3nZEgGvsgAZG75uSF4K3P1l",
+      "posted_at": "2026-11-20T08:00:10",
+      "reason": "The post announces an upcoming workshop on circular economy with a registration link, scheduled time, venue, and attractive benefits for student attendees.",
+      "category": [
+        "workshop"
+      ],
+      "format": [
+        "offline",
+        "cá nhân"
+      ],
+      "description": "Tham gia workshop 'Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên' để cập nhật kiến thức chuyên môn và lắng nghe chia sẻ thực tiễn. Sinh viên tham gia sẽ nhận được vé xem phim, túi tote giới hạn, và giấy chứng nhận điểm rèn luyện.",
+      "event_end_datetime": "2026-11-21T09:00:00+07:00",
+      "event_start_datetime": "2026-11-21T07:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Nhà hát Sinh viên (Tầng 4) - Nhà Văn hóa Sinh viên TP.HCM tại Khu Đô thị ĐHQG-HCM",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "reg_end_datetime": "2026-11-21T07:30:00+07:00",
+      "reg_start_datetime": "2026-11-20T08:00:10+07:00",
+      "registration_url": "https://tinyurl.com/WSKinhTeTuanHoan",
+      "target_audience": [
+        "học sinh",
+        "sinh viên"
+      ],
+      "title": "Workshop “Kinh tế tuần hoàn – Khi rác thải trở thành tài nguyên”",
+      "start_datetime": "2026-11-21T07:30:00+07:00",
+      "end_datetime": "2026-11-21T09:00:00+07:00",
+      "dedup_status": "updated",
+      "updated_changes": {
+        "reg_start_datetime": {
+          "old": "2026-11-19T19:00:05+07:00",
+          "new": "2026-11-20T08:00:10+07:00"
+        }
+      }
+    },
+    {
+      "post_id": "1621645143339671",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02U1qUMT2HdjfseQmpdLjV5hwGS5NKEKvJJ5V1styfSj9njuTMdHy3uUmi7biWdycWl",
+      "posted_at": "2026-11-19T10:42:11",
+      "reason": "The post announces an upcoming teacher appreciation ceremony on November 20, 2026, inviting students to attend at a specific time and venue.",
+      "category": [
+        "cộng đồng",
+        "khác"
+      ],
+      "format": [
+        "offline"
+      ],
+      "description": "Lễ kỷ niệm Ngày Nhà giáo Việt Nam 20/11 là dịp để sinh viên trường Đại học Khoa học Tự nhiên gửi lời tri ân đến quý thầy cô, tôn vinh những đóng góp trong sự nghiệp trồng người và lan tỏa truyền thống tôn sư trọng đạo.",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-20T09:30:00+07:00",
+      "fee": "miễn phí",
+      "is_online": false,
+      "location": "Giảng đường 1, Trường Đại học Khoa học tự nhiên, ĐHQG-HCM (227 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh)",
+      "organizer": "Đoàn Thanh niên - Hội Sinh viên Trường Đại học Khoa học tự nhiên, ĐHQG-HCM",
+      "reg_end_datetime": "null",
+      "reg_start_datetime": "null",
+      "registration_url": "null",
+      "target_audience": [
+        "sinh viên"
+      ],
+      "title": "LỄ KỶ NIỆM VÀ TRI ÂN THẦY CÔ - CHÀO MỪNG NGÀY NHÀ GIÁO VIỆT NAM 20/11",
+      "start_datetime": "2026-11-20T09:30:00+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    },
+    {
+      "post_id": "1620898333414352",
+      "post_url": "https://www.facebook.com/DoanHoiHCMUS/posts/pfbid02NprRufLKCwt3fjEXjjNX12hiciyYu3PTj3NGMadm6YPzZMY5oboheWoCnxfPTUNdl",
+      "posted_at": "2026-11-18T18:30:15",
+      "reason": "The post serves as an active reminder and countdown for an ongoing student short-clip creation competition with an explicit submission deadline.",
+      "category": [
+        "cuộc thi"
+      ],
+      "format": [
+        "cá nhân",
+        "đồng đội"
+      ],
+      "description": "Cuộc thi sáng tạo clip ngắn \"Hiểu luật – Sống chất\" hưởng ứng Ngày Pháp luật Việt Nam 09/11 là sân chơi để sinh viên thể hiện sự sáng tạo, lan tỏa kiến thức pháp luật và chinh phục các giải thưởng hấp dẫn với tổng giá trị cao. Thí sinh cần hoàn thiện sản phẩm video đăng tải lên TikTok và gửi file gốc kèm liên kết về email ban tổ chức trước hạn chót.",
+      "event_end_datetime": "2026-11-20T23:59:00+07:00",
+      "event_start_datetime": "2026-11-18T18:30:15+07:00",
+      "fee": "miễn phí",
+      "is_online": true,
+      "location": "Trực tuyến",
+      "organizer": "Tuổi trẻ Trường Đại học Khoa học tự nhiên",
+      "reg_end_datetime": "2026-11-20T23:59:00+07:00",
+      "reg_start_datetime": "2026-11-18T18:30:15+07:00",
+      "registration_url": "youth@vnuhcm.edu.vn",
+      "target_audience": [
+        "sinh viên",
+        "cộng đồng"
+      ],
+      "title": "Cuộc thi sáng tạo clip ngắn “Hiểu luật – Sống chất”",
+      "start_datetime": "2026-11-18T18:30:15+07:00",
+      "end_datetime": "2026-11-20T23:59:00+07:00",
+      "registration_status": "link",
+      "dedup_status": "created"
+    }
+  ]
 }
