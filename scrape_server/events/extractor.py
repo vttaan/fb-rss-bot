@@ -21,12 +21,13 @@ import unicodedata
 import urllib.error
 import urllib.request
 from datetime import datetime
+from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 
-from config import FEEDS_DIR, LOCAL_TIMEZONE
+from config import FEEDS_DIR, LOCAL_TIMEZONE, STORE_EMAIL_CONTENT
 from .classifier import classify_event
 from database import (
     EmailMessage,
@@ -2432,8 +2433,8 @@ def sync_all_event_folders(session=None) -> Dict[str, int]:
         by_client: Dict[str, List[Dict[str, Any]]] = {}
         for ev_dict in all_events_list:
             sources = ev_dict.get("sources") or []
-            is_email_ev = ev_dict.get("source_type") == "email" or any(
-                s.get("source_type") == "email" for s in sources
+            is_email_ev = str(ev_dict.get("source_type") or "").lower().startswith("email") or any(
+                str(s.get("source_type") or "").lower().startswith("email") for s in sources
             )
             if is_email_ev:
                 email_events_list.append(ev_dict)
@@ -2519,9 +2520,12 @@ def ingest_email_message(
     subject: str = "",
     client_id: str = "anonymous",
     message_id: Optional[str] = None,
+    content_hash: Optional[str] = None,
     sender: Optional[str] = None,
     received_at: Optional[str] = None,
     media_urls: Optional[List[str]] = None,
+    source: Optional[str] = None,
+    sync_folders: bool = True,
 ) -> Dict[str, Any]:
     """
     Receive an email entry from a client into the server Inbox, move it to the Unified Extractor,
@@ -2533,7 +2537,11 @@ def ingest_email_message(
     clean_client = (client_id or "anonymous").strip() or "anonymous"
     clean_subject = (subject or "").strip()
     clean_content = (content or "").strip()
+    clean_hash = (content_hash or "").strip().lower() or None
+    clean_src = (source or "").strip().lower()
+    email_source_type = f"email: {clean_src}" if clean_src and clean_src != "email" else "email"
     media = [u.strip() for u in (media_urls or []) if u and str(u).strip()]
+    stored_content = clean_content if STORE_EMAIL_CONTENT else ""
 
     # Parse received_at timestamp
     rec_dt = datetime.now(LOCAL_TIMEZONE)
@@ -2542,7 +2550,11 @@ def ingest_email_message(
             parsed = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
             rec_dt = ensure_local_tz(parsed) or rec_dt
         except Exception:
-            pass
+            try:
+                parsed = parsedate_to_datetime(received_at)
+                rec_dt = ensure_local_tz(parsed) or rec_dt
+            except Exception:
+                pass
 
     # Deterministic message_id if client didn't supply one
     if not message_id or not str(message_id).strip():
@@ -2554,10 +2566,19 @@ def ingest_email_message(
         clean_msg_id = str(message_id).strip()
 
     with get_session() as session:
-        # 1. Message-ID level deduplication check
-        existing_msg = session.scalar(
-            select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
-        )
+        # 1. Exact-copy deduplication (before any LLM work): content_hash first, then message_id
+        existing_msg = None
+        dup_reason = "message_id_already_processed"
+        if clean_hash:
+            existing_msg = session.scalar(
+                select(EmailMessage).where(EmailMessage.content_hash == clean_hash)
+            )
+            if existing_msg:
+                dup_reason = "content_hash_already_processed"
+        if not existing_msg:
+            existing_msg = session.scalar(
+                select(EmailMessage).where(EmailMessage.message_id == clean_msg_id)
+            )
         if existing_msg:
             ev_record = (
                 session.get(EventRecord, existing_msg.event_id)
@@ -2566,7 +2587,7 @@ def ingest_email_message(
             )
             return {
                 "status": "duplicate",
-                "reason": "message_id_already_processed",
+                "reason": dup_reason,
                 "is_event": existing_msg.is_event,
                 "is_duplicate": True,
                 "is_updated": False,
@@ -2607,14 +2628,19 @@ def ingest_email_message(
         else:
             raw_data = _enrich_extracted_event_fields(raw_data, full_email_text, published_at=rec_dt)
 
+        sender_display_name, _ = parseaddr(sender or "")
+        if not str(raw_data.get("organizer") or "").strip() and sender_display_name.strip():
+            raw_data["organizer"] = sender_display_name.strip()
+
         is_event = bool(raw_data.pop("is_event", False))
         if not is_event:
             msg_row = EmailMessage(
                 message_id=clean_msg_id,
+                content_hash=clean_hash,
                 client_id=clean_client,
                 subject=clean_subject,
                 sender=sender,
-                content=clean_content,
+                content=stored_content,
                 media_urls_json=json.dumps(media, ensure_ascii=False),
                 received_at=rec_dt,
                 ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -2626,7 +2652,8 @@ def ingest_email_message(
             )
             session.add(msg_row)
             session.commit()
-            sync_all_event_folders(session)
+            if sync_folders:
+                sync_all_event_folders(session)
             return {
                 "status": "ignored",
                 "is_event": False,
@@ -2643,7 +2670,7 @@ def ingest_email_message(
         upsert_status, ev_record, changes = upsert_unified_event(
             session=session,
             raw_data=raw_data,
-            source_type="email",
+            source_type=email_source_type,
             source_id=clean_msg_id,
             media_urls=media,
             fanpage_id=None,
@@ -2655,10 +2682,11 @@ def ingest_email_message(
         ev_dict = ev_record.to_dict()
         msg_row = EmailMessage(
             message_id=clean_msg_id,
+            content_hash=clean_hash,
             client_id=clean_client,
             subject=clean_subject,
             sender=sender,
-            content=clean_content,
+            content=stored_content,
             media_urls_json=json.dumps(media, ensure_ascii=False),
             received_at=rec_dt,
             ingested_at=datetime.now(LOCAL_TIMEZONE),
@@ -2670,7 +2698,8 @@ def ingest_email_message(
         )
         session.add(msg_row)
         session.commit()
-        sync_all_event_folders(session)
+        if sync_folders:
+            sync_all_event_folders(session)
 
         return {
             "status": upsert_status,

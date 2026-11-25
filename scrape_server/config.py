@@ -64,3 +64,17 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/131.0.0.0 Safari/537.36"
 )
+
+# Inbox Privacy, Safety Limits & CORS Settings
+STORE_EMAIL_CONTENT = os.environ.get("STORE_EMAIL_CONTENT", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+INGEST_MAX_BATCH_SIZE = int(os.environ.get("INGEST_MAX_BATCH_SIZE", "50"))
+INGEST_MAX_CONTENT_CHARS = int(os.environ.get("INGEST_MAX_CONTENT_CHARS", "50000"))
+INGEST_RATE_LIMIT_PER_MIN = int(os.environ.get("INGEST_RATE_LIMIT_PER_MIN", "60"))
+CORS_ORIGINS = [
+    o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
+]

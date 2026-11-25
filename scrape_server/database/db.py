@@ -310,6 +310,20 @@ def _migrate_sqlite_schema() -> None:
                     )
                 conn.execute(text("DROP TABLE events_legacy_backup"))
 
+        # 3. Ensure `email_messages.content_hash` exists on legacy DBs
+        if "email_messages" in existing_tables:
+            em_cols = _table_columns(conn, "email_messages")
+            if "content_hash" not in em_cols:
+                conn.execute(
+                    text("ALTER TABLE email_messages ADD COLUMN content_hash VARCHAR(128)")
+                )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_email_messages_content_hash "
+                    "ON email_messages (content_hash)"
+                )
+            )
+
 
 def init_db() -> None:
     """Create database tables if they do not exist and run safe schema migrations."""
@@ -760,6 +774,23 @@ def get_inbox_messages(client_id: Optional[str] = None, limit: int = 100) -> Lis
         return list(session.scalars(stmt).all())
 
 
+def get_known_content_hashes(hashes: List[str]) -> List[str]:
+    """Return subset of client-supplied SHA-256 content_hash strings already recorded on the server."""
+    clean = [str(h).strip().lower() for h in (hashes or []) if h and str(h).strip()]
+    if not clean:
+        return []
+    init_db()
+    known: List[str] = []
+    with get_session() as session:
+        for i in range(0, len(clean), 500):
+            chunk = clean[i : i + 500]
+            rows = session.scalars(
+                select(EmailMessage.content_hash).where(EmailMessage.content_hash.in_(chunk))
+            ).all()
+            known.extend([r for r in rows if r])
+    return known
+
+
 def get_all_events(
     source_type: Optional[str] = None,
     client_id: Optional[str] = None,
@@ -774,6 +805,8 @@ def get_all_events(
             st_clean = source_type.strip()
             if st_clean.lower() == "facebook":
                 stmt = stmt.where(EventRecord.source_type.ilike("facebook%"))
+            elif st_clean.lower() == "email":
+                stmt = stmt.where(EventRecord.source_type.ilike("email%"))
             else:
                 stmt = stmt.where(EventRecord.source_type == st_clean)
         if client_id:

@@ -195,18 +195,19 @@ def passes_privacy_and_keyword_gate(from_addr, subject, body_text, config=None):
     return True, "passed", matched_kw
 
 
-def compute_content_hash(from_addr, subject, body_text, word_limit=30):
+def compute_content_hash(from_addr, subject, body_text, word_limit=None):
     """
-    Deterministic Hash Design: sender + first 30 words.
-    Extracts the normalized sender email and combines it with the first 30 words of
-    (subject + body). This allows the server's deduplication engine to quickly check
-    if the event has already been recorded BEFORE invoking the LLM / QR decoder.
+    Deterministic Hash Design: sender + normalized subject + cleaned body.
+    Hashes the full cleaned body by default (so follow-up/reschedule emails with the
+    same opening paragraph do not collide), while supporting an optional word_limit slice.
     """
     email_addr = extract_email_address(from_addr)
-    combined = _normalize_nfc(f"{subject or ''} {body_text or ''}")
-    words = re.findall(r"\S+", combined.lower())
-    first_words = " ".join(words[:word_limit])
-    raw_key = f"{email_addr}|{first_words}"
+    norm_subj = " ".join(re.findall(r"\S+", _normalize_nfc(subject or "").lower()))
+    body_words = re.findall(r"\S+", _normalize_nfc(body_text or "").lower())
+    if word_limit is not None:
+        body_words = body_words[:word_limit]
+    norm_body = " ".join(body_words)
+    raw_key = f"{email_addr}|{norm_subj}|{norm_body}"
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest(), raw_key
 
 
@@ -229,7 +230,7 @@ def normalize_date_to_iso(date_str):
 
 def format_for_server(source, msg_id, from_str, subject, date_str, body_text, matched_keywords, media_urls=None):
     """Package a verified email into the standard payload for POST /api/inbox/batch."""
-    content_hash, hash_source = compute_content_hash(from_str, subject, body_text, word_limit=30)
+    content_hash, hash_source = compute_content_hash(from_str, subject, body_text)
     return {
         "source": source,
         "message_id": msg_id,

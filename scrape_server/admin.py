@@ -5,6 +5,7 @@ Clients send the token in the `X-Admin-Token` header.
 """
 import asyncio
 import hmac
+import json
 import os
 from datetime import datetime
 from typing import List, Optional
@@ -21,7 +22,7 @@ from auth import (
     require_admin_session,
     set_session_cookie,
 )
-from config import FEEDS_DIR, SCROLL_COUNT
+from config import FEEDS_DIR, LOCAL_TIMEZONE, SCROLL_COUNT
 from database import (
     add_fanpage,
     ensure_local_tz,
@@ -77,6 +78,16 @@ class AdminLoginRequest(BaseModel):
 
 class ClassifyRequest(BaseModel):
     event_ids: Optional[List[int]] = Field(None, description="Optional list of event_ids to reclassify; omit for all")
+
+
+class UpdateFilterConfigRequest(BaseModel):
+    allowed_senders: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    excluded_keywords: Optional[List[str]] = None
+    non_event_keywords: Optional[List[str]] = None
+    active_registration_cues: Optional[List[str]] = None
+    newer_than_days: Optional[int] = None
+    max_results: Optional[int] = None
 
 
 def require_admin(request: Request, x_admin_token: str = Header(default="")) -> None:
@@ -435,6 +446,40 @@ async def admin_remove_fanpage(identifier: str = Query(..., description="Fanpage
     generate_all_rss()
     await manager.broadcast_to_all({"event": "status", "message": f"Removed fanpage: {removed.name or removed.slug}", "refresh_tree": True})
     return {"removed": removed.to_dict()}
+
+
+@router.put("/api/admin/filter-config", dependencies=[Depends(require_admin)])
+def admin_update_filter_config(body: UpdateFilterConfigRequest):
+    """Update shared feeds/config/filter_config.json live, incrementing version."""
+    cfg_path = FEEDS_DIR / "config" / "filter_config.json"
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    if cfg_path.is_file():
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    else:
+        data = {}
+
+    if body.allowed_senders is not None:
+        data["allowed_senders"] = body.allowed_senders
+    if body.keywords is not None:
+        data["keywords"] = body.keywords
+    if body.excluded_keywords is not None:
+        data["excluded_keywords"] = body.excluded_keywords
+    if body.non_event_keywords is not None:
+        data["non_event_keywords"] = body.non_event_keywords
+    if body.active_registration_cues is not None:
+        data["active_registration_cues"] = body.active_registration_cues
+    if body.newer_than_days is not None:
+        data["newer_than_days"] = body.newer_than_days
+    if body.max_results is not None:
+        data["max_results"] = body.max_results
+
+    data["version"] = int(data.get("version", 0)) + 1
+    data["updated_at"] = datetime.now(LOCAL_TIMEZONE).isoformat(timespec="seconds")
+    cfg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"ok": True, "config": data}
 
 
 ADMIN_HTML = """<!DOCTYPE html>

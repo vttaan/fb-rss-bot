@@ -26,6 +26,7 @@ def to_server_schema(email_item, client_id="anonymous"):
         "client_id": client_id,
         "message_id": email_item.get("message_id") or email_item["content_hash"],
         "content_hash": email_item["content_hash"],
+        "source": email_item.get("source", "email"),
         "subject": email_item.get("subject", ""),
         "sender": email_item.get("from", ""),
         "received_at": email_item.get("date", ""),

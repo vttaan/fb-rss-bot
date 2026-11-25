@@ -1,13 +1,16 @@
 import asyncio
+import hmac
 import json
 import os
+import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Deque, Dict, List, Optional, Set
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -24,10 +27,14 @@ from auth import (
 )
 
 from config import (
+    CORS_ORIGINS,
     DEFAULT_INTERVAL_SECONDS,
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
     FEEDS_DIR,
+    INGEST_MAX_BATCH_SIZE,
+    INGEST_MAX_CONTENT_CHARS,
+    INGEST_RATE_LIMIT_PER_MIN,
     LOCAL_TIMEZONE,
     PUBLIC_NGROK_URL,
     SCRAPE_MISFIRE_GRACE_SECONDS,
@@ -42,6 +49,7 @@ from database import (
     get_all_recent_posts,
     get_event_by_id,
     get_inbox_messages,
+    get_known_content_hashes,
     get_or_create_user,
     get_posts_for_user,
     get_subscribers_for_fanpage,
@@ -72,6 +80,8 @@ class ExtractPostRequest(BaseModel):
 class EmailIngestRequest(BaseModel):
     client_id: str = Field("anonymous", description="Client or user identifier submitting the email")
     message_id: Optional[str] = Field(None, description="Unique Email Message-ID header or UID")
+    content_hash: Optional[str] = Field(None, description="SHA-256 fingerprint computed by the client")
+    source: Optional[str] = Field(None, description="Email provider source, e.g. gmail or outlook")
     subject: str = Field("", description="Email subject line")
     sender: Optional[str] = Field(None, description="Sender email address or display name")
     received_at: Optional[str] = Field(None, description="ISO 8601 timestamp when email was received")
@@ -81,6 +91,39 @@ class EmailIngestRequest(BaseModel):
 
 class BatchEmailIngestRequest(BaseModel):
     emails: List[EmailIngestRequest]
+
+
+class HashCheckRequest(BaseModel):
+    hashes: List[str] = Field(..., description="List of client-computed SHA-256 content_hash strings to check")
+
+
+_ingest_rate_buckets: Dict[str, Deque[float]] = defaultdict(deque)
+
+
+def guard_ingest_or_user(
+    request: Request,
+    x_ingest_token: str = Header(default=""),
+) -> Optional[User]:
+    """Enforce sliding-window rate limit and authenticate via Web App session cookie or X-Ingest-Token."""
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    bucket = _ingest_rate_buckets[client_ip]
+    while bucket and (now - bucket[0]) > 60.0:
+        bucket.popleft()
+    if len(bucket) >= INGEST_RATE_LIMIT_PER_MIN:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for inbox endpoints.")
+    bucket.append(now)
+
+    user = get_current_user_optional(request)
+    if user is not None:
+        return user
+
+    expected_key = os.environ.get("INGEST_API_KEY", "").strip()
+    if expected_key:
+        if not x_ingest_token or not hmac.compare_digest(x_ingest_token.encode("utf-8"), expected_key.encode("utf-8")):
+            raise HTTPException(status_code=401, detail="Invalid or missing authentication.")
+
+    return None
 
 
 class UserRegisterRequest(BaseModel):
@@ -312,7 +355,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS else ["*"],
+    allow_credentials=bool(CORS_ORIGINS),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -464,9 +508,52 @@ def api_get_schedule():
     }
 
 
+@app.get("/api/inbox/filter-config")
+def api_get_filter_config(
+    client_version: Optional[int] = Query(None, description="Client's current filter_config version"),
+    auth_user: Optional[User] = Depends(guard_ingest_or_user),
+):
+    """Serve shared email filter_config.json for remote client / Web App sync."""
+    cfg_path = FEEDS_DIR / "config" / "filter_config.json"
+    if not cfg_path.is_file():
+        raise HTTPException(status_code=404, detail="Filter config not found on server.")
+    try:
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read filter_config.json: {exc}") from exc
+
+    server_version = int(data.get("version", 1))
+    if client_version is not None and client_version == server_version:
+        return {"up_to_date": True, "version": server_version}
+    return {"up_to_date": False, **data}
+
+
+@app.post("/api/inbox/check")
+def api_check_inbox_hashes(
+    body: HashCheckRequest,
+    auth_user: Optional[User] = Depends(guard_ingest_or_user),
+):
+    """Pre-flight check: return which content_hash strings are already known on the server."""
+    seen: Set[str] = set()
+    clean_hashes: List[str] = []
+    for raw_h in body.hashes:
+        h = str(raw_h or "").strip().lower()
+        if h and h not in seen:
+            seen.add(h)
+            clean_hashes.append(h)
+
+    known = get_known_content_hashes(clean_hashes)
+    known_set = set(known)
+    unseen = [h for h in clean_hashes if h not in known_set]
+    return {"known": known, "unseen": unseen}
+
+
 @app.post("/api/inbox")
 @app.post("/api/events/ingest-email")
-async def api_ingest_email(body: EmailIngestRequest):
+async def api_ingest_email(
+    body: EmailIngestRequest,
+    auth_user: Optional[User] = Depends(guard_ingest_or_user),
+):
     """
     Inbox endpoint to receive an event-related email entry from a client, move it to the
     Unified Extractor, compare anchor fields (title, format online/offline, date, time, location)
@@ -474,18 +561,26 @@ async def api_ingest_email(body: EmailIngestRequest):
     """
     if not body.content or not body.content.strip():
         raise HTTPException(status_code=400, detail="Email content must not be empty.")
+    if len(body.content) > INGEST_MAX_CONTENT_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
+        )
 
+    effective_client_id = auth_user.username if auth_user is not None else (body.client_id or "anonymous")
     try:
-        get_or_create_user(body.client_id or "anonymous")
+        get_or_create_user(effective_client_id)
         result = await asyncio.to_thread(
             ingest_email_message,
             content=body.content,
             subject=body.subject,
-            client_id=body.client_id,
+            client_id=effective_client_id,
             message_id=body.message_id,
+            content_hash=body.content_hash,
             sender=body.sender,
             received_at=body.received_at,
             media_urls=body.media_urls,
+            source=body.source,
         )
     except HTTPException:
         raise
@@ -505,24 +600,48 @@ async def api_ingest_email(body: EmailIngestRequest):
 
 
 @app.post("/api/inbox/batch")
-async def api_ingest_email_batch(body: BatchEmailIngestRequest):
+async def api_ingest_email_batch(
+    body: BatchEmailIngestRequest,
+    auth_user: Optional[User] = Depends(guard_ingest_or_user),
+):
     """Batch upload endpoint for clients submitting multiple filtered emails at once."""
+    if len(body.emails) > INGEST_MAX_BATCH_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Batch size exceeds {INGEST_MAX_BATCH_SIZE} emails.",
+        )
+
     results = []
+    any_mutated = False
     for item in body.emails:
         if not item.content or not item.content.strip():
             continue
-        get_or_create_user(item.client_id or "anonymous")
+        if len(item.content) > INGEST_MAX_CONTENT_CHARS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Email content exceeds {INGEST_MAX_CONTENT_CHARS} characters.",
+            )
+        effective_client_id = auth_user.username if auth_user is not None else (item.client_id or "anonymous")
+        get_or_create_user(effective_client_id)
         res = await asyncio.to_thread(
             ingest_email_message,
             content=item.content,
             subject=item.subject,
-            client_id=item.client_id,
+            client_id=effective_client_id,
             message_id=item.message_id,
+            content_hash=item.content_hash,
             sender=item.sender,
             received_at=item.received_at,
             media_urls=item.media_urls,
+            source=item.source,
+            sync_folders=False,
         )
+        if res.get("status") in ("created", "updated", "ignored"):
+            any_mutated = True
         results.append(res)
+
+    if any_mutated:
+        await asyncio.to_thread(sync_all_event_folders)
 
     await manager.broadcast_to_all({"event": "inbox_updated", "refresh_tree": True})
     for res in results:
