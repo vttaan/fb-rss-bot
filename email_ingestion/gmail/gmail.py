@@ -97,6 +97,29 @@ def get_media_urls(payload):
     return urls
 
 
+_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def get_image_attachment_ids(payload):
+    """Recursively collect Gmail attachmentIds for inline/attached images (for local QR decoding)."""
+    ids = []
+    seen = set()
+
+    def _walk(part):
+        mime = (part.get("mimeType") or "").lower()
+        filename = (part.get("filename") or "").lower()
+        att_id = (part.get("body") or {}).get("attachmentId")
+        if att_id and (mime.startswith("image/") or filename.endswith(_IMAGE_EXTS)):
+            if att_id not in seen:
+                seen.add(att_id)
+                ids.append(att_id)
+        for child in part.get("parts", []):
+            _walk(child)
+
+    _walk(payload or {})
+    return ids
+
+
 class GmailProvider(MailProvider):
     """Gmail implementation of the generalized MailProvider interface."""
 
@@ -140,6 +163,7 @@ class GmailProvider(MailProvider):
             ).execute()
             payload = msg.get("payload", {})
             headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
+            att_ids = get_image_attachment_ids(payload)
             raw_emails.append({
                 "id": msg["id"],
                 "from": headers.get("from", ""),
@@ -147,8 +171,31 @@ class GmailProvider(MailProvider):
                 "date": headers.get("date", ""),
                 "text": get_body(payload) or msg.get("snippet", ""),
                 "media_urls": get_media_urls(payload),
+                "attachment_ids": att_ids,
+                "has_image_attachments": bool(att_ids),
             })
         return raw_emails
+
+    def fetch_image_attachments(self, connection, raw_mail, max_images=3):
+        """Download up to `max_images` inline/attached images for local QR decoding."""
+        msg_id = raw_mail.get("id")
+        if not msg_id:
+            return []
+        images = []
+        for att_id in (raw_mail.get("attachment_ids") or [])[:max_images]:
+            try:
+                att = connection.users().messages().attachments().get(
+                    userId="me", messageId=msg_id, id=att_id
+                ).execute()
+                raw_b64 = att.get("data")
+                if not raw_b64:
+                    continue
+                img_bytes = base64.urlsafe_b64decode(raw_b64)
+                if img_bytes and len(img_bytes) <= 10 * 1024 * 1024:
+                    images.append(img_bytes)
+            except Exception:
+                continue
+        return images
 
 
 def fetch_drl_emails(config=None, extra_query=""):

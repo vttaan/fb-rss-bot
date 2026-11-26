@@ -27,15 +27,18 @@ from auth import (
 )
 
 from config import (
+    BASE_DIR,
     CORS_ORIGINS,
     DEFAULT_INTERVAL_SECONDS,
     DEFAULT_SCRAPE_HOURS,
     DEFAULT_SCRAPE_MINUTE,
     FEEDS_DIR,
+    GMAIL_WEB_CLIENT_ID,
     INGEST_MAX_BATCH_SIZE,
     INGEST_MAX_CONTENT_CHARS,
     INGEST_RATE_LIMIT_PER_MIN,
     LOCAL_TIMEZONE,
+    OUTLOOK_WEB_CLIENT_ID,
     PUBLIC_NGROK_URL,
     SCRAPE_MISFIRE_GRACE_SECONDS,
     SCRAPE_TIMEZONE,
@@ -506,6 +509,59 @@ def api_get_schedule():
         "scheduled_times_ict": [f"{h:02d}:{SERVER_SCRAPE_MINUTE:02d}" for h in parsed_hours],
         "next_run_at": next_run,
     }
+
+
+_EMBEDDED_CONFIG_START = "/*__EMBEDDED_CONFIG_START__*/"
+_EMBEDDED_CONFIG_END = "/*__EMBEDDED_CONFIG_END__*/"
+
+
+def _render_inbox_client_js() -> str:
+    """Read static/email_sync.js and inline current filter_config.json + OAuth client IDs."""
+    js_path = BASE_DIR / "static" / "email_sync.js"
+    if not js_path.is_file():
+        raise HTTPException(status_code=404, detail="Client email sync module not found.")
+    template = js_path.read_text(encoding="utf-8")
+
+    cfg_path = FEEDS_DIR / "config" / "filter_config.json"
+    if cfg_path.is_file():
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            cfg = {}
+    else:
+        cfg = {}
+
+    embedded_payload = {
+        "version": int(cfg.get("version", 1)) if cfg else 0,
+        "updated_at": cfg.get("updated_at"),
+        "filter_config": cfg,
+        "oauth": {
+            "gmail_client_id": GMAIL_WEB_CLIENT_ID,
+            "outlook_client_id": OUTLOOK_WEB_CLIENT_ID,
+        },
+    }
+    start_idx = template.find(_EMBEDDED_CONFIG_START)
+    end_idx = template.find(_EMBEDDED_CONFIG_END)
+    if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
+        raise HTTPException(status_code=500, detail="Missing EMBEDDED_CONFIG sentinel in email_sync.js.")
+
+    injected_json = json.dumps(embedded_payload, ensure_ascii=False)
+    return (
+        template[:start_idx]
+        + f"{_EMBEDDED_CONFIG_START} {injected_json} {_EMBEDDED_CONFIG_END}"
+        + template[end_idx + len(_EMBEDDED_CONFIG_END) :]
+    )
+
+
+@app.get("/api/inbox/client.js")
+def api_get_inbox_client_js():
+    """Serve browser-side email ingestion ES module with server config pre-inlined."""
+    rendered = _render_inbox_client_js()
+    return Response(
+        content=rendered,
+        media_type="application/javascript; charset=utf-8",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/api/inbox/filter-config")

@@ -1,5 +1,6 @@
 import os
 import sys
+import base64
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta, timezone
@@ -47,7 +48,11 @@ def _collapse_sender_domains(allowed_senders):
 
 
 def build_graph_search_query(allowed_senders=None, keywords=None, excluded_keywords=None, newer_than_days=14):
-    """Build Microsoft Graph $search KQL parity query matching Gmail's 4 filter dimensions."""
+    """
+    Build Microsoft Graph $search KQL using only allowed_senders + received>=cutoff.
+    Full keyword/exclusion/non-event filtering runs locally across all 35+ rules so
+    Outlook's 12-keyword ceiling never drops valid events.
+    """
     clauses = []
 
     roots = _collapse_sender_domains(allowed_senders)
@@ -57,20 +62,6 @@ def build_graph_search_query(allowed_senders=None, keywords=None, excluded_keywo
         else:
             sender_terms = " OR ".join(f"from:{r}" for r in roots[:5])
             clauses.append(f"({sender_terms})")
-
-    kw_list = [kw.strip() for kw in (keywords or []) if kw and str(kw).strip()][:12]
-    if kw_list:
-        escaped_terms = [f'\\"{kw}\\"' for kw in kw_list]
-        kw_expr = " OR ".join(escaped_terms)
-        clauses.append(
-            f"({kw_expr})"
-            if (roots or excluded_keywords or newer_than_days) and len(kw_list) > 1
-            else kw_expr
-        )
-
-    excl_list = [ek.strip() for ek in (excluded_keywords or []) if ek and str(ek).strip()][:4]
-    if excl_list:
-        clauses.append(" AND ".join(f'NOT \\"{ek}\\"' for ek in excl_list))
 
     if newer_than_days and int(newer_than_days) > 0:
         cutoff_date = (datetime.now(timezone.utc) - timedelta(days=int(newer_than_days))).strftime("%Y-%m-%d")
@@ -139,9 +130,10 @@ class OutlookProvider(MailProvider):
             "Authorization": f"Bearer {connection}",
             "ConsistencyLevel": "eventual",
         }
+        effective_top = min(max(int(max_results or 20), 50), 100)
         params = {
-            "$top": max_results,
-            "$select": "id,subject,from,receivedDateTime,bodyPreview,body",
+            "$top": effective_top,
+            "$select": "id,subject,from,receivedDateTime,bodyPreview,body,hasAttachments",
         }
         if query:
             params["$search"] = query
@@ -154,13 +146,11 @@ class OutlookProvider(MailProvider):
         )
         if response.status_code == 400 and query and " AND " in query:
             inner = query.strip('"')
-            kw_clauses = [
-                p.strip()
-                for p in inner.split(" AND ")
-                if p.strip() and not p.strip().startswith(("from:", "(from:", "NOT ", "received>="))
+            date_clauses = [
+                p.strip() for p in inner.split(" AND ") if p.strip().startswith("received>=")
             ]
-            if kw_clauses:
-                params["$search"] = f'"{kw_clauses[0].strip("()")}"'
+            if date_clauses:
+                params["$search"] = f'"{date_clauses[0]}"'
             else:
                 params.pop("$search", None)
             response = requests.get(
@@ -183,6 +173,7 @@ class OutlookProvider(MailProvider):
             is_html = body_obj.get("contentType", "").lower() == "html"
             clean_text = strip_html(raw_content) if is_html else raw_content
             media_urls = extract_html_media_urls(raw_content) if is_html else []
+            has_img_att = bool(msg.get("hasAttachments")) or ("cid:" in (raw_content or "").lower())
             raw_emails.append({
                 "id": msg.get("id", ""),
                 "from": from_formatted,
@@ -190,8 +181,46 @@ class OutlookProvider(MailProvider):
                 "date": msg.get("receivedDateTime", ""),
                 "text": clean_text,
                 "media_urls": media_urls,
+                "has_image_attachments": has_img_att,
             })
         return raw_emails
+
+    def fetch_image_attachments(self, connection, raw_mail, max_images=3):
+        """Download up to `max_images` inline/attached images from Microsoft Graph for local QR decoding."""
+        msg_id = raw_mail.get("id")
+        if not msg_id:
+            return []
+        headers = {"Authorization": f"Bearer {connection}"}
+        try:
+            res = requests.get(
+                f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}/attachments",
+                headers=headers,
+                timeout=30,
+            )
+            res.raise_for_status()
+        except Exception:
+            return []
+
+        images = []
+        for att in res.json().get("value", []):
+            if att.get("@odata.type") != "#microsoft.graph.fileAttachment":
+                continue
+            ctype = (att.get("contentType") or "").lower()
+            name = (att.get("name") or "").lower()
+            b64 = att.get("contentBytes")
+            if not b64:
+                continue
+            if not (ctype.startswith("image/") or name.endswith((".png", ".jpg", ".jpeg", ".webp"))):
+                continue
+            try:
+                raw_bytes = base64.b64decode(b64)
+                if raw_bytes and len(raw_bytes) <= 10 * 1024 * 1024:
+                    images.append(raw_bytes)
+                    if len(images) >= max_images:
+                        break
+            except Exception:
+                continue
+        return images
 
 
 def fetch_drl_emails(config=None):

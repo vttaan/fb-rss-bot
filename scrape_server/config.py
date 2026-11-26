@@ -78,3 +78,5 @@ INGEST_RATE_LIMIT_PER_MIN = int(os.environ.get("INGEST_RATE_LIMIT_PER_MIN", "60"
 CORS_ORIGINS = [
     o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
 ]
+GMAIL_WEB_CLIENT_ID = os.environ.get("GMAIL_WEB_CLIENT_ID", "").strip()
+OUTLOOK_WEB_CLIENT_ID = os.environ.get("OUTLOOK_WEB_CLIENT_ID", "").strip()

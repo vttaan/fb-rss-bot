@@ -92,6 +92,78 @@ def extract_html_media_urls(html_text):
     return urls
 
 
+_STATIC_ASSET_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".css", ".js")
+
+
+def has_registration_link(text):
+    """Return True if plain text already contains at least one non-asset http(s) URL."""
+    if not text:
+        return False
+    for match in re.finditer(r'https?://[^\s<>"\')]+', str(text), flags=re.IGNORECASE):
+        url = match.group(0).rstrip(".,;:!?")
+        lower_path = url.split("?", 1)[0].split("#", 1)[0].lower()
+        if "unsubscribe" in url.lower():
+            continue
+        if lower_path.endswith(_STATIC_ASSET_EXTS):
+            continue
+        return True
+    return False
+
+
+def decode_qr_from_bytes(image_bytes):
+    """
+    Decode an http(s) QR link from raw image bytes locally using OpenCV.
+    Returns None cleanly if OpenCV/numpy is unavailable or no http(s) QR is found.
+    """
+    if not image_bytes:
+        return None
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return None
+
+    arr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        return None
+
+    detector = cv2.QRCodeDetector()
+    candidates = [img]
+    h, w = img.shape[:2]
+    if max(h, w) < 1600:
+        candidates.append(cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC))
+    candidates.append(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+
+    for candidate in candidates:
+        value, _, _ = detector.detectAndDecode(candidate)
+        if value and value.strip().lower().startswith(("http://", "https://")):
+            return value.strip()
+    return None
+
+
+def append_qr_links_to_text(body_text, qr_links):
+    """Append unique decoded QR URLs not already present in body_text."""
+    text = body_text or ""
+    lower_text = text.lower()
+    additions = []
+    seen = set()
+    for link in qr_links or []:
+        clean = str(link or "").strip()
+        if not clean or not clean.lower().startswith(("http://", "https://")):
+            continue
+        key = clean.lower()
+        if key in lower_text or key in seen:
+            continue
+        seen.add(key)
+        additions.append(f"QR Link: {clean}")
+    if not additions:
+        return text
+    prefix = text.rstrip()
+    joined = "\n".join(additions)
+    return f"{prefix}\n\n{joined}" if prefix else joined
+
+
 def extract_email_address(from_header_or_addr):
     """Extract clean lowercase email address from 'Name <user@domain>' or 'user@domain'."""
     _, addr = parseaddr(from_header_or_addr or "")

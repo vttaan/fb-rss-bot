@@ -13,9 +13,12 @@ Follows the unified architecture diagram:
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from privacy_filter import (
+    append_qr_links_to_text,
+    decode_qr_from_bytes,
+    format_for_llm_server,
+    has_registration_link,
     load_filter_config,
     passes_privacy_and_keyword_gate,
-    format_for_llm_server,
 )
 
 
@@ -65,23 +68,53 @@ class MailProvider(ABC):
         """
         pass
 
+    def fetch_image_attachments(
+        self, connection: Any, raw_mail: Dict[str, Any], max_images: int = 3
+    ) -> List[bytes]:
+        """Optional hook for providers to fetch raw image attachments for local QR decoding."""
+        return []
+
     def filter_privacy_and_keywords(
-        self, raw_emails: List[Dict[str, str]], config: Dict[str, Any]
+        self,
+        raw_emails: List[Dict[str, Any]],
+        config: Dict[str, Any],
+        connection: Any = None,
     ) -> List[Dict[str, Any]]:
         """
-        Apply the 3-stage local privacy & keyword gate and attach `content_hash`
-        across all providers uniformly.
+        Apply the 4-step local privacy & keyword gate, decode local QR posters for
+        linkless passing emails when attachments exist, and attach `content_hash`.
         """
         verified = []
         for mail in raw_emails:
+            body_text = mail.get("text", "")
             passed, reason, matched_kw = passes_privacy_and_keyword_gate(
                 from_addr=mail.get("from", ""),
                 subject=mail.get("subject", ""),
-                body_text=mail.get("text", ""),
+                body_text=body_text,
                 config=config,
             )
             if not passed:
                 continue
+
+            if (
+                connection is not None
+                and mail.get("has_image_attachments")
+                and not has_registration_link(body_text)
+            ):
+                qr_links = []
+                try:
+                    images = self.fetch_image_attachments(connection, mail, max_images=3)
+                except Exception:
+                    images = []
+                for img_bytes in images:
+                    try:
+                        link = decode_qr_from_bytes(img_bytes)
+                    except Exception:
+                        link = None
+                    if link and link not in qr_links:
+                        qr_links.append(link)
+                if qr_links:
+                    body_text = append_qr_links_to_text(body_text, qr_links)
 
             verified.append(
                 format_for_llm_server(
@@ -90,7 +123,7 @@ class MailProvider(ABC):
                     from_str=mail.get("from", ""),
                     subject=mail.get("subject", ""),
                     date_str=mail.get("date", ""),
-                    body_text=mail.get("text", ""),
+                    body_text=body_text,
                     matched_keywords=matched_kw,
                     media_urls=mail.get("media_urls", []),
                 )
@@ -122,5 +155,5 @@ class MailProvider(ABC):
             filter_fields=filter_fields,
             max_results=config.get("max_results", 20),
         )
-        return self.filter_privacy_and_keywords(raw_emails, config)
+        return self.filter_privacy_and_keywords(raw_emails, config, connection=conn)
 
